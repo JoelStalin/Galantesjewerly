@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server';
+import { getAllSections, updateSection, getSettings, updateSettings, getFeaturedItems, addFeaturedItem, updateFeaturedItem, deleteFeaturedItem } from '@/lib/db';
+
+export async function GET() {
+  try {
+    const sections = await getAllSections();
+    const settings = await getSettings();
+    const featured = await getFeaturedItems();
+    return NextResponse.json({ sections, settings, featured });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { id, updates, type } = await request.json();
+    
+    if (type === 'settings' && updates) {
+      const updatedSettings = await updateSettings(updates);
+      return NextResponse.json({ success: true, settings: updatedSettings });
+    }
+    
+    if (type === 'featured_add' && updates) {
+      const newItem = await addFeaturedItem(updates);
+      return NextResponse.json({ success: true, featured: newItem });
+    }
+
+    if (type === 'featured_update' && id && updates) {
+      const updated = await updateFeaturedItem(id, updates);
+      return NextResponse.json({ success: true, featured: updated });
+    }
+
+    if (type === 'section' && id && updates) {
+      const updated = await updateSection(id, updates);
+      if (!updated) return NextResponse.json({ error: 'Section not found' }, { status: 404 });
+      return NextResponse.json({ success: true, section: updated });
+    }
+    
+    return NextResponse.json({ error: 'Invalid payload type' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { id, type } = await request.json();
+    if (type === 'featured_delete' && id) {
+      const success = await deleteFeaturedItem(id);
+      return NextResponse.json({ success });
+    }
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}

@@ -4,53 +4,37 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: galantes_web
-    restart: unless-stopped
+    restart: always
     environment:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-    expose:
-      - "3000"
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-galantes2026}
+    volumes:
+      # Carpeta de datos persistente para que las fotos no se borren en reinicios
+      - ./data:/app/data
+    ports:
+      - "3000:3000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
-      - app-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: galantes_nginx
-    restart: unless-stopped
-    volumes:
-      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    expose:
-      - "80"
-    depends_on:
-      web:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - app-network
+      - galante-net
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: galantes_tunnel
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    restart: always
+    command: tunnel run --token ${CF_TUNNEL_TOKEN}
     depends_on:
-      nginx:
+      web:
         condition: service_healthy
     networks:
-      - app-network
+      - galante-net
 
 networks:
-  app-network:
+  galante-net:
     driver: bridge

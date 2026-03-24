@@ -1,0 +1,19 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/about/page": "app/about/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/auth/logout/route": "app/api/admin/auth/logout/route.js",
+  "/api/admin/auth/route": "app/api/admin/auth/route.js",
+  "/api/admin/content/route": "app/api/admin/content/route.js",
+  "/api/admin/upload/route": "app/api/admin/upload/route.js",
+  "/bridal/page": "app/bridal/page.js",
+  "/collections/page": "app/collections/page.js",
+  "/contact/page": "app/contact/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/journal/page": "app/journal/page.js",
+  "/page": "app/page.js",
+  "/repairs/page": "app/repairs/page.js"
+}
