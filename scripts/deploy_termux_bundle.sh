@@ -45,7 +45,7 @@ if [ -f "$PREFIX_PATH/etc/profile.d/start-services.sh" ]; then
 fi
 
 sv up sshd >/dev/null 2>&1 || true
-sv up galantesjewelry >/dev/null 2>&1 || true
+sv restart galantesjewelry >/dev/null 2>&1 || sv up galantesjewelry >/dev/null 2>&1 || true
 if [ -d "$PREFIX_PATH/var/service/cloudflared" ]; then
   sv up cloudflared >/dev/null 2>&1 || true
 fi
