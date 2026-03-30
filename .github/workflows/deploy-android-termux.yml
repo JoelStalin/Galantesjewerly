@@ -22,6 +22,7 @@ jobs:
 
       - name: Create deploy bundle
         run: |
+          BUNDLE_PATH="$RUNNER_TEMP/galantesjewelry_bundle.tar.gz"
           tar \
             --exclude-vcs \
             --exclude=node_modules \
@@ -42,7 +43,8 @@ jobs:
             --exclude=build_log.txt \
             --exclude=data/blobs \
             --exclude=data/cms.json \
-            -czf galantesjewelry_bundle.tar.gz .
+            -czf "$BUNDLE_PATH" .
+          echo "LOCAL_BUNDLE=$BUNDLE_PATH" >> "$GITHUB_ENV"
 
       - name: Install SSH client
         run: sudo apt-get update && sudo apt-get install -y openssh-client
@@ -88,9 +90,10 @@ jobs:
         env:
           ANDROID_APP_ENV: ${{ secrets.ANDROID_APP_ENV }}
         run: |
-          printf '%s' "$ANDROID_APP_ENV" > android.env
-          scp galantesjewelry_bundle.tar.gz android-termux:$REMOTE_BUNDLE
-          scp android.env android-termux:$REMOTE_ENV
+          ENV_FILE="$RUNNER_TEMP/android.env"
+          printf '%s' "$ANDROID_APP_ENV" > "$ENV_FILE"
+          scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
+          scp "$ENV_FILE" android-termux:$REMOTE_ENV
           scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
           ssh android-termux "chmod 700 $REMOTE_SCRIPT"
 
