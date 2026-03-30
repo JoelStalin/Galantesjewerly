@@ -217,3 +217,67 @@
 - Result: pass
 - Notes: returned HTTP `200` after the supervised tunnel came back up
 - Evidence: `project-memory/evidence/android-cloudflare-recovery-2026-03-25.md`
+
+## 2026-03-29T18:40:00-04:00
+
+- Command: `npm run lint`
+- Result: pass
+- Notes: 1 warning remained in `components/admin/ImageUploader.tsx` for the intentional plain `<img>` preview
+- Evidence: repository validation during the GitHub Actions deploy session
+
+## 2026-03-29T18:43:00-04:00
+
+- Command: `npm run build`
+- Result: pass
+- Notes: production build passed before the Android deploy workflow was pushed
+- Evidence: repository validation during the GitHub Actions deploy session
+
+## 2026-03-29T18:50:00-04:00
+
+- Command: `ssh -o StrictHostKeyChecking=accept-new galates-domain "echo ssh-domain-ok"`
+- Result: pass
+- Notes: proved that `ssh.galantesjewelry.com` reached the Android host through Cloudflare SSH after host-key acceptance
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+
+## 2026-03-29T18:51:00-04:00
+
+- Command: `ssh -o BatchMode=yes galates-domain "hostname; whoami; echo final-check-ok"`
+- Result: pass
+- Notes: returned `localhost`, `u0_a382`, and `final-check-ok`
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+
+## 2026-03-29T19:08:09-04:00
+
+- Command: `python tests/e2e/admin_image_session_flow.py` against `https://galantesjewelry.com`
+- Result: fail
+- Artifact directory: `tests/e2e/artifacts/2026-03-29_19-08-09/`
+- Notes: authenticated and created the record, but timed out waiting for the exact admin notice text after save; deploy infrastructure was not the failing layer
+- Evidence: `tests/e2e/artifacts/2026-03-29_19-08-09/report.md`
+
+## 2026-03-29T19:12:00-04:00
+
+- Command: `python tests/e2e/public_smoke.py` against `https://galantesjewelry.com`
+- Result: pass
+- Notes: public home and admin login remained reachable through the production domain
+- Evidence: repository validation during the GitHub Actions deploy session
+
+## 2026-03-29T21:21:00-04:00
+
+- Command: remote deploy execution through `scripts/deploy_termux_bundle.sh` on the Android host
+- Result: pass
+- Notes: `npm ci`, `npm run build:android`, service installation, and local `/api/health` all passed on the Termux host
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+
+## 2026-03-29T22:17:55-04:00
+
+- Command: tunnel SSH service-status probe and local health probe via `ssh -o BatchMode=yes galates-domain`
+- Result: pass
+- Notes: `galantesjewelry`, `cloudflared`, and `sshd` all reported `run`, and local `/api/health` returned `status=ok`
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+
+## 2026-03-29T22:18:00-04:00
+
+- Command: workstation request to `https://galantesjewelry.com/api/health`
+- Result: pass
+- Notes: returned HTTP `200` after the deploy workflow hardening
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`

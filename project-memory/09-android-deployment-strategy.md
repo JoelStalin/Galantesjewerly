@@ -39,6 +39,8 @@ Validated on `u0_a325@192.168.12.193:8022` on 2026-03-25:
 
 ## Reboot Autostart Requirement
 
+Supersession note, 2026-03-29: the separate `Termux:Boot` add-on requirement below applies to F-Droid-style Termux installations. The validated production host for this project now runs the Google Play Termux build, where boot support is integrated into the main app. On that host, the filesystem contract still remains `~/.termux/boot/00-start-services`, but forcing the separate F-Droid add-on is no longer the correct recovery path.
+
 Reboot startup on this host is prepared but not yet activatable by shell alone because:
 
 - `com.termux.boot` is not installed on the device
@@ -49,6 +51,16 @@ That means the repo now contains the correct boot script and supervised service,
 - install the matching `Termux:Boot` add-on from the same source as the installed Termux app
 - open the `Termux:Boot` app once after installation
 - disable Android battery optimization for Termux
+
+## 2026-03-29 Addendum
+
+Validated on `u0_a382@10.1.10.119:8022` and `u0_a382@ssh.galantesjewelry.com:8022` on 2026-03-29:
+
+- `pm list packages -i` reported `package:com.termux  installer=com.android.vending`
+- the production host now uses a dedicated SSH hostname `ssh.galantesjewelry.com`
+- `sshd` is supervised by `termux-services` alongside `galantesjewelry` and `cloudflared`
+- GitHub Actions deploys now target the tunnel hostname rather than the private LAN IP
+- the remaining manual reliability task is disabling Android battery optimization for Termux
 
 ## AVF / VM Note
 
@@ -75,5 +87,7 @@ Android Virtualization Framework exists on supported ARM64 devices. That means a
 - 2026-03-25: Android 8.0 background execution limits make long-lived background work more constrained
 - 2026-03-25: Android app-specific storage rules constrain how and where app files are persisted
 - 2026-03-25: Android Virtualization Framework is supported only on ARM64 devices
+- 2026-03-29: Termux Play Store releases and app docs show the current Play build integrates boot support into the main app
 - local operational memory: `context/operations/termux_cloudflare_architecture.md`
 - runtime evidence: `project-memory/evidence/android-deployment-2026-03-25.md`
+- runtime evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`

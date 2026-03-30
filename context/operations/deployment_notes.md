@@ -14,6 +14,27 @@ Store secrets only in `.env` on the host:
 
 Do not commit deployment secrets to the repository.
 
+For GitHub Actions deploys:
+
+- the workflow uses `environment: Production`
+- deploy secrets therefore belong under **Environment secrets / Production**
+- the canonical SSH target is `ssh.galantesjewelry.com`, not the Android LAN IP
+- the Android host `.env` is shipped through the `ANDROID_APP_ENV` secret and restored on-device during deploy
+
+## GitHub Actions Deploy Flow
+1. build the source bundle in the runner temp directory
+2. install `openssh-client` and `cloudflared`
+3. connect to `ssh.galantesjewelry.com` as `u0_a382`
+4. upload the bundle, environment file, and deploy script
+5. run `scripts/deploy_termux_bundle.sh` on the Android host
+6. wait for `http://127.0.0.1:3000/api/health` on-device and `https://galantesjewelry.com/api/health` publicly
+
+## Android Boot Notes
+- on the validated Google Play build of Termux, boot support is integrated into the main app
+- keep using `~/.termux/boot/00-start-services`
+- do not assume the separate F-Droid `Termux:Boot` add-on is the right fix on this host
+- Android battery optimization must still be disabled manually for best uptime
+
 ## Fallback Plan (Non-Docker, Limited Environment)
 If deployed on an Android device via Termux where Docker cannot run:
 1. Keep `output: 'standalone'` and build the app as a Node.js standalone server.

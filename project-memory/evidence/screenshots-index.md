@@ -39,3 +39,5 @@
   - public-render timeout before featured-item ordering was forced for the temporary test item
 - `tests/e2e/artifacts/2026-03-25_20-04-09/99_failure.png`
   - repeated public-render timeout confirming the same root cause
+- `tests/e2e/artifacts/2026-03-29_19-08-09/99_failure.png`
+  - admin-save flow timed out waiting for the exact dashboard notice text during the production-domain validation session

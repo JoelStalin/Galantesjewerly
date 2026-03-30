@@ -314,3 +314,78 @@
 - Evidence: `project-memory/evidence/android-cloudflare-recovery-2026-03-25.md`
 - Related decision: `DEC-004-android-remote-docker-first.md`
 - Related test: Android remote tunnel recovery
+
+## CHG-022
+
+- Timestamp: 2026-03-29T18:45:00-04:00
+- File: `.github/workflows/deploy-android-termux.yml`
+- Function or block: workflow deploy path, bundle creation, SSH configuration, secret wiring, remote execution
+- Previous state: the repository had no durable CI path to deploy the Android Termux host, and early workflow attempts failed on bundle creation, secret handling, and SSH configuration
+- Change applied: added and hardened the GitHub Actions deploy workflow so it packages from `RUNNER_TEMP`, declares `environment: Production`, targets `ssh.galantesjewelry.com`, accepts raw or base64 SSH key secrets, uploads the bundle/env/script trio, and validates public health
+- Reason: make Android deploys reproducible from GitHub-hosted runners instead of relying on the workstation
+- Expected impact: pushes or manual workflow dispatches can update the Android host through the Cloudflare SSH hostname
+- Possible risk: CI still depends on Cloudflare tunnel health and correctly populated environment secrets
+- Validation performed: the repaired workflow advanced past every earlier failure mode, the public site remained healthy, and the domain SSH path passed
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+- Related decision: `DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`
+- Related test: GitHub Actions troubleshooting session, SSH domain validation, public health probe
+
+## CHG-023
+
+- Timestamp: 2026-03-29T18:52:00-04:00
+- Files: `scripts/install_termux_service.sh`, `scripts/termux-boot-start-services.sh`
+- Function or block: Android boot contract, package installation, supervised `sshd` startup
+- Previous state: the Android host used an orphan `sshd` process, and the installer messaging still reflected the older assumption that a separate `Termux:Boot` add-on was always required
+- Change applied: ensured `openssh` and `cloudflared` installation when required, removed the `sshd/down` guard, started `sshd` from the boot script, and detected the Google Play Termux build so integrated boot support is documented correctly
+- Reason: keep the Android host reachable after reboot and align the repo with the validated Termux distribution
+- Expected impact: the host now restarts `sshd`, the app, and the tunnel under `runit`, and future operators are less likely to chase the wrong Termux add-on path
+- Possible risk: Android battery optimization remains outside shell control and can still kill background services
+- Validation performed: `sv status` reported `run` for `sshd`, `galantesjewelry`, and `cloudflared`, and `ssh.galantesjewelry.com` authenticated successfully
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+- Related decision: `DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`
+- Related test: SSH domain validation and remote service-status probes
+
+## CHG-024
+
+- Timestamp: 2026-03-29T19:12:00-04:00
+- File: `scripts/deploy_termux_bundle.sh`
+- Function or block: remote deploy extract/build/restart/health sequence
+- Previous state: the remote deploy helper could leave the old app process alive or fail immediately after restart because it waited a fixed two seconds and probed health only once
+- Change applied: restarted `galantesjewelry` under `sv` explicitly and replaced the single health probe with a retry loop against `http://127.0.0.1:3000/api/health`
+- Reason: make deploy completion deterministic on the slower Android host
+- Expected impact: successful builds are less likely to be marked failed just because the service needs more than two seconds to become healthy
+- Possible risk: a real startup failure now takes longer to surface because the script waits through the retry budget
+- Validation performed: the Android host returned `status=ok` after restart and the public health endpoint remained `200`
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+- Related decision: `DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`
+- Related test: remote restart validation and public health probe
+
+## CHG-025
+
+- Timestamp: 2026-03-29T19:18:00-04:00
+- File: `.gitignore`
+- Function or block: runtime artifact exclusions
+- Previous state: temporary deploy bundles, Selenium artifacts, runtime Chrome-profile clones, and local blob data could be staged accidentally
+- Change applied: ignored temporary deploy directories, tarballs, logs, runtime test artifacts, cloned Chrome profiles, and `data/blobs`
+- Reason: keep commits focused on durable source changes and avoid committing local operational debris
+- Expected impact: future deploy or test sessions should generate less git noise and lower the chance of pushing artifacts by mistake
+- Possible risk: operators may forget that runtime evidence now lives outside version control unless it is intentionally indexed in project memory
+- Validation performed: `git status` dropped the runtime noise down to actual source changes plus the intentionally modified `data/cms.json`
+- Evidence: workstation git status checks during the 2026-03-29 session
+- Related decision: `DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`
+- Related test: git hygiene checks during deploy prep
+
+## CHG-026
+
+- Timestamp: 2026-03-29T22:17:55-04:00
+- Files: `project-memory/15-github-actions-termux-runbook.md`, `project-memory/decisions/DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`, `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`, `project-memory/conversations/2026-03-29_agent-session_004.md`, `project-memory/evidence/test-runs-index.md`, `project-memory/evidence/screenshots-index.md`, `project-memory/09-android-deployment-strategy.md`, `project-memory/14-next-steps.md`, `context/operations/deployment_notes.md`
+- Function or block: durable troubleshooting memory for GitHub Actions, Cloudflare SSH, and the Play Store Termux boot model
+- Previous state: the 2026-03-29 deploy-recovery session existed only in live terminal context and would have to be rediscovered during the next incident
+- Change applied: added a runbook, decision record, evidence file, conversation record, cross-linked test entries, screenshot index update, architecture addendum, and deployment-note updates
+- Reason: reduce mean time to recover the next time CI, SSH, or Android boot behavior regresses
+- Expected impact: future agents can jump directly to the documented failure modes and verified fixes instead of replaying the full investigation
+- Possible risk: the memory can become stale if future workflow or host changes are not documented with the same rigor
+- Validation performed: cross-references now point to the current evidence set, and the production domain plus SSH tunnel were still healthy while documenting the session
+- Evidence: `project-memory/evidence/github-actions-android-deploy-2026-03-29.md`
+- Related decision: `DEC-005-github-actions-termux-deploy-over-cloudflare-ssh.md`
+- Related test: SSH domain validation, public health probe, Selenium smoke
