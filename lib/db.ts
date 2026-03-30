@@ -1,5 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { deleteManagedImage } from '@/lib/storage';
+import { getDataRoot } from '@/lib/runtime-paths';
 
 export interface PageSection {
   id: string;
@@ -21,6 +23,10 @@ export interface SiteSettings {
   instagram_url?: string;
   facebook_url?: string;
   whatsapp_number?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  contact_address?: string;
+  appointment_email?: string;
 }
 
 export interface FeaturedItem {
@@ -40,7 +46,7 @@ interface DBData {
   featured_items: FeaturedItem[];
 }
 
-const dataDir = path.join(process.cwd(), 'data');
+const dataDir = getDataRoot();
 const dbFile = path.join(dataDir, 'cms.json');
 
 const INITIAL_DATA: DBData = {
@@ -49,9 +55,13 @@ const INITIAL_DATA: DBData = {
     logo_url: '/assets/branding/logo.png',
     site_title: "Galante's Jewelry by the Sea | Coastal Fine Jewelry",
     site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
-    instagram_url: 'https://instagram.com/',
-    facebook_url: 'https://facebook.com/',
-    whatsapp_number: ''
+    instagram_url: 'https://instagram.com/galantesjewelry',
+    facebook_url: 'https://facebook.com/galantesjewelry',
+    whatsapp_number: '1234567890',
+    contact_email: 'concierge@galantesjewelry.com',
+    contact_phone: '(305) 555-0199',
+    contact_address: '123 Overseas Highway, Islamorada, FL 33036',
+    appointment_email: 'appointments@galantesjewelry.com'
   },
   sections: [
     {
@@ -67,15 +77,15 @@ const INITIAL_DATA: DBData = {
     {
       id: '2',
       section_identifier: 'philosophy',
-      title: "Barefoot Luxury from Islamorada",
-      content_text: "We curate and craft fine nautical jewelry designed to celebrate the spirit of the Florida Keys. Whether you are marking an anniversary, planning a destination wedding, or restoring an heirloom timepiece, our concierge service ensures every detail is attended to with master craftsmanship.",
+      title: "Barefoot Luxury in Islamorada",
+      content_text: "We curate and craft fine nautical jewelry designed to celebrate the spirit of the Florida Keys. Whether you're marking an anniversary, planning a destination wedding, or restoring an heirloom timepiece, our concierge service ensures every detail is attended to with master craftsmanship.",
       image_url: "",
       is_active: true
     },
     {
       id: '6',
       section_identifier: 'review',
-      title: "Words from Our Patrons",
+      title: "Client Testimonials",
       content_text: "\"Galante's created the most breathtaking engagement ring for my fiancé. Their attention to detail and personal concierge service made our Islamorada trip truly unforgettable.\"",
       subtitle: "— Sarah & James, Florida",
       image_url: "",
@@ -127,6 +137,7 @@ const INITIAL_DATA: DBData = {
 };
 
 let memCache: DBData | null = null;
+let memCacheMtimeMs: number | null = null;
 let initPromise: Promise<void> | null = null;
 
 async function performInit() {
@@ -136,23 +147,43 @@ async function performInit() {
   
   try {
     const fileContent = await fs.readFile(dbFile, 'utf-8');
-    const parsed = JSON.parse(fileContent) as any;
+    const parsed = JSON.parse(fileContent) as Partial<DBData>;
     
     // Migration logic moved here to run only once per process
     let needsUpdate = false;
-    if (!parsed.featured_items) {
-      parsed.featured_items = INITIAL_DATA.featured_items;
-      parsed.sections = (parsed.sections || []).filter((s: any) => !s.section_identifier.startsWith('featured_'));
+    if (!parsed.settings) {
+      parsed.settings = INITIAL_DATA.settings;
+      needsUpdate = true;
+    } else {
+      parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
+    }
+
+    if (!parsed.sections) {
+      parsed.sections = INITIAL_DATA.sections;
       needsUpdate = true;
     }
+
+    if (!parsed.featured_items) {
+      parsed.featured_items = INITIAL_DATA.featured_items;
+      parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
+      needsUpdate = true;
+    }
+
+    const hydratedData: DBData = {
+      settings: parsed.settings ?? INITIAL_DATA.settings,
+      sections: parsed.sections ?? INITIAL_DATA.sections,
+      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
+    };
     
     if (needsUpdate) {
-      await fs.writeFile(dbFile, JSON.stringify(parsed, null, 2), 'utf-8');
+      await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
     }
-    memCache = parsed;
+    memCache = hydratedData;
+    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   } catch {
     await fs.writeFile(dbFile, JSON.stringify(INITIAL_DATA, null, 2), 'utf-8');
     memCache = INITIAL_DATA;
+    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   }
 }
 
@@ -165,14 +196,45 @@ async function initDB() {
 
 async function readDB(): Promise<DBData> {
   await initDB();
-  if (memCache) return memCache;
+  const fileStats = await fs.stat(dbFile);
+
+  if (memCache && memCacheMtimeMs === fileStats.mtimeMs) {
+    return memCache;
+  }
+
   const fileContent = await fs.readFile(dbFile, 'utf-8');
-  return JSON.parse(fileContent);
+  const parsed = JSON.parse(fileContent) as DBData;
+  memCache = parsed;
+  memCacheMtimeMs = fileStats.mtimeMs;
+  return parsed;
 }
 
 async function writeDB(data: DBData) {
-  memCache = data;
   await fs.writeFile(dbFile, JSON.stringify(data, null, 2), 'utf-8');
+  memCache = data;
+  memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
+}
+
+function collectReferencedImages(data: DBData) {
+  return [
+    data.settings?.favicon_url,
+    data.settings?.logo_url,
+    ...(data.sections || []).map((section) => section.image_url),
+    ...(data.featured_items || []).map((item) => item.image_url),
+  ].filter((value): value is string => Boolean(value));
+}
+
+async function cleanupRemovedManagedImages(previousUrls: string[], currentData: DBData) {
+  const remainingUrls = new Set(collectReferencedImages(currentData));
+  const removedUrls = [...new Set(previousUrls.filter((url) => Boolean(url) && !remainingUrls.has(url)))];
+
+  for (const removedUrl of removedUrls) {
+    try {
+      await deleteManagedImage(removedUrl);
+    } catch (error) {
+      console.error('[DB] Failed to cleanup managed image:', removedUrl, error);
+    }
+  }
 }
 
 export async function getSettings(): Promise<SiteSettings> {
@@ -186,8 +248,10 @@ export async function getSettings(): Promise<SiteSettings> {
 
 export async function updateSettings(updates: Partial<SiteSettings>): Promise<SiteSettings> {
   const data = await readDB();
+  const previousUrls = [data.settings?.favicon_url, data.settings?.logo_url].filter((value): value is string => Boolean(value));
   data.settings = { ...data.settings, ...updates };
   await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
   return data.settings;
 }
 
@@ -205,8 +269,10 @@ export async function updateSection(id: string, updates: Partial<PageSection>): 
   const index = data.sections.findIndex(s => s.id === id);
   if (index === -1) return null;
 
+  const previousUrls = [data.sections[index].image_url].filter((value): value is string => Boolean(value));
   data.sections[index] = { ...data.sections[index], ...updates };
   await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
   return data.sections[index];
 }
 
@@ -233,17 +299,24 @@ export async function updateFeaturedItem(id: string, updates: Partial<FeaturedIt
   const index = data.featured_items.findIndex(s => s.id === id);
   if (index === -1) return null;
 
+  const previousUrls = [data.featured_items[index].image_url].filter((value): value is string => Boolean(value));
   data.featured_items[index] = { ...data.featured_items[index], ...updates };
   await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
   return data.featured_items[index];
 }
 
 export async function deleteFeaturedItem(id: string): Promise<boolean> {
   const data = await readDB();
   const initialLength = data.featured_items.length;
+  const previousUrls = data.featured_items
+    .filter(s => s.id === id)
+    .map((item) => item.image_url)
+    .filter((value): value is string => Boolean(value));
   data.featured_items = data.featured_items.filter(s => s.id !== id);
   if (data.featured_items.length !== initialLength) {
     await writeDB(data);
+    await cleanupRemovedManagedImages(previousUrls, data);
     return true;
   }
   return false;

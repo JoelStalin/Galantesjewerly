@@ -1,24 +1,26 @@
 import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { existsSync } from 'fs';
+import { resolveManagedImageFile } from '@/lib/storage';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
-  if (!id) return new Response('Missing id', { status: 400 });
-
-  // Strictly look in data/blobs to bypass public/ folder issues in Android
-  const filePath = join(process.cwd(), 'data', 'blobs', id);
-
-  if (!existsSync(filePath)) {
-    return new Response('Imagen no encontrada en el servidor de datos', { status: 404 });
+  if (!id) {
+    return new Response('Imagen ID no proporcionado', { status: 400 });
   }
 
   try {
+    const { filePath, storageId } = resolveManagedImageFile(id);
+
+    if (!existsSync(filePath)) {
+      console.error(`[ImageBridge] 404 Not Found: ${filePath}`);
+      return new Response('Imagen no encontrada en el servidor de datos', { status: 404 });
+    }
+
     const fileBuffer = await readFile(filePath);
-    const ext = id.split('.').pop();
+    const ext = storageId.split('.').pop();
     
     return new NextResponse(fileBuffer, {
       headers: {
@@ -27,6 +29,11 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid storage id') {
+      return new Response('Imagen ID inválido', { status: 400 });
+    }
+
+    console.error('[ImageBridge] Error serving image:', error);
     return new Response('Error al leer la imagen del disco', { status: 500 });
   }
 }

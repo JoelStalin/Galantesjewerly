@@ -1,33 +1,81 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ImageUploaderProps {
   label: string;
   currentUrl: string;
   onUploadSuccess: (url: string) => void;
+  onUploadStateChange?: (isUploading: boolean) => void;
   isFavicon?: boolean;
+  onRemove?: () => void;
+  inputTestId?: string;
+  previewTestId?: string;
+  removeButtonTestId?: string;
 }
 
-export default function ImageUploader({ label, currentUrl, onUploadSuccess, isFavicon }: ImageUploaderProps) {
+export default function ImageUploader({ label, currentUrl, onUploadSuccess, onUploadStateChange, isFavicon, onRemove, inputTestId, previewTestId, removeButtonTestId }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setError('');
+
+    // Client-side validation
+    if (file.size > 5 * 1024 * 1024) {
+      setError('El archivo es demasiado grande (máximo 5MB).');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setError('Solo se permiten archivos de imagen.');
+      return;
+    }
+
     // Show immediate preview
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
     const objectUrl = URL.createObjectURL(file);
     setPreview(objectUrl);
 
     uploadFile(file);
   };
 
+  const handleRemove = () => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    setError('');
+    setPreview(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    onRemove?.();
+  };
+
   const uploadFile = async (file: File | Blob, fileName?: string) => {
     setUploading(true);
+    onUploadStateChange?.(true);
+
     try {
       const formData = new FormData();
       formData.append('file', file, fileName || (file as File).name);
@@ -40,17 +88,28 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, isFa
         body: formData,
       });
 
+      if (res.status === 401) {
+        window.location.replace('/admin/login');
+        return;
+      }
+
       const data = await res.json();
+
       if (data.success) {
         onUploadSuccess(data.url);
-        setPreview(null); // Clear preview after successful upload
+        setError('');
+        setPreview(null);
       } else {
-        alert('Error al subir: ' + data.error);
+        const errorMsg = data.error || 'Error desconocido';
+        console.error('[Uploader] Server Error:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
-      alert('Error de conexión al subir el archivo');
+      console.error('[Uploader] Connection Error:', err);
+      setError('Error de conexión con el servidor. Verifique que la aplicación esté corriendo.');
     } finally {
       setUploading(false);
+      onUploadStateChange?.(false);
     }
   };
 
@@ -65,6 +124,7 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, isFa
             <img 
               src={preview || currentUrl} 
               alt="Preview" 
+              data-testid={previewTestId}
               className="w-full h-full object-contain"
             />
           ) : (
@@ -84,20 +144,39 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, isFa
           <div className="text-[10px] text-zinc-400 max-w-[200px] leading-relaxed">
             {isFavicon ? 'Se convertirá automáticamente a 32x32px (Cuadrado)' : 'Formatos recomendados: JPG, PNG, WEBP.'}
           </div>
-          <button 
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="text-[11px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded border border-amber-200 transition-all"
-            disabled={uploading}
-          >
-            {uploading ? 'Subiendo...' : 'Seleccionar Archivo'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button 
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[11px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded border border-amber-200 transition-all"
+              disabled={uploading}
+            >
+              {uploading ? 'Subiendo...' : 'Seleccionar Archivo'}
+            </button>
+            {(preview || currentUrl) && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                data-testid={removeButtonTestId}
+                className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 px-3 py-1.5 rounded border border-zinc-200 transition-all"
+                disabled={uploading}
+              >
+                Quitar Imagen
+              </button>
+            )}
+          </div>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-relaxed text-red-700">
+              {error}
+            </div>
+          )}
           <input 
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileChange} 
+            data-testid={inputTestId}
             className="hidden" 
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
           />
         </div>
       </div>

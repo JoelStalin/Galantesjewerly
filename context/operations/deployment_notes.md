@@ -16,11 +16,12 @@ Do not commit deployment secrets to the repository.
 
 ## Fallback Plan (Non-Docker, Limited Environment)
 If deployed on an Android device via Termux where Docker cannot run:
-1. Run `npm run build` with `output: 'export'` configured in `next.config.ts`.
-2. Use raw `nginx` or a simple Python/HTTP server to serve `/out`.
-3. Run `cloudflared` binary directly in Termux.
+1. Keep `output: 'standalone'` and build the app as a Node.js standalone server.
+2. Copy the standalone bundle together with `public`, `.next/static`, and the persistent `data` directory.
+3. Start `node server.js` in Termux with `NODE_ENV=production`, `PORT=3000`, and writable `data/blobs`.
+4. Run the `cloudflared` binary directly in Termux only if Docker is not part of the environment.
 
 ## Standard Container Flow
-1. `web` serves the Next.js application on internal port `3000`.
-2. `nginx` proxies public HTTP traffic to `web`.
-3. `cloudflared` publishes the Nginx service to Cloudflare without opening host ports manually.
+1. `web` serves the Next.js standalone server on internal port `3000`.
+2. `nginx` proxies public HTTP traffic to `web` and forwards the required headers.
+3. `cloudflared` publishes the Nginx service to Cloudflare without exposing the Node container directly.

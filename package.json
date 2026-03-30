@@ -5,8 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build:android": "next build --webpack",
+    "start": "node scripts/start-standalone.mjs",
+    "start:next": "next start",
+    "lint": "eslint app components lib proxy.ts",
+    "e2e:admin": "python tests/e2e/admin_image_session_flow.py",
+    "e2e:smoke": "python tests/e2e/public_smoke.py",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "jose": "^6.2.2",

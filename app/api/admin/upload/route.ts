@@ -1,59 +1,50 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
-import sharp from 'sharp';
+import { getAdminSessionFromRequest } from '@/lib/auth';
+import { saveProcessedImage } from '@/lib/storage';
 
 export async function POST(request: Request) {
+  const session = await getAdminSessionFromRequest(request);
+
+  if (!session) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const isFavicon = formData.get('isFavicon') === 'true';
 
     if (!file) {
-      return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 });
+      return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    let buffer = Buffer.from(bytes) as any;
+    try {
+      const uploadedImage = await saveProcessedImage(file, { isFavicon });
 
-    // Ensure storage directory exists
-    const storageDir = join(process.cwd(), 'data', 'blobs');
-    if (!existsSync(storageDir)) {
-      await mkdir(storageDir, { recursive: true });
+      return NextResponse.json({
+        contentType: uploadedImage.contentType,
+        size: uploadedImage.size,
+        storageId: uploadedImage.storageId,
+        success: true,
+        url: uploadedImage.url,
+      });
+    } catch (storageError) {
+      const errorMessage = storageError instanceof Error
+        ? storageError.message
+        : 'Error interno inesperado en la subida';
+      const status = errorMessage.includes('maximo 5MB')
+        || errorMessage.includes('Formato de archivo')
+        || errorMessage.includes('imagen valida')
+        ? 400
+        : 500;
+
+      return NextResponse.json({ error: errorMessage }, { status });
     }
-
-    // Processing with Sharp
-    let sharpInstance = sharp(buffer);
-    
-    if (isFavicon) {
-      buffer = await sharpInstance
-        .resize(32, 32, { fit: 'cover' })
-        .png()
-        .toBuffer() as any;
-    } else {
-      buffer = await sharpInstance
-        .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer() as any;
-    }
-
-    // Save strictly to DATA folder to avoid static server issues
-    const timestamp = Date.now();
-    const extension = isFavicon ? 'png' : 'webp';
-    const filename = `${timestamp}.${extension}`;
-    const path = join(storageDir, filename);
-
-    await writeFile(path, buffer);
-    console.log(`Fichero guardado en DATA: ${path}`);
-
-    // Return the new dynamic image bridge URL
-    return NextResponse.json({ 
-      success: true, 
-      url: `/api/image?id=${filename}` 
-    });
   } catch (error) {
-    console.error('Error en la subida:', error);
-    return NextResponse.json({ error: 'Error interno al procesar la imagen' }, { status: 500 });
+    console.error('[Upload] Internal Error:', error);
+    return NextResponse.json(
+      { error: 'Error interno inesperado en la subida' },
+      { status: 500 },
+    );
   }
 }

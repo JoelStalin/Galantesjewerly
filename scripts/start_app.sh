@@ -1,24 +1,23 @@
 #!/bin/bash
-# Galante's Jewelry - Termux Bootstrap Script
+set -e
 
-echo "🌿 Galante's Jewelry: Iniciando Entorno Standalone..."
+echo "Galante's Jewelry: starting standalone runtime..."
 
-# 1. Limpieza de procesos previos
-echo "🧹 Limpiando procesos antiguos..."
 pkill -f "node server.js" || true
 
-# 2. Asegurar estructura de carpetas y permisos
-echo "🔑 Verificando permisos..."
 mkdir -p data/blobs
-chmod -R 777 data
-chmod -R 777 public
+chmod -R 775 data
 
-# 3. Iniciar servidor con logs persistentes
-echo "🚀 Arrancando Servidor en Puerto 3000..."
-export PORT=3000
-export HOSTNAME="0.0.0.0"
+if [ ! -f "server.js" ]; then
+  echo "server.js not found. Extract or build the standalone bundle before running this script."
+  exit 1
+fi
 
-# Ejecutar en segundo plano
+export NODE_ENV=production
+export PORT="${PORT:-3000}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export APP_DATA_DIR="${APP_DATA_DIR:-$(pwd)/data}"
+
 nohup node server.js > server.log 2>&1 &
 
-echo "✅ Aplicación iniciada. Revisa server.log para detalles."
+echo "Application started. Check server.log for runtime output."

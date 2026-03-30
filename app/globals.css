@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+
+@source "./";
+@source "../components";
 
 @theme {
   --color-primary: #0f2d46;
@@ -9,8 +12,8 @@
   --color-surface: #fffdf9;
   --color-foreground: #141414;
 
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Georgia, "Times New Roman", ui-serif, serif;
 }
 
 :root {

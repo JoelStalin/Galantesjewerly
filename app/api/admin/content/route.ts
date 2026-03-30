@@ -1,18 +1,39 @@
 import { NextResponse } from 'next/server';
 import { getAllSections, updateSection, getSettings, updateSettings, getFeaturedItems, addFeaturedItem, updateFeaturedItem, deleteFeaturedItem } from '@/lib/db';
+import { getAdminSessionFromRequest } from '@/lib/auth';
 
-export async function GET() {
+async function requireAdminSession(request: Request) {
+  const session = await getAdminSessionFromRequest(request);
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return null;
+}
+
+export async function GET(request: Request) {
+  const unauthorizedResponse = await requireAdminSession(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const sections = await getAllSections();
     const settings = await getSettings();
     const featured = await getFeaturedItems();
     return NextResponse.json({ sections, settings, featured });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
+  const unauthorizedResponse = await requireAdminSession(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const { id, updates, type } = await request.json();
     
@@ -28,6 +49,7 @@ export async function PUT(request: Request) {
 
     if (type === 'featured_update' && id && updates) {
       const updated = await updateFeaturedItem(id, updates);
+      if (!updated) return NextResponse.json({ error: 'Featured item not found' }, { status: 404 });
       return NextResponse.json({ success: true, featured: updated });
     }
 
@@ -38,20 +60,26 @@ export async function PUT(request: Request) {
     }
     
     return NextResponse.json({ error: 'Invalid payload type' }, { status: 400 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
+  const unauthorizedResponse = await requireAdminSession(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const { id, type } = await request.json();
     if (type === 'featured_delete' && id) {
       const success = await deleteFeaturedItem(id);
+      if (!success) return NextResponse.json({ error: 'Featured item not found' }, { status: 404 });
       return NextResponse.json({ success });
     }
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

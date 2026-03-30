@@ -14,7 +14,7 @@ export function getContextContent(category: string, filename: string): string | 
   }
 }
 
-export function getJsonContext(category: string, filename: string): any | null {
+export function getJsonContext(category: string, filename: string): unknown | null {
   try {
     const content = getContextContent(category, filename);
     return content ? JSON.parse(content) : null;

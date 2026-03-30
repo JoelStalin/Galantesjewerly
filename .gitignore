@@ -29,6 +29,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.tmp-start-standalone*.log
+build_log.txt
+test_error.png
+*.tar.gz
+*.zip
+
+# runtime content
+/temp_deploy/
+/temp_standalone/
+/data/blobs/
+/tests/e2e/artifacts/
+/tests/e2e/.runtime/
+/tests/e2e/__pycache__/
 
 # env files (can opt-in for committing if needed)
 .env*

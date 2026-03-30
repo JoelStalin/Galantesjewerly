@@ -32,9 +32,11 @@ export function FeaturedCarousel({ items }: { items: FeaturedItem[] }) {
     <div className="max-w-7xl mx-auto w-full">
        <div className={`grid grid-cols-1 md:grid-cols-3 gap-12 transition-opacity duration-300 ${fade ? 'opacity-100' : 'opacity-0'}`}>
           {visibleItems.map((feat, i) => (
-             <div key={`${feat.id}-${startIndex}-${i}`} className="flex flex-col items-center text-center">
+             <div key={`${feat.id}-${startIndex}-${i}`} data-testid={`featured-public-card-${feat.id}`} data-title={feat.title} className="flex flex-col items-center text-center">
                 <div className="w-full h-80 bg-stone-100 mb-6 relative overflow-hidden group">
                    <div 
+                     data-testid={`featured-public-image-${feat.id}`}
+                     data-image-url={feat.image_url}
                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" 
                      style={{ backgroundImage: `url('${feat.image_url}')` }}
                    ></div>
@@ -55,6 +57,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedItem[] }) {
             {items.map((_, idx) => (
               <button 
                 key={idx}
+                data-testid={`featured-dot-${idx}`}
                 onClick={() => { 
                   setFade(false); 
                   setTimeout(() => { setStartIndex(idx); setFade(true); }, 300); 

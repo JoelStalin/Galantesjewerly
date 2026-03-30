@@ -1,72 +1,111 @@
-# Galante's Jewelry by the Sea 🌊
+# Galante's Jewelry by the Sea
 
-A high-performance, mobile-first Next.js web application for a luxury jewelry boutique in Islamorada, Florida Keys.
+Next.js 16 App Router storefront with an authenticated admin panel, managed image uploads, persistent file-backed CMS storage, Docker packaging, and an Android-oriented deployment strategy.
 
-## Architecture & Stack
-- **Framework**: Next.js 16 (App Router, React 19)
-- **Styling**: Tailwind CSS (Native v4 with CSS variables)
-- **Infrastructure**: Docker + Nginx reverse proxy
-- **Networking**: Cloudflare Tunnel (`cloudflared`)
-- **Operative Memory**: `/context`
+## Stack
 
-This architecture keeps the app portable, secure, and ready for private deployment without exposing the host directly to the public internet.
+- Next.js 16.2.1 with App Router
+- React 19.2.4
+- TypeScript
+- Tailwind CSS v4
+- JWT cookie auth with `jose`
+- Image processing with `sharp`
+- Persistent CMS data in `data/cms.json` and `data/blobs`
+- Docker + Nginx + optional Cloudflare Tunnel
 
-## Prerequisites
-- Node.js 20+ (if running bare metal)
-- Docker & Docker Compose (for containerized deployment)
-- Cloudflare Tunnel token (if exposing via Cloudflare)
+## Environment
 
-## Environment Variables
-Create a `.env` file with at least:
+Create `.env` from `.env.example` and define at minimum:
 
 ```env
-CF_TUNNEL_TOKEN=your_cloudflare_tunnel_token
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change_me
+ADMIN_SECRET_KEY=change_me_32_chars_minimum
 PORT=3000
+NGINX_PORT=8080
 SITE_URL=https://galantesjewelry.com
 ```
 
-Do not commit secrets.
+Do not commit live secrets. The current repository history and working tree must be treated as exposed if a real token or password was committed.
 
 ## Local Development
-1. Install dependencies: `npm install`
-2. Run development server: `npm run dev`
-3. View at `http://localhost:3000`
-
-## Build & Production (Docker)
-1. Make sure `.env` contains `CF_TUNNEL_TOKEN`.
-2. Run `docker compose up -d --build`.
-3. Services started:
-   - `web`: Next.js app
-   - `nginx`: reverse proxy
-   - `cloudflared`: Cloudflare Tunnel
-
-## Remote SSH Deployment
-1. Configure `REMOTE_HOST`, `REMOTE_PORT`, `REMOTE_USER`, and `REMOTE_APP_DIR` in `.env`.
-2. Run `./scripts/deploy_remote.sh` (Requires rsync & SSH access, preferably via key).
-3. On the server, run `./scripts/bootstrap_remote.sh`.
-
-## Cloudflare Tunnel
-The tunnel runs as a dedicated container:
 
 ```bash
-docker compose logs -f cloudflared
+npm install
+npm run dev
 ```
 
-Traffic flow:
+Open `http://127.0.0.1:3000`.
 
-Cloudflare Edge → `cloudflared` → `nginx` → `web`
+## Local Production Runtime
 
-## AI Operative Memory (`/context`)
-The `/context` folder stores:
-- brand book
-- voice and tone
-- business strategy
-- prompts
-- customer/data schemas
-- deployment notes
+Build the standalone server and run it with the repository start helper:
 
-## Daily Operations & Content Management
-- Brand/copy: edit in `app/`
-- AI rules: edit in `context/prompts/` and `context/brand/`
-- Tunnel logs: `docker logs galantes_tunnel`
-- Nginx logs: `docker logs galantes_nginx`
+```bash
+npm run build
+npm run start
+```
+
+`npm run start` launches `.next/standalone/server.js`. This keeps local production behavior aligned with Docker and Termux.
+
+## Docker
+
+Development container:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Production-style stack with Nginx:
+
+```bash
+docker compose up -d --build
+```
+
+Optional Cloudflare Tunnel:
+
+```bash
+docker compose --profile tunnel up -d --build
+```
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f web
+docker compose logs -f nginx
+```
+
+## Selenium E2E
+
+Prepare the persistent cloned Chrome profile:
+
+```bash
+python tests/e2e/profile_manager.py --profile Default
+```
+
+Run the main admin suite:
+
+```bash
+python tests/e2e/admin_image_session_flow.py
+```
+
+Artifacts are written to `tests/e2e/artifacts/YYYY-MM-DD_HH-mm-ss/`.
+
+## Android-Oriented Deployment
+
+The repository remains fully dockerized, but Android itself is not treated as a first-class Docker host. The supported patterns are:
+
+- Android as operator device controlling a remote Linux Docker host.
+- Android Termux running the standalone Node bundle directly when Docker is not available.
+- Android with a Linux VM only when the VM explicitly provides a supported Docker environment.
+
+Detailed architecture, decisions, and evidence live in `project-memory/`.
+
+## Long-Term Technical Memory
+
+Use the following sources together:
+
+- `project-memory/` for durable engineering traceability
+- `context/operations/` for operational architecture notes
+- `tests/e2e/` for executable validation assets

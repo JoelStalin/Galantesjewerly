@@ -1,0 +1,112 @@
+name: Deploy Android Termux
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      REMOTE_BUNDLE: ~/galantesjewelry_bundle.tar.gz
+      REMOTE_ENV: ~/galantesjewelry.env
+      REMOTE_SCRIPT: ~/galantesjewelry_deploy_termux_bundle.sh
+      REMOTE_STAGE: ~/galantesjewelry_ci
+      REMOTE_APP_DIR: ~/galantesjewelry
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deploy bundle
+        run: |
+          tar \
+            --exclude-vcs \
+            --exclude=node_modules \
+            --exclude=.next \
+            --exclude=.env \
+            --exclude=temp_standalone \
+            --exclude=temp_deploy \
+            --exclude=tests/e2e/artifacts \
+            --exclude=tests/e2e/.runtime \
+            --exclude=__pycache__ \
+            --exclude='*.zip' \
+            --exclude='*.tar.gz' \
+            --exclude='*.log' \
+            --exclude=.tmp-start-standalone.err.log \
+            --exclude=.tmp-start-standalone.out.log \
+            --exclude=test_error.png \
+            --exclude=cloudflare_route_latest.html \
+            --exclude=build_log.txt \
+            --exclude=data/blobs \
+            --exclude=data/cms.json \
+            -czf galantesjewelry_bundle.tar.gz .
+
+      - name: Install SSH client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
+      - name: Install cloudflared
+        if: ${{ secrets.ANDROID_SSH_USE_CLOUDFLARED == 'true' }}
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/cloudflared
+
+      - name: Configure SSH
+        env:
+          ANDROID_SSH_PRIVATE_KEY: ${{ secrets.ANDROID_SSH_PRIVATE_KEY }}
+          ANDROID_SSH_HOST: ${{ secrets.ANDROID_SSH_HOST }}
+          ANDROID_SSH_USER: ${{ secrets.ANDROID_SSH_USER }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$ANDROID_SSH_PRIVATE_KEY" > ~/.ssh/android_termux
+          chmod 600 ~/.ssh/android_termux
+          {
+            echo "Host android-termux"
+            echo "  HostName $ANDROID_SSH_HOST"
+            echo "  User $ANDROID_SSH_USER"
+            echo "  IdentityFile ~/.ssh/android_termux"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking accept-new"
+            if [ "${{ secrets.ANDROID_SSH_USE_CLOUDFLARED }}" = "true" ]; then
+              echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h"
+            fi
+          } >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          if [ -n "$CF_ACCESS_CLIENT_ID" ] && [ -n "$CF_ACCESS_CLIENT_SECRET" ]; then
+            {
+              echo "CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID"
+              echo "CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Upload bundle and env
+        env:
+          ANDROID_APP_ENV: ${{ secrets.ANDROID_APP_ENV }}
+        run: |
+          printf '%s' "$ANDROID_APP_ENV" > android.env
+          scp galantesjewelry_bundle.tar.gz android-termux:$REMOTE_BUNDLE
+          scp android.env android-termux:$REMOTE_ENV
+          scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
+          ssh android-termux "chmod 700 $REMOTE_SCRIPT"
+
+      - name: Deploy on Android
+        run: |
+          ssh android-termux "
+            APP_DIR=$REMOTE_APP_DIR \
+            BUNDLE_PATH=$REMOTE_BUNDLE \
+            ENV_SOURCE=$REMOTE_ENV \
+            STAGING_DIR=$REMOTE_STAGE \
+            sh $REMOTE_SCRIPT
+          "
+
+      - name: Verify public health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          if [ -n "$HEALTHCHECK_URL" ]; then
+            curl --fail --show-error --silent "$HEALTHCHECK_URL"
+          fi
