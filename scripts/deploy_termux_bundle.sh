@@ -50,8 +50,15 @@ if [ -d "$PREFIX_PATH/var/service/cloudflared" ]; then
   sv up cloudflared >/dev/null 2>&1 || true
 fi
 
-sleep 2
-curl -fsS http://127.0.0.1:3000/api/health
+i=0
+until curl -fsS http://127.0.0.1:3000/api/health; do
+  i=$((i + 1))
+  if [ "$i" -ge 30 ]; then
+    echo "Application health check failed after restart."
+    exit 1
+  fi
+  sleep 2
+done
 
 rm -rf "$STAGING_DIR"
 rm -f "$BUNDLE_PATH"
