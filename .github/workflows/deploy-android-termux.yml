@@ -15,7 +15,9 @@ jobs:
       REMOTE_SCRIPT: ~/galantesjewelry_deploy_termux_bundle.sh
       REMOTE_STAGE: ~/galantesjewelry_ci
       REMOTE_APP_DIR: ~/galantesjewelry
-      ANDROID_SSH_USE_CLOUDFLARED: ${{ secrets.ANDROID_SSH_USE_CLOUDFLARED }}
+      ANDROID_SSH_HOST: ssh.galantesjewelry.com
+      ANDROID_SSH_USER: u0_a382
+      ANDROID_SSH_USE_CLOUDFLARED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,11 +61,12 @@ jobs:
       - name: Configure SSH
         env:
           ANDROID_SSH_PRIVATE_KEY: ${{ secrets.ANDROID_SSH_PRIVATE_KEY }}
-          ANDROID_SSH_HOST: ${{ secrets.ANDROID_SSH_HOST }}
-          ANDROID_SSH_USER: ${{ secrets.ANDROID_SSH_USER }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
+          [ -n "$ANDROID_SSH_PRIVATE_KEY" ] || { echo "ANDROID_SSH_PRIVATE_KEY secret is missing"; exit 1; }
+          [ -n "$ANDROID_SSH_HOST" ] || { echo "ANDROID_SSH_HOST is empty"; exit 1; }
+          [ -n "$ANDROID_SSH_USER" ] || { echo "ANDROID_SSH_USER is empty"; exit 1; }
           mkdir -p ~/.ssh
           printf '%s\n' "$ANDROID_SSH_PRIVATE_KEY" > ~/.ssh/android_termux
           chmod 600 ~/.ssh/android_termux
@@ -90,6 +93,7 @@ jobs:
         env:
           ANDROID_APP_ENV: ${{ secrets.ANDROID_APP_ENV }}
         run: |
+          [ -n "$ANDROID_APP_ENV" ] || { echo "ANDROID_APP_ENV secret is missing"; exit 1; }
           ENV_FILE="$RUNNER_TEMP/android.env"
           printf '%s' "$ANDROID_APP_ENV" > "$ENV_FILE"
           scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
