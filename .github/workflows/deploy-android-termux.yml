@@ -9,6 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
     env:
       REMOTE_BUNDLE: ~/galantesjewelry_bundle.tar.gz
       REMOTE_ENV: ~/galantesjewelry.env
