@@ -676,7 +676,7 @@ export default function IntegrationsPanel() {
               value={activeAppointmentConfig.gmailSender}
               onChange={(event) => updateActiveAppointmentConfig({ gmailSender: event.target.value })}
               className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-amber-300"
-              placeholder="ceo@galantesjewelry.com"
+              placeholder="joelstalin2105@gmail.com"
               autoComplete="off"
             />
           </div>

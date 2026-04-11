@@ -67,7 +67,8 @@ const integrationsFile = path.join(dataDir, 'integrations.json');
 const MINIMUM_GOOGLE_SCOPES = ['openid', 'email', 'profile'];
 const DEFAULT_TIMEZONE = 'America/New_York';
 const DEFAULT_DURATION_MINUTES = 60;
-const DEFAULT_GMAIL_ACCOUNT = 'ceo@galantesjewelry.com';
+const DEFAULT_GMAIL_SENDER = 'joelstalin2105@gmail.com';
+const DEFAULT_GMAIL_RECIPIENT = 'ceo@galantesjewelry.com';
 
 const DEFAULT_GOOGLE_CONFIGS: Record<IntegrationEnvironment, StoredGoogleIntegration> = {
   development: buildDefaultGoogleConfig({
@@ -120,8 +121,8 @@ function buildDefaultAppointmentConfig(environment: IntegrationEnvironment): Sto
     googleCalendarId: '',
     googleServiceAccountEmail: '',
     gmailNotificationsEnabled: false,
-    gmailRecipientInbox: DEFAULT_GMAIL_ACCOUNT,
-    gmailSender: DEFAULT_GMAIL_ACCOUNT,
+    gmailRecipientInbox: DEFAULT_GMAIL_RECIPIENT,
+    gmailSender: DEFAULT_GMAIL_SENDER,
     appointmentDurationMinutes: DEFAULT_DURATION_MINUTES,
     appointmentTimezone: DEFAULT_TIMEZONE,
     encryptedSecrets: {},

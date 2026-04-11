@@ -112,7 +112,7 @@ export async function testMailConnection(environment: IntegrationEnvironment) {
 
   if (getAppointmentTestMode()) {
     return {
-      sender: config.sender || 'ceo@galantesjewelry.com',
+      sender: config.sender || 'joelstalin2105@gmail.com',
       recipientInbox: config.recipientInbox || 'ceo@galantesjewelry.com',
     };
   }

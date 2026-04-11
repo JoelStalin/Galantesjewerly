@@ -155,7 +155,7 @@ def configure_mock_integrations(base_url: str) -> None:
             'googleServiceAccountEmail': 'mock-calendar@galantes.iam.gserviceaccount.com',
             'gmailNotificationsEnabled': True,
             'gmailRecipientInbox': 'ceo@galantesjewelry.com',
-            'gmailSender': 'ceo@galantesjewelry.com',
+            'gmailSender': 'joelstalin2105@gmail.com',
             'appointmentDurationMinutes': 60,
             'appointmentTimezone': 'America/New_York',
             'secrets': {
@@ -287,7 +287,8 @@ def main() -> None:
         'profile_name': PROFILE_NAME,
         'artifact_dir': str(artifact_dir),
         'app_data_dir': str(app_data_dir),
-        'gmail_account': 'ceo@galantesjewelry.com',
+        'gmail_sender': 'joelstalin2105@gmail.com',
+        'gmail_recipient': 'ceo@galantesjewelry.com',
         'test_mode': os.getenv('APPOINTMENT_TEST_MODE', 'success'),
         'cases': [],
         'errors': [],
@@ -304,7 +305,7 @@ def main() -> None:
         report['cases'].append({
             'name': 'admin_integration_settings',
             'status': 'pass',
-            'details': 'Saved Calendar and Gmail settings with masked secrets for ceo@galantesjewelry.com.',
+            'details': 'Saved Calendar sender and recipient settings with masked secrets.',
         })
 
         driver, profile_dir = get_driver(PROFILE_NAME, headless=HEADLESS)

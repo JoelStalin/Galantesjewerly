@@ -95,7 +95,7 @@ async function runCase(testCase, index) {
       googleServiceAccountEmail: 'mock-calendar@galantes.iam.gserviceaccount.com',
       gmailNotificationsEnabled: true,
       gmailRecipientInbox: 'ceo@galantesjewelry.com',
-      gmailSender: 'ceo@galantesjewelry.com',
+      gmailSender: 'joelstalin2105@gmail.com',
       appointmentDurationMinutes: 60,
       appointmentTimezone: 'America/New_York',
       secrets: {

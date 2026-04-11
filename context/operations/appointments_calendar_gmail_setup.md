@@ -32,7 +32,7 @@ Configure these per environment:
 | Google private key | Private key from the service account JSON |
 | Gmail notifications enabled | On |
 | Gmail recipient inbox | `ceo@galantesjewelry.com` |
-| Gmail sender | `ceo@galantesjewelry.com` |
+| Gmail sender | `joelstalin2105@gmail.com` |
 | Gmail app password | 16-character Google app password for the sender account |
 | Appointment duration minutes | `60` |
 | Appointment timezone | `America/New_York` |
@@ -58,10 +58,10 @@ For consumer Gmail calendars, sharing a dedicated calendar with the service acco
 
 Recommended setup:
 
-1. Use `ceo@galantesjewelry.com` as both the sending account and receiving inbox.
+1. Use `joelstalin2105@gmail.com` as the sending account.
 2. Enable 2-Step Verification on that Google account.
 3. Create a Google App Password for Mail.
-4. Put `ceo@galantesjewelry.com` in "Gmail sender".
+4. Put `joelstalin2105@gmail.com` in "Gmail sender".
 5. Put the app password in "Gmail SMTP App Password".
 6. Put `ceo@galantesjewelry.com` in "Gmail recipient inbox".
 7. Use the "Test Calendar and Gmail" button in admin.
@@ -95,7 +95,7 @@ The test command starts local Next.js servers with `APPOINTMENT_TEST_MODE` and c
 - admin settings persistence
 - secrets not serialized to the admin JSON response
 
-`npm run e2e:appointments` also drives the public `/contact` page through Selenium with the same local Chrome profile strategy used by the rest of the repo. It starts a local production server in `APPOINTMENT_TEST_MODE=success`, saves Calendar/Gmail settings for `ceo@galantesjewelry.com`, submits the public form, and verifies `appointments.json` recorded the mock Calendar event and email delivery.
+`npm run e2e:appointments` also drives the public `/contact` page through Selenium with the same local Chrome profile strategy used by the rest of the repo. It starts a local production server in `APPOINTMENT_TEST_MODE=success`, saves Calendar/Gmail settings, submits the public form, and verifies `appointments.json` recorded the mock Calendar event and email delivery.
 
 ## Security Notes
 
