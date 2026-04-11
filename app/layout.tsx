@@ -193,6 +193,10 @@ function Footer({ settings }: { settings: SiteSettings }) {
         </div>
       </div>
       <div className="mx-auto mt-12 max-w-6xl border-t border-white/20 pt-6 text-center text-xs text-white/60">
+        <div className="mb-3 flex flex-wrap justify-center gap-4">
+          <Link href="/privacy-policy" className="transition-colors hover:text-accent">Privacy Policy</Link>
+          <Link href="/terms-of-service" className="transition-colors hover:text-accent">Terms of Service</Link>
+        </div>
         &copy; {new Date().getFullYear()} Galante&apos;s Jewelry. All rights reserved.
       </div>
     </footer>

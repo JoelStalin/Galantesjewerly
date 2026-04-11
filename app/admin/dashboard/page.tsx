@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import type { PageSection, SiteSettings, FeaturedItem } from '@/lib/db';
 import ImageUploader from '@/components/admin/ImageUploader';
+import IntegrationsPanel from '@/components/admin/IntegrationsPanel';
 
 type NoticeState = {
   message: string;
   tone: 'error' | 'success';
 };
 
-const adminTabs = ['settings', 'sections', 'featured'] as const;
+const adminTabs = ['settings', 'sections', 'featured', 'integrations'] as const;
+type AdminTab = (typeof adminTabs)[number];
 
 export default function Dashboard() {
   const [sections, setSections] = useState<PageSection[]>([]);
@@ -22,7 +24,7 @@ export default function Dashboard() {
   const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({});
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
   const [sessionUser, setSessionUser] = useState('');
-  const [activeTab, setActiveTab] = useState<'settings' | 'sections' | 'featured'>('settings');
+  const [activeTab, setActiveTab] = useState<AdminTab>('settings');
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -272,7 +274,13 @@ export default function Dashboard() {
               className={`pb-4 text-sm font-semibold uppercase tracking-wider transition-colors border-b-2 whitespace-nowrap ${activeTab === tab ? 'border-amber-500 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'settings' ? 'Global Settings' : tab === 'sections' ? 'Single Sections' : 'Featured Collections (Carousel)'}
+              {tab === 'settings'
+                ? 'Global Settings'
+                : tab === 'sections'
+                  ? 'Single Sections'
+                  : tab === 'featured'
+                    ? 'Featured Collections (Carousel)'
+                    : 'Integrations & OAuth'}
             </button>
           ))}
         </div>
@@ -472,6 +480,10 @@ export default function Dashboard() {
                 ))}
              </div>
           </div>
+        )}
+
+        {activeTab === 'integrations' && (
+          <IntegrationsPanel />
         )}
       </div>
     </div>
