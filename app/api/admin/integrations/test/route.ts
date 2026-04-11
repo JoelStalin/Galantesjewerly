@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth';
 import {
   getGoogleIntegrationForEnvironment,
+  recordAppointmentIntegrationTest,
   recordGoogleIntegrationTest,
 } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
+import { testCalendarConnection } from '@/lib/google-calendar';
+import { testMailConnection } from '@/lib/mailer';
 
 function getAuditContext(request: Request, actor: string) {
   const forwardedFor = request.headers.get('x-forwarded-for') || '';
@@ -37,8 +40,30 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { environment } = await request.json() as { environment?: IntegrationEnvironment };
+    const { environment, provider } = await request.json() as {
+      environment?: IntegrationEnvironment;
+      provider?: 'google' | 'appointments';
+    };
     const resolvedEnvironment = environment || 'production';
+
+    if (provider === 'appointments') {
+      const [calendarResult, mailResult] = await Promise.all([
+        testCalendarConnection(resolvedEnvironment),
+        testMailConnection(resolvedEnvironment),
+      ]);
+      await recordAppointmentIntegrationTest(
+        resolvedEnvironment,
+        getAuditContext(request, session.user || 'admin'),
+      );
+
+      return NextResponse.json({
+        ok: true,
+        provider: 'appointments',
+        calendar: calendarResult,
+        mail: mailResult,
+      });
+    }
+
     const config = await getGoogleIntegrationForEnvironment(resolvedEnvironment);
 
     const missingFields = [

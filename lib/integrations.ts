@@ -3,20 +3,29 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getDataRoot } from '@/lib/runtime-paths';
 import {
+  appointmentSecretFields,
   googleSecretFields,
   integrationEnvironments,
+  type AppointmentIntegrationAdminConfig,
+  type AppointmentSecretField,
   type GoogleIntegrationAdminConfig,
   type GoogleSecretField,
   type IntegrationAuditEntry,
   type IntegrationEnvironment,
 } from '@/lib/integration-types';
+import { decryptSecret, encryptSecret, maskEncryptedSecret } from '@/lib/secure-settings';
 
 type StoredGoogleIntegration = Omit<GoogleIntegrationAdminConfig, 'secrets'> & {
   encryptedSecrets: Partial<Record<GoogleSecretField, string>>;
 };
 
+type StoredAppointmentIntegration = Omit<AppointmentIntegrationAdminConfig, 'secrets'> & {
+  encryptedSecrets: Partial<Record<AppointmentSecretField, string>>;
+};
+
 type IntegrationStore = {
   google: Record<IntegrationEnvironment, StoredGoogleIntegration>;
+  appointments: Record<IntegrationEnvironment, StoredAppointmentIntegration>;
   audit: IntegrationAuditEntry[];
 };
 
@@ -32,6 +41,21 @@ type UpdateGoogleIntegrationInput = {
   clearSecrets?: GoogleSecretField[];
 };
 
+type UpdateAppointmentIntegrationInput = {
+  provider?: 'appointments';
+  environment: IntegrationEnvironment;
+  googleCalendarEnabled?: boolean;
+  googleCalendarId?: string;
+  googleServiceAccountEmail?: string;
+  gmailNotificationsEnabled?: boolean;
+  gmailRecipientInbox?: string;
+  gmailSender?: string;
+  appointmentDurationMinutes?: number;
+  appointmentTimezone?: string;
+  secrets?: Partial<Record<AppointmentSecretField, string>>;
+  clearSecrets?: AppointmentSecretField[];
+};
+
 type AuditContext = {
   actor: string;
   ipAddress: string;
@@ -41,6 +65,9 @@ type AuditContext = {
 const dataDir = getDataRoot();
 const integrationsFile = path.join(dataDir, 'integrations.json');
 const MINIMUM_GOOGLE_SCOPES = ['openid', 'email', 'profile'];
+const DEFAULT_TIMEZONE = 'America/New_York';
+const DEFAULT_DURATION_MINUTES = 60;
+const DEFAULT_GMAIL_ACCOUNT = 'ceo@galantesjewelry.com';
 
 const DEFAULT_GOOGLE_CONFIGS: Record<IntegrationEnvironment, StoredGoogleIntegration> = {
   development: buildDefaultGoogleConfig({
@@ -58,6 +85,12 @@ const DEFAULT_GOOGLE_CONFIGS: Record<IntegrationEnvironment, StoredGoogleIntegra
     javascriptOrigin: 'https://galantesjewelry.com',
     redirectUri: 'https://galantesjewelry.com/api/auth/google/callback',
   }),
+};
+
+const DEFAULT_APPOINTMENT_CONFIGS: Record<IntegrationEnvironment, StoredAppointmentIntegration> = {
+  development: buildDefaultAppointmentConfig('development'),
+  staging: buildDefaultAppointmentConfig('staging'),
+  production: buildDefaultAppointmentConfig('production'),
 };
 
 function buildDefaultGoogleConfig(input: {
@@ -79,12 +112,35 @@ function buildDefaultGoogleConfig(input: {
   };
 }
 
+function buildDefaultAppointmentConfig(environment: IntegrationEnvironment): StoredAppointmentIntegration {
+  return {
+    provider: 'appointments',
+    environment,
+    googleCalendarEnabled: false,
+    googleCalendarId: '',
+    googleServiceAccountEmail: '',
+    gmailNotificationsEnabled: false,
+    gmailRecipientInbox: DEFAULT_GMAIL_ACCOUNT,
+    gmailSender: DEFAULT_GMAIL_ACCOUNT,
+    appointmentDurationMinutes: DEFAULT_DURATION_MINUTES,
+    appointmentTimezone: DEFAULT_TIMEZONE,
+    encryptedSecrets: {},
+    updatedAt: null,
+    updatedBy: null,
+  };
+}
+
 function emptyStore(): IntegrationStore {
   return {
     google: {
       development: { ...DEFAULT_GOOGLE_CONFIGS.development },
       staging: { ...DEFAULT_GOOGLE_CONFIGS.staging },
       production: { ...DEFAULT_GOOGLE_CONFIGS.production },
+    },
+    appointments: {
+      development: { ...DEFAULT_APPOINTMENT_CONFIGS.development },
+      staging: { ...DEFAULT_APPOINTMENT_CONFIGS.staging },
+      production: { ...DEFAULT_APPOINTMENT_CONFIGS.production },
     },
     audit: [],
   };
@@ -98,67 +154,8 @@ function assertGoogleSecretField(value: string): value is GoogleSecretField {
   return googleSecretFields.includes(value as GoogleSecretField);
 }
 
-function getEncryptionKey() {
-  const source =
-    process.env.INTEGRATIONS_SECRET_KEY ||
-    process.env.ADMIN_SECRET_KEY ||
-    'local_only_integration_secret_for_development';
-
-  return crypto.createHash('sha256').update(source).digest();
-}
-
-function encryptSecret(value: string) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', getEncryptionKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-
-  return [
-    'v1',
-    iv.toString('base64url'),
-    tag.toString('base64url'),
-    encrypted.toString('base64url'),
-  ].join(':');
-}
-
-function decryptSecret(payload: string) {
-  const [version, ivValue, tagValue, encryptedValue] = payload.split(':');
-
-  if (version !== 'v1' || !ivValue || !tagValue || !encryptedValue) {
-    throw new Error('Unsupported encrypted secret payload.');
-  }
-
-  const decipher = crypto.createDecipheriv(
-    'aes-256-gcm',
-    getEncryptionKey(),
-    Buffer.from(ivValue, 'base64url'),
-  );
-  decipher.setAuthTag(Buffer.from(tagValue, 'base64url'));
-
-  return Buffer.concat([
-    decipher.update(Buffer.from(encryptedValue, 'base64url')),
-    decipher.final(),
-  ]).toString('utf8');
-}
-
-function maskSecret(encryptedValue?: string) {
-  if (!encryptedValue) {
-    return { isSet: false, maskedValue: '' };
-  }
-
-  try {
-    const decrypted = decryptSecret(encryptedValue);
-    const tail = decrypted.slice(-4);
-    return {
-      isSet: true,
-      maskedValue: tail ? `********${tail}` : '********',
-    };
-  } catch {
-    return {
-      isSet: true,
-      maskedValue: '********',
-    };
-  }
+function assertAppointmentSecretField(value: string): value is AppointmentSecretField {
+  return appointmentSecretFields.includes(value as AppointmentSecretField);
 }
 
 function toAdminConfig(config: StoredGoogleIntegration): GoogleIntegrationAdminConfig {
@@ -173,10 +170,31 @@ function toAdminConfig(config: StoredGoogleIntegration): GoogleIntegrationAdminC
     updatedAt: config.updatedAt,
     updatedBy: config.updatedBy,
     secrets: {
-      googleClientSecret: maskSecret(config.encryptedSecrets.googleClientSecret),
-      apiKey: maskSecret(config.encryptedSecrets.apiKey),
-      accessToken: maskSecret(config.encryptedSecrets.accessToken),
-      refreshToken: maskSecret(config.encryptedSecrets.refreshToken),
+      googleClientSecret: maskEncryptedSecret(config.encryptedSecrets.googleClientSecret),
+      apiKey: maskEncryptedSecret(config.encryptedSecrets.apiKey),
+      accessToken: maskEncryptedSecret(config.encryptedSecrets.accessToken),
+      refreshToken: maskEncryptedSecret(config.encryptedSecrets.refreshToken),
+    },
+  };
+}
+
+function toAppointmentAdminConfig(config: StoredAppointmentIntegration): AppointmentIntegrationAdminConfig {
+  return {
+    provider: config.provider,
+    environment: config.environment,
+    googleCalendarEnabled: config.googleCalendarEnabled,
+    googleCalendarId: config.googleCalendarId,
+    googleServiceAccountEmail: config.googleServiceAccountEmail,
+    gmailNotificationsEnabled: config.gmailNotificationsEnabled,
+    gmailRecipientInbox: config.gmailRecipientInbox,
+    gmailSender: config.gmailSender,
+    appointmentDurationMinutes: config.appointmentDurationMinutes,
+    appointmentTimezone: config.appointmentTimezone,
+    updatedAt: config.updatedAt,
+    updatedBy: config.updatedBy,
+    secrets: {
+      googlePrivateKey: maskEncryptedSecret(config.encryptedSecrets.googlePrivateKey),
+      gmailSmtpPassword: maskEncryptedSecret(config.encryptedSecrets.gmailSmtpPassword),
     },
   };
 }
@@ -273,6 +291,15 @@ async function readStore(): Promise<IntegrationStore> {
       };
     }
 
+    for (const environment of integrationEnvironments) {
+      nextStore.appointments[environment] = {
+        ...nextStore.appointments[environment],
+        ...(parsed.appointments?.[environment] || {}),
+        provider: 'appointments',
+        environment,
+      };
+    }
+
     nextStore.audit = Array.isArray(parsed.audit) ? parsed.audit.slice(0, 100) : [];
     return nextStore;
   } catch {
@@ -288,7 +315,7 @@ async function writeStore(store: IntegrationStore) {
 }
 
 function buildAuditEntry(
-  config: StoredGoogleIntegration,
+  config: StoredGoogleIntegration | StoredAppointmentIntegration,
   context: AuditContext,
   action: IntegrationAuditEntry['action'],
   changedFields: string[],
@@ -297,7 +324,7 @@ function buildAuditEntry(
     id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     timestamp: new Date().toISOString(),
     actor: context.actor,
-    provider: 'google',
+    provider: config.provider,
     environment: config.environment,
     action,
     changedFields,
@@ -311,6 +338,25 @@ export async function getGoogleIntegrationConfigs() {
 
   return {
     configs: integrationEnvironments.map((environment) => toAdminConfig(store.google[environment])),
+    audit: store.audit,
+  };
+}
+
+export async function getAppointmentIntegrationConfigs() {
+  const store = await readStore();
+
+  return {
+    configs: integrationEnvironments.map((environment) => toAppointmentAdminConfig(store.appointments[environment])),
+    audit: store.audit,
+  };
+}
+
+export async function getIntegrationAdminPayload() {
+  const store = await readStore();
+
+  return {
+    configs: integrationEnvironments.map((environment) => toAdminConfig(store.google[environment])),
+    appointmentConfigs: integrationEnvironments.map((environment) => toAppointmentAdminConfig(store.appointments[environment])),
     audit: store.audit,
   };
 }
@@ -331,6 +377,25 @@ export async function getDecryptedGoogleIntegration(environment: IntegrationEnvi
         return [field, encryptedValue ? decryptSecret(encryptedValue) : ''];
       }),
     ) as Record<GoogleSecretField, string>,
+  };
+}
+
+export async function getAppointmentIntegrationForEnvironment(environment: IntegrationEnvironment) {
+  const store = await readStore();
+  return store.appointments[environment];
+}
+
+export async function getDecryptedAppointmentIntegration(environment: IntegrationEnvironment) {
+  const config = await getAppointmentIntegrationForEnvironment(environment);
+
+  return {
+    ...config,
+    secrets: Object.fromEntries(
+      appointmentSecretFields.map((field) => {
+        const encryptedValue = config.encryptedSecrets[field];
+        return [field, encryptedValue ? decryptSecret(encryptedValue) : ''];
+      }),
+    ) as Record<AppointmentSecretField, string>,
   };
 }
 
@@ -424,6 +489,135 @@ export async function updateGoogleIntegrationConfig(input: UpdateGoogleIntegrati
   };
 }
 
+function normalizeEmail(value?: string) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeOptionalText(value?: string) {
+  return String(value || '').trim();
+}
+
+function normalizeDuration(value?: number) {
+  const duration = Number(value);
+
+  if (!Number.isFinite(duration) || duration < 15 || duration > 240) {
+    throw new Error('Appointment duration must be between 15 and 240 minutes.');
+  }
+
+  return Math.round(duration);
+}
+
+function validateTimeZone(value?: string) {
+  const timezone = normalizeOptionalText(value) || DEFAULT_TIMEZONE;
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    throw new Error('Appointment timezone is invalid.');
+  }
+}
+
+export async function updateAppointmentIntegrationConfig(input: UpdateAppointmentIntegrationInput, context: AuditContext) {
+  if (!isIntegrationEnvironment(input.environment)) {
+    throw new Error('Invalid integration environment.');
+  }
+
+  const store = await readStore();
+  const current = store.appointments[input.environment];
+  const next: StoredAppointmentIntegration = {
+    ...current,
+    encryptedSecrets: { ...current.encryptedSecrets },
+  };
+  const changedFields = new Set<string>();
+
+  if (typeof input.googleCalendarEnabled === 'boolean' && input.googleCalendarEnabled !== current.googleCalendarEnabled) {
+    next.googleCalendarEnabled = input.googleCalendarEnabled;
+    changedFields.add('googleCalendarEnabled');
+  }
+
+  if (typeof input.gmailNotificationsEnabled === 'boolean' && input.gmailNotificationsEnabled !== current.gmailNotificationsEnabled) {
+    next.gmailNotificationsEnabled = input.gmailNotificationsEnabled;
+    changedFields.add('gmailNotificationsEnabled');
+  }
+
+  const textFields = [
+    ['googleCalendarId', normalizeOptionalText(input.googleCalendarId)],
+    ['googleServiceAccountEmail', normalizeEmail(input.googleServiceAccountEmail)],
+    ['gmailRecipientInbox', normalizeEmail(input.gmailRecipientInbox)],
+    ['gmailSender', normalizeEmail(input.gmailSender)],
+  ] as const;
+
+  for (const [field, value] of textFields) {
+    if (input[field] === undefined) {
+      continue;
+    }
+
+    if (value !== current[field]) {
+      next[field] = value;
+      changedFields.add(field);
+    }
+  }
+
+  if (input.appointmentDurationMinutes !== undefined) {
+    const duration = normalizeDuration(input.appointmentDurationMinutes);
+    if (duration !== current.appointmentDurationMinutes) {
+      next.appointmentDurationMinutes = duration;
+      changedFields.add('appointmentDurationMinutes');
+    }
+  }
+
+  if (input.appointmentTimezone !== undefined) {
+    const timezone = validateTimeZone(input.appointmentTimezone);
+    if (timezone !== current.appointmentTimezone) {
+      next.appointmentTimezone = timezone;
+      changedFields.add('appointmentTimezone');
+    }
+  }
+
+  for (const field of input.clearSecrets || []) {
+    if (!assertAppointmentSecretField(field)) {
+      continue;
+    }
+
+    if (next.encryptedSecrets[field]) {
+      delete next.encryptedSecrets[field];
+      changedFields.add(field);
+    }
+  }
+
+  for (const [field, value] of Object.entries(input.secrets || {})) {
+    if (!assertAppointmentSecretField(field)) {
+      continue;
+    }
+
+    const trimmedValue = String(value || '').trim();
+    if (!trimmedValue) {
+      continue;
+    }
+
+    next.encryptedSecrets[field] = encryptSecret(trimmedValue);
+    changedFields.add(field);
+  }
+
+  if (changedFields.size > 0) {
+    next.updatedAt = new Date().toISOString();
+    next.updatedBy = context.actor;
+    store.appointments[input.environment] = next;
+    store.audit = [
+      buildAuditEntry(next, context, current.updatedAt ? 'update' : 'create', [...changedFields]),
+      ...store.audit,
+    ].slice(0, 100);
+    await writeStore(store);
+  }
+
+  return {
+    config: toAppointmentAdminConfig(next),
+    changedFields: [...changedFields],
+    audit: store.audit,
+  };
+}
+
 export async function recordGoogleIntegrationTest(environment: IntegrationEnvironment, context: AuditContext) {
   if (!isIntegrationEnvironment(environment)) {
     throw new Error('Invalid integration environment.');
@@ -432,6 +626,19 @@ export async function recordGoogleIntegrationTest(environment: IntegrationEnviro
   const store = await readStore();
   const config = store.google[environment];
   const auditEntry = buildAuditEntry(config, context, 'test', ['connectionTest']);
+  store.audit = [auditEntry, ...store.audit].slice(0, 100);
+  await writeStore(store);
+  return auditEntry;
+}
+
+export async function recordAppointmentIntegrationTest(environment: IntegrationEnvironment, context: AuditContext) {
+  if (!isIntegrationEnvironment(environment)) {
+    throw new Error('Invalid integration environment.');
+  }
+
+  const store = await readStore();
+  const config = store.appointments[environment];
+  const auditEntry = buildAuditEntry(config, context, 'test', ['appointmentIntegrationTest']);
   store.audit = [auditEntry, ...store.audit].slice(0, 100);
   await writeStore(store);
   return auditEntry;

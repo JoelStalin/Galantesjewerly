@@ -10,6 +10,7 @@ This suite validates the admin login, persistent session behavior, image upload 
 python tests/e2e/profile_manager.py --profile Default
 python tests/e2e/admin_image_session_flow.py
 python tests/e2e/public_smoke.py
+npm run e2e:appointments
 ```
 
 ## URLs Tested
@@ -22,6 +23,9 @@ python tests/e2e/public_smoke.py
 - `/api/admin/content`
 - `/api/admin/session`
 - `/api/admin/upload`
+- `/contact`
+- `/api/contact`
+- `/api/admin/integrations`
 
 ## Primary Selectors
 
@@ -44,6 +48,15 @@ python tests/e2e/public_smoke.py
 - `featured-dot-{index}`
 - `featured-public-card-{id}`
 - `featured-public-image-{id}`
+- `contact-name`
+- `contact-email`
+- `contact-phone`
+- `contact-inquiry-type`
+- `contact-appointment-date`
+- `contact-appointment-time`
+- `contact-message`
+- `contact-submit`
+- `contact-success`
 
 ## Artifacts
 

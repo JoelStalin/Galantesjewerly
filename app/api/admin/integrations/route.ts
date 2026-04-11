@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth';
 import {
-  getGoogleIntegrationConfigs,
+  getIntegrationAdminPayload,
+  updateAppointmentIntegrationConfig,
   updateGoogleIntegrationConfig,
 } from '@/lib/integrations';
 
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    return NextResponse.json(await getGoogleIntegrationConfigs());
+    return NextResponse.json(await getIntegrationAdminPayload());
   } catch {
     return NextResponse.json({ error: 'Failed to read integrations' }, { status: 500 });
   }
@@ -50,10 +51,10 @@ export async function PUT(request: Request) {
 
   try {
     const payload = await request.json();
-    const result = await updateGoogleIntegrationConfig(
-      payload,
-      getAuditContext(request, session.user || 'admin'),
-    );
+    const context = getAuditContext(request, session.user || 'admin');
+    const result = payload.provider === 'appointments'
+      ? await updateAppointmentIntegrationConfig(payload, context)
+      : await updateGoogleIntegrationConfig(payload, context);
 
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
