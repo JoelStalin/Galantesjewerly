@@ -11,7 +11,7 @@ services:
       - APP_DATA_DIR=/app/data
       - WATCHPACK_POLLING=true
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-galantes2026}
+      # - ADMIN_PASSWORD=${ADMIN_PASSWORD:-galantes2026}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-galantes_secret_vault_2026}
     volumes:
       - .:/app

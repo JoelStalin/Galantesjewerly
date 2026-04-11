@@ -1,18 +1,52 @@
 {
+  "settings": {
+    "favicon_url": "/favicon.ico",
+    "logo_url": "/assets/branding/logo.png",
+    "site_title": "Galante's Jewelry by the Sea | Coastal Fine Jewelry",
+    "site_description": "Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.",
+    "instagram_url": "https://instagram.com/galantesjewelry",
+    "facebook_url": "https://facebook.com/galantesjewelry",
+    "whatsapp_number": "1234567890",
+    "contact_email": "concierge@galantesjewelry.com",
+    "contact_phone": "(305) 555-0199",
+    "contact_address": "123 Overseas Highway, Islamorada, FL 33036",
+    "appointment_email": "appointments@galantesjewelry.com"
+  },
   "sections": [
     {
       "id": "1",
       "section_identifier": "hero",
-      "title": "Galante's Jewelry by the Sea - Live Test Pass",
-      "content_text": "Descubre la elegancia y exclusividad de nuestras joyas de colección, donde la belleza choca con el océano.",
-      "image_url": "/gold_banner.jpg",
+      "title": "Galante's Jewelry by the Sea",
+      "content_text": "The Coastal Concierge",
+      "image_url": "https://images.unsplash.com/photo-1516912481808-3406841bd33c?q=80&w=2844&auto=format&fit=crop",
+      "action_text": "Book Appointment",
+      "action_link": "/contact",
       "is_active": true
     },
     {
       "id": "2",
-      "section_identifier": "about",
-      "title": "Sobre Nosotros",
-      "content_text": "Con décadas de experiencia, ofrecemos el arte hecho joya en las costas más hermosas.",
+      "section_identifier": "philosophy",
+      "title": "Barefoot Luxury in Islamorada",
+      "content_text": "We curate and craft fine nautical jewelry designed to celebrate the spirit of the Florida Keys. Whether you're marking an anniversary, planning a destination wedding, or restoring an heirloom timepiece, our concierge service ensures every detail is attended to with master craftsmanship.",
+      "image_url": "",
+      "is_active": true
+    },
+    {
+      "id": "6",
+      "section_identifier": "review",
+      "title": "Client Testimonials",
+      "content_text": "\"Galante's created the most breathtaking engagement ring for my fiancé. Their attention to detail and personal concierge service made our Islamorada trip truly unforgettable.\"",
+      "subtitle": "— Sarah & James, Florida",
+      "image_url": "",
+      "is_active": true
+    },
+    {
+      "id": "7",
+      "section_identifier": "cta",
+      "title": "Begin Your Story",
+      "content_text": "Whether you are visiting the Florida Keys or are a local resident, we invite you to experience jewelry curation as it should be.",
+      "action_text": "Schedule Your Consultation",
+      "action_link": "/contact",
       "image_url": "",
       "is_active": true
     }
