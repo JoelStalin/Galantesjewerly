@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [saving, setSaving] = useState<string | null>(null);
   const [uploadingTargets, setUploadingTargets] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({});
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
   const [sessionUser, setSessionUser] = useState('');
   const [activeTab, setActiveTab] = useState<'settings' | 'sections' | 'featured'>('settings');
@@ -87,6 +88,11 @@ export default function Dashboard() {
 
   const isUploadingTarget = (key: string) => Boolean(uploadingTargets[key]);
 
+  const flashSaved = (key: string) => {
+    setSavedKeys((prev) => ({ ...prev, [key]: true }));
+    setTimeout(() => setSavedKeys((prev) => { const next = { ...prev }; delete next[key]; return next; }), 2500);
+  };
+
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/auth/logout', { method: 'POST' });
@@ -114,6 +120,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('save_section_failed');
 
       setNotice({ message: 'Section updated successfully.', tone: 'success' });
+      flashSaved(sectionId);
     } catch {
       setNotice({ message: 'Could not save the section.', tone: 'error' });
     } finally {
@@ -135,6 +142,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('save_settings_failed');
 
       setNotice({ message: 'Global settings published.', tone: 'success' });
+      flashSaved('settings');
     } catch {
       setNotice({ message: 'Could not save global settings.', tone: 'error' });
     } finally {
@@ -191,6 +199,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('update_featured_failed');
 
       setNotice({ message: 'Featured item updated.', tone: 'success' });
+      flashSaved(itemId);
     } catch {
       setNotice({ message: 'Could not update featured item.', tone: 'error' });
     } finally {
@@ -351,8 +360,8 @@ export default function Dashboard() {
               </div>
 
               <div className="pt-6 border-t border-zinc-100 flex justify-end">
-                <button onClick={handleSaveSettings} disabled={saving === 'settings' || isSettingsUploading} className="bg-zinc-900 text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-sm">
-                  {saving === 'settings' ? 'Syncing...' : isSettingsUploading ? 'Uploading image...' : 'Save Global Settings'}
+                <button onClick={handleSaveSettings} disabled={saving === 'settings' || isSettingsUploading} className={`text-white text-sm font-medium px-6 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 shadow-sm ${savedKeys['settings'] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
+                  {saving === 'settings' ? 'Syncing...' : isSettingsUploading ? 'Uploading image...' : savedKeys['settings'] ? '✓ Saved!' : 'Save Global Settings'}
                 </button>
               </div>
             </div>
@@ -399,8 +408,8 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="pt-6 mt-6 border-t border-zinc-100 flex justify-end">
-                  <button onClick={() => handleSaveSection(section.id)} disabled={saving === section.id || isUploadingTarget(`section-${section.id}`)} className="bg-zinc-900 text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-sm">
-                    {saving === section.id ? 'Syncing...' : isUploadingTarget(`section-${section.id}`) ? 'Uploading...' : 'Update Section'}
+                  <button onClick={() => handleSaveSection(section.id)} disabled={saving === section.id || isUploadingTarget(`section-${section.id}`)} className={`text-white text-sm font-medium px-6 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 shadow-sm ${savedKeys[section.id] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
+                    {saving === section.id ? 'Syncing...' : isUploadingTarget(`section-${section.id}`) ? 'Uploading...' : savedKeys[section.id] ? '✓ Saved!' : 'Update Section'}
                   </button>
                 </div>
               </div>
@@ -455,8 +464,8 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="pt-4 mt-4 border-t border-zinc-100 flex justify-center">
-                      <button data-testid={`save-featured-${item.id}`} onClick={() => handleUpdateFeatured(item.id)} disabled={saving === item.id || isUploadingTarget(`featured-${item.id}`)} className="w-full bg-zinc-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors">
-                        {saving === item.id ? '...' : isUploadingTarget(`featured-${item.id}`) ? 'Uploading...' : 'Save and Rotate'}
+                      <button data-testid={`save-featured-${item.id}`} onClick={() => handleUpdateFeatured(item.id)} disabled={saving === item.id || isUploadingTarget(`featured-${item.id}`)} className={`w-full text-white text-sm font-medium px-4 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 ${savedKeys[item.id] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
+                        {saving === item.id ? '...' : isUploadingTarget(`featured-${item.id}`) ? 'Uploading...' : savedKeys[item.id] ? '✓ Saved!' : 'Save and Rotate'}
                       </button>
                     </div>
                   </div>
