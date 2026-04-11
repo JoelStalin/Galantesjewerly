@@ -1,4 +1,4 @@
-import { google, calendar_v3 } from 'googleapis';
+import { importPKCS8, SignJWT } from 'jose';
 import { getDecryptedAppointmentIntegration } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
 import type { AppointmentRecord, ContactSubmission } from '@/lib/appointments';
@@ -16,6 +16,38 @@ export type CreatedCalendarEvent = {
   id: string;
   htmlLink: string;
 };
+
+type GoogleTokenResponse = {
+  access_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleCalendarApiError = {
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+  };
+};
+
+type FreeBusyResponse = {
+  calendars?: Record<string, {
+    busy?: Array<{ start?: string; end?: string }>;
+  }>;
+};
+
+type CalendarEventResponse = {
+  id?: string;
+  htmlLink?: string;
+};
+
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 function normalizePrivateKey(value: string) {
   return value.replace(/\\n/g, '\n').trim();
@@ -47,20 +79,78 @@ function assertCalendarConfig(config: CalendarRuntimeConfig) {
   }
 }
 
-function getCalendarClient(config: CalendarRuntimeConfig) {
-  assertCalendarConfig(config);
-
-  const auth = new google.auth.JWT({
-    email: config.serviceAccountEmail,
-    key: config.privateKey,
-    scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
-
-  return google.calendar({ version: 'v3', auth });
-}
-
 function getAppointmentTestMode() {
   return process.env.APPOINTMENT_TEST_MODE || '';
+}
+
+function cacheKey(config: CalendarRuntimeConfig) {
+  return `${config.serviceAccountEmail}:${config.calendarId}`;
+}
+
+async function getAccessToken(config: CalendarRuntimeConfig) {
+  assertCalendarConfig(config);
+
+  const key = cacheKey(config);
+  const cached = tokenCache.get(key);
+  if (cached && cached.expiresAt > Date.now() + 60_000) {
+    return cached.token;
+  }
+
+  const privateKey = await importPKCS8(config.privateKey, 'RS256');
+  const now = Math.floor(Date.now() / 1000);
+  const assertion = await new SignJWT({ scope: GOOGLE_CALENDAR_SCOPE })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuer(config.serviceAccountEmail)
+    .setSubject(config.serviceAccountEmail)
+    .setAudience(GOOGLE_TOKEN_URL)
+    .setIssuedAt(now)
+    .setExpirationTime(now + 3600)
+    .sign(privateKey);
+
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+  const payload = await response.json() as GoogleTokenResponse;
+
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || 'Google Calendar token request failed.');
+  }
+
+  tokenCache.set(key, {
+    token: payload.access_token,
+    expiresAt: Date.now() + Math.max((payload.expires_in || 3600) - 60, 60) * 1000,
+  });
+
+  return payload.access_token;
+}
+
+async function calendarApiRequest<T>(
+  config: CalendarRuntimeConfig,
+  path: string,
+  init: RequestInit,
+): Promise<T> {
+  const accessToken = await getAccessToken(config);
+  const response = await fetch(`${GOOGLE_CALENDAR_API}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) as T & GoogleCalendarApiError : {} as T & GoogleCalendarApiError;
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message || `Google Calendar API failed with status ${response.status}.`);
+  }
+
+  return payload as T;
 }
 
 export async function isCalendarSlotAvailable(input: {
@@ -82,16 +172,20 @@ export async function isCalendarSlotAvailable(input: {
     return true;
   }
 
-  const calendar = getCalendarClient(input.config);
-  const response = await calendar.freebusy.query({
-    requestBody: {
-      timeMin: input.start.toISOString(),
-      timeMax: input.end.toISOString(),
-      timeZone: input.config.timezone,
-      items: [{ id: input.config.calendarId }],
+  const response = await calendarApiRequest<FreeBusyResponse>(
+    input.config,
+    '/freeBusy',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        timeMin: input.start.toISOString(),
+        timeMax: input.end.toISOString(),
+        timeZone: input.config.timezone,
+        items: [{ id: input.config.calendarId }],
+      }),
     },
-  });
-  const busy = response.data.calendars?.[input.config.calendarId]?.busy || [];
+  );
+  const busy = response.calendars?.[input.config.calendarId]?.busy || [];
 
   return busy.length === 0;
 }
@@ -110,10 +204,9 @@ export async function createCalendarEvent(input: {
     };
   }
 
-  const calendar = getCalendarClient(input.config);
   const { record, submission } = input;
   const phoneLine = submission.phone ? `Phone: ${submission.phone}\n` : '';
-  const event: calendar_v3.Schema$Event = {
+  const event = {
     summary: `${submission.name} - ${submission.inquiryType}`,
     description: [
       `Galantes Jewelry appointment request`,
@@ -146,15 +239,19 @@ export async function createCalendarEvent(input: {
     },
   };
 
-  const response = await calendar.events.insert({
-    calendarId: input.config.calendarId,
-    requestBody: event,
-    sendUpdates: 'none',
-  });
+  const calendarId = encodeURIComponent(input.config.calendarId);
+  const response = await calendarApiRequest<CalendarEventResponse>(
+    input.config,
+    `/calendars/${calendarId}/events?sendUpdates=none`,
+    {
+      method: 'POST',
+      body: JSON.stringify(event),
+    },
+  );
 
   return {
-    id: response.data.id || '',
-    htmlLink: response.data.htmlLink || '',
+    id: response.id || '',
+    htmlLink: response.htmlLink || '',
   };
 }
 
@@ -169,18 +266,22 @@ export async function testCalendarConnection(environment: IntegrationEnvironment
     };
   }
 
-  const calendar = getCalendarClient(config);
   const now = new Date();
   const later = new Date(now.getTime() + 15 * 60 * 1000);
 
-  await calendar.freebusy.query({
-    requestBody: {
-      timeMin: now.toISOString(),
-      timeMax: later.toISOString(),
-      timeZone: config.timezone,
-      items: [{ id: config.calendarId }],
+  await calendarApiRequest<FreeBusyResponse>(
+    config,
+    '/freeBusy',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        timeMin: now.toISOString(),
+        timeMax: later.toISOString(),
+        timeZone: config.timezone,
+        items: [{ id: config.calendarId }],
+      }),
     },
-  });
+  );
 
   return {
     calendarId: config.calendarId,
