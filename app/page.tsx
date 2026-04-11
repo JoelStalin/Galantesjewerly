@@ -17,18 +17,18 @@ export default async function Home() {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Hero Section */}
-      <section className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-center items-center text-center px-4 text-white overflow-hidden">
+      <section className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-end text-white overflow-hidden">
         <div
           className="absolute inset-0 z-0 bg-cover bg-center transition-all duration-1000"
           style={{ backgroundImage: `url('${hero?.image_url || ""}')` }}
         ></div>
-        {/* Gradient overlay: transparent at top, subtle dark at bottom for text legibility */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10"></div>
-        <div className="z-10 max-w-5xl mx-auto flex flex-col items-center">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif text-accent mb-6 leading-tight drop-shadow-lg">
+        {/* Gradient: fuerte abajo-izquierda, transparente arriba-derecha para no tapar el rostro */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-tr from-black/75 via-black/30 to-transparent"></div>
+        <div className="z-10 w-full max-w-2xl px-8 md:px-16 pb-14 md:pb-20">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif text-accent mb-4 leading-tight drop-shadow-lg">
             {hero?.title}
           </h1>
-          <p className="text-lg md:text-2xl font-light tracking-wide mb-10 text-white drop-shadow-md max-w-3xl whitespace-pre-wrap">
+          <p className="text-base md:text-xl font-light tracking-wide mb-8 text-white/90 drop-shadow-md whitespace-pre-wrap">
             {hero?.content_text}
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
