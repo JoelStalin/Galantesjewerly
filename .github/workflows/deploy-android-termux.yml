@@ -55,7 +55,16 @@ jobs:
       - name: Install cloudflared
         if: ${{ env.ANDROID_SSH_USE_CLOUDFLARED == 'true' }}
         run: |
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          for attempt in 1 2 3; do
+            if curl --fail --location --show-error https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared; then
+              break
+            fi
+            if [ "$attempt" = "3" ]; then
+              echo "cloudflared download failed after 3 attempts"
+              exit 1
+            fi
+            sleep 5
+          done
           chmod +x cloudflared
           sudo mv cloudflared /usr/local/bin/cloudflared
 
@@ -105,12 +114,24 @@ jobs:
           ANDROID_APP_ENV: ${{ secrets.ANDROID_APP_ENV }}
         run: |
           [ -n "$ANDROID_APP_ENV" ] || { echo "ANDROID_APP_ENV secret is missing"; exit 1; }
+          retry() {
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              if "$@"; then
+                return 0
+              fi
+              echo "Command failed on attempt $attempt: $*"
+              attempt=$((attempt + 1))
+              sleep 8
+            done
+            return 1
+          }
           ENV_FILE="$RUNNER_TEMP/android.env"
           printf '%s' "$ANDROID_APP_ENV" > "$ENV_FILE"
-          scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
-          scp "$ENV_FILE" android-termux:$REMOTE_ENV
-          scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
-          ssh android-termux "chmod 700 $REMOTE_SCRIPT"
+          retry scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
+          retry scp "$ENV_FILE" android-termux:$REMOTE_ENV
+          retry scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
+          retry ssh android-termux "chmod 700 $REMOTE_SCRIPT"
 
       - name: Deploy on Android
         run: |
