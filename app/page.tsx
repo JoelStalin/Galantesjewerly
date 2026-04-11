@@ -17,11 +17,13 @@ export default async function Home() {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Hero Section */}
-      <section className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-center items-center text-center px-4 bg-primary text-white overflow-hidden">
-        <div 
-          className="absolute inset-0 z-0 opacity-30 bg-cover bg-center transition-all duration-1000"
+      <section className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-center items-center text-center px-4 text-white overflow-hidden">
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center transition-all duration-1000"
           style={{ backgroundImage: `url('${hero?.image_url || ""}')` }}
         ></div>
+        {/* Gradient overlay: transparent at top, subtle dark at bottom for text legibility */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10"></div>
         <div className="z-10 max-w-5xl mx-auto flex flex-col items-center">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif text-accent mb-6 leading-tight drop-shadow-lg">
             {hero?.title}
