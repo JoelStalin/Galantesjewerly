@@ -7,6 +7,7 @@
     "build": "next build",
     "build:android": "next build --webpack",
     "start": "node scripts/start-standalone.mjs",
+    "start:express": "node server/express-app.js",
     "start:next": "next start",
     "lint": "eslint app components lib proxy.ts",
     "test": "vitest run",
@@ -26,6 +27,12 @@
     "docker:down": "docker compose down"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.6.2",
+    "googleapis": "^171.4.0",
     "jose": "^6.2.2",
     "next": "16.2.3",
     "nodemailer": "^8.0.5",

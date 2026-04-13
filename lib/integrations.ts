@@ -208,6 +208,7 @@ function toAppointmentAdminConfig(config: StoredAppointmentIntegration): Appoint
     secrets: {
       googlePrivateKey: maskEncryptedSecret(config.encryptedSecrets.googlePrivateKey),
       gmailSmtpPassword: maskEncryptedSecret(config.encryptedSecrets.gmailSmtpPassword),
+      sendGridApiKey: maskEncryptedSecret(config.encryptedSecrets.sendGridApiKey),
     },
   };
 }

@@ -41,6 +41,7 @@ const secretLabels: Record<GoogleSecretField, string> = {
 const appointmentSecretLabels: Record<AppointmentSecretField, string> = {
   googlePrivateKey: 'Google Private Key',
   gmailSmtpPassword: 'Gmail SMTP App Password',
+  sendGridApiKey: 'SendGrid API Key',
 };
 
 function toConfigMap<T extends { environment: IntegrationEnvironment }>(configs: T[]) {
@@ -764,7 +765,7 @@ export default function IntegrationsPanel() {
                       value={pendingAppointmentSecrets[activeEnvironment][field] || ''}
                       onChange={(event) => updateAppointmentSecretDraft(field, event.target.value)}
                       className={commonClassName}
-                      placeholder={secretState.isSet ? secretState.maskedValue : 'Gmail app password'}
+                      placeholder={secretState.isSet ? secretState.maskedValue : appointmentSecretLabels[field]}
                       autoComplete="new-password"
                     />
                   )}

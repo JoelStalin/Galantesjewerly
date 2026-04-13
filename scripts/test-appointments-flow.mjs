@@ -87,6 +87,7 @@ async function runCase(testCase, index) {
 
     const privateKey = 'fake-private-key-for-test';
     const smtpPassword = 'fake-gmail-app-password';
+    const sendGridApiKey = 'fake-sendgrid-api-key';
     const saveResponse = await requestJson(`${baseUrl}/api/admin/integrations`, 'PUT', {
       provider: 'appointments',
       environment: 'development',
@@ -101,6 +102,7 @@ async function runCase(testCase, index) {
       secrets: {
         googlePrivateKey: privateKey,
         gmailSmtpPassword: smtpPassword,
+        sendGridApiKey,
       },
       clearSecrets: [],
     }, cookie);
@@ -113,6 +115,7 @@ async function runCase(testCase, index) {
     assert.equal(adminReadResponse.status, 200, `${testCase.mode}: admin settings read failed`);
     assert.equal(adminText.includes(privateKey), false, `${testCase.mode}: private key leaked in admin JSON`);
     assert.equal(adminText.includes(smtpPassword), false, `${testCase.mode}: SMTP password leaked in admin JSON`);
+    assert.equal(adminText.includes(sendGridApiKey), false, `${testCase.mode}: SendGrid API key leaked in admin JSON`);
 
     const contactResponse = await postJson(`${baseUrl}/api/contact`, {
       name: 'Automation Client',
@@ -128,6 +131,24 @@ async function runCase(testCase, index) {
 
     const latestRecord = await readLatestRecord(dataDir);
     assert.equal(latestRecord.status, testCase.expectedRecordStatus, `${testCase.mode}: unexpected record status`);
+
+    if (testCase.mode === 'success') {
+      const apiV1Response = await postJson(`${baseUrl}/api/v1/appointments`, {
+        name: 'Automation API Client',
+        email: 'api-client@example.com',
+        phone: '+13055550200',
+        inquiryType: 'Appointment',
+        message: 'I would like to schedule a private consultation through API v1.',
+        date: futureDate(),
+        time: '11:30',
+        duration: 60,
+      });
+      assert.equal(apiV1Response.status, 201, 'success: /api/v1/appointments did not return HTTP 201');
+      const apiPayload = await apiV1Response.json();
+      assert.equal(apiPayload.success, true, 'success: /api/v1/appointments did not return success true');
+      assert.ok(apiPayload.appointmentId, 'success: /api/v1/appointments did not return appointmentId');
+      assert.ok(apiPayload.googleEventLink, 'success: /api/v1/appointments did not return googleEventLink');
+    }
   } finally {
     child.kill();
     await sleep(500);

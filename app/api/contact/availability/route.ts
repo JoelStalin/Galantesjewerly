@@ -4,6 +4,8 @@ import { buildAppointmentInterval } from '@/lib/appointments';
 import { getCalendarRuntimeConfig, isCalendarSlotAvailable } from '@/lib/google-calendar';
 import { resolveGoogleEnvironmentFromHost } from '@/lib/google-login';
 
+export const runtime = 'nodejs';
+
 const availabilitySchema = z.object({
   appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   appointmentTime: z.string().regex(/^\d{2}:\d{2}$/),

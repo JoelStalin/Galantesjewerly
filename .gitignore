@@ -36,6 +36,7 @@ test_error.png
 *.zip
 
 # runtime content
+/token.json
 /temp_deploy/
 /temp_standalone/
 /data/blobs/

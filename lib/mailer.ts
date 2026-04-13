@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import { getDecryptedAppointmentIntegration } from '@/lib/integrations';
 import { getGoogleOAuthRuntimeConfig, refreshGoogleOAuthAccessToken } from '@/lib/google-oauth';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
@@ -15,6 +16,7 @@ export type MailRuntimeConfig = {
   oauthClientSecret: string;
   oauthRefreshToken: string;
   oauthConnectedGoogleEmail: string;
+  sendGridApiKey: string;
 };
 
 export async function getMailRuntimeConfig(environment: IntegrationEnvironment): Promise<MailRuntimeConfig> {
@@ -31,6 +33,7 @@ export async function getMailRuntimeConfig(environment: IntegrationEnvironment):
     oauthClientSecret: googleOAuth.clientSecret,
     oauthRefreshToken: googleOAuth.refreshToken,
     oauthConnectedGoogleEmail: googleOAuth.connectedGoogleEmail,
+    sendGridApiKey: stored.secrets.sendGridApiKey || process.env.SENDGRID_API_KEY || '',
   };
 }
 
@@ -43,8 +46,8 @@ function assertMailConfig(config: MailRuntimeConfig) {
     !config.enabled ? 'Gmail notifications are disabled' : '',
     !config.recipientInbox ? 'Gmail recipient inbox' : '',
     !config.sender ? 'Gmail sender' : '',
-    !config.smtpPassword && !hasGoogleOAuthConfig(config)
-      ? 'Gmail SMTP app password or connected Google OAuth account'
+    !config.sendGridApiKey && !config.smtpPassword && !hasGoogleOAuthConfig(config)
+      ? 'SendGrid API key, Gmail SMTP app password, or connected Google OAuth account'
       : '',
   ].filter(Boolean);
 
@@ -97,6 +100,60 @@ function buildPlainText(input: {
     '',
     `Local audit ID: ${record.id}`,
   ].join('\n');
+}
+
+function toIcsDate(value: Date) {
+  return value.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function escapeIcsText(value: string) {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function buildIcsAttachment(input: {
+  record: AppointmentRecord;
+  submission: ContactSubmission;
+  event: CreatedCalendarEvent;
+  start?: Date;
+  end?: Date;
+}) {
+  if (!input.start || !input.end) {
+    return null;
+  }
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Galantes Jewelry//Appointments//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${input.event.id || input.record.id}@galantesjewelry.com`,
+    `DTSTAMP:${toIcsDate(new Date())}`,
+    `DTSTART:${toIcsDate(input.start)}`,
+    `DTEND:${toIcsDate(input.end)}`,
+    `SUMMARY:${escapeIcsText(`${input.record.id} - ${input.submission.name}`)}`,
+    `DESCRIPTION:${escapeIcsText(buildPlainText(input))}`,
+    `URL:${input.event.htmlLink || 'https://galantesjewelry.com/contact'}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Galantes Jewelry appointment reminder',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  return {
+    content: Buffer.from(ics, 'utf8').toString('base64'),
+    filename: 'galantes-appointment.ics',
+    type: 'text/calendar',
+    disposition: 'attachment',
+  };
 }
 
 function sanitizeHeader(value: string) {
@@ -159,11 +216,39 @@ async function sendWithGmailApi(input: {
   return { messageId: payload.id };
 }
 
+async function sendWithSendGrid(input: {
+  config: MailRuntimeConfig;
+  record: AppointmentRecord;
+  submission: ContactSubmission;
+  event: CreatedCalendarEvent;
+  start?: Date;
+  end?: Date;
+}) {
+  assertMailConfig(input.config);
+  sgMail.setApiKey(input.config.sendGridApiKey);
+  const subject = `Galantes appointment: ${input.submission.name} - ${input.submission.inquiryType}`;
+  const text = buildPlainText(input);
+  const attachment = buildIcsAttachment(input);
+
+  const [result] = await sgMail.send({
+    to: input.config.recipientInbox,
+    from: input.config.sender,
+    replyTo: input.submission.email,
+    subject,
+    text,
+    attachments: attachment ? [attachment] : undefined,
+  });
+
+  return { messageId: String(result.headers['x-message-id'] || result.statusCode || input.record.id) };
+}
+
 export async function sendAppointmentNotification(input: {
   config: MailRuntimeConfig;
   record: AppointmentRecord;
   submission: ContactSubmission;
   event: CreatedCalendarEvent;
+  start?: Date;
+  end?: Date;
 }) {
   if (getAppointmentTestMode() === 'mail_error') {
     throw new Error('Mock Gmail delivery failure.');
@@ -175,6 +260,10 @@ export async function sendAppointmentNotification(input: {
 
   const subject = `Galantes appointment: ${input.submission.name} - ${input.submission.inquiryType}`;
   const text = buildPlainText(input);
+
+  if (input.config.sendGridApiKey) {
+    return sendWithSendGrid(input);
+  }
 
   if (!input.config.smtpPassword && hasGoogleOAuthConfig(input.config)) {
     return sendWithGmailApi({
@@ -203,6 +292,18 @@ export async function testMailConnection(environment: IntegrationEnvironment) {
     return {
       sender: config.sender || 'joelstalin2105@gmail.com',
       recipientInbox: config.recipientInbox || 'ceo@galantesjewelry.com',
+    };
+  }
+
+  assertMailConfig(config);
+
+  if (config.sendGridApiKey) {
+    sgMail.setApiKey(config.sendGridApiKey);
+
+    return {
+      sender: config.sender,
+      recipientInbox: config.recipientInbox,
+      authMode: 'sendgrid',
     };
   }
 

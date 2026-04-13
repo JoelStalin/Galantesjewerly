@@ -180,6 +180,7 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
         and get_secret_state(google_config, 'refreshToken').get('isSet')
     )
     has_smtp = bool(get_secret_state(config, 'gmailSmtpPassword').get('isSet'))
+    has_sendgrid = bool(get_secret_state(config, 'sendGridApiKey').get('isSet'))
 
     missing = []
     if not config.get('googleCalendarEnabled'):
@@ -194,8 +195,8 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
         missing.append(f'Gmail recipient inbox = {EXPECTED_GMAIL_RECIPIENT}')
     if (config.get('gmailSender') or '').lower() != EXPECTED_GMAIL_SENDER.lower():
         missing.append(f'Gmail sender = {EXPECTED_GMAIL_SENDER}')
-    if not has_smtp and not has_google_oauth:
-        missing.append('Gmail SMTP App Password or connected Google OAuth owner account')
+    if not has_sendgrid and not has_smtp and not has_google_oauth:
+        missing.append('SendGrid API Key, Gmail SMTP App Password, or connected Google OAuth owner account')
 
     report['admin_config'] = {
         'environment': config.get('environment'),
@@ -207,6 +208,7 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
         'gmailRecipientInbox': config.get('gmailRecipientInbox'),
         'gmailSender': config.get('gmailSender'),
         'gmailSmtpPasswordSet': bool(get_secret_state(config, 'gmailSmtpPassword').get('isSet')),
+        'sendGridApiKeySet': bool(get_secret_state(config, 'sendGridApiKey').get('isSet')),
         'googleOauthOwnerConnected': has_google_oauth,
         'googleOauthConnectedEmail': google_config.get('connectedGoogleEmail'),
         'googleOauthRefreshTokenSet': bool(get_secret_state(google_config, 'refreshToken').get('isSet')),

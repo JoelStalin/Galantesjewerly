@@ -8,7 +8,7 @@ export const googleSecretFields = ['googleClientSecret', 'apiKey', 'accessToken'
 
 export type GoogleSecretField = (typeof googleSecretFields)[number];
 
-export const appointmentSecretFields = ['googlePrivateKey', 'gmailSmtpPassword'] as const;
+export const appointmentSecretFields = ['googlePrivateKey', 'gmailSmtpPassword', 'sendGridApiKey'] as const;
 
 export type AppointmentSecretField = (typeof appointmentSecretFields)[number];
 
