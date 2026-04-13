@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Jewelry Product Categories -->
+    <record id="product_category_jewelry" model="product.category">
+        <field name="name">Jewelry</field>
+        <field name="parent_id" ref="product.product_category_all" />
+    </record>
+
+    <record id="product_category_rings" model="product.category">
+        <field name="name">Rings</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+
+    <record id="product_category_bridal" model="product.category">
+        <field name="name">Bridal</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+
+    <record id="product_category_necklaces" model="product.category">
+        <field name="name">Necklaces</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+
+    <record id="product_category_bracelets" model="product.category">
+        <field name="name">Bracelets</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+
+    <record id="product_category_earrings" model="product.category">
+        <field name="name">Earrings</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+
+    <record id="product_category_nautical" model="product.category">
+        <field name="name">Nautical Collection</field>
+        <field name="parent_id" ref="product_category_jewelry" />
+    </record>
+</odoo>
