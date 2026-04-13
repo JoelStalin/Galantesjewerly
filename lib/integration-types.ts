@@ -20,6 +20,8 @@ export type GoogleIntegrationAdminConfig = {
   javascriptOrigin: string;
   redirectUri: string;
   scopes: string[];
+  connectedGoogleEmail: string;
+  oauthConnectedAt: string | null;
   secrets: Record<GoogleSecretField, MaskedSecretState>;
   updatedAt: string | null;
   updatedBy: string | null;

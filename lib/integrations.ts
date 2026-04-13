@@ -41,6 +41,14 @@ type UpdateGoogleIntegrationInput = {
   clearSecrets?: GoogleSecretField[];
 };
 
+type StoreGoogleOAuthTokensInput = {
+  environment: IntegrationEnvironment;
+  accessToken?: string;
+  refreshToken?: string;
+  scopes?: string[] | string;
+  connectedGoogleEmail?: string;
+};
+
 type UpdateAppointmentIntegrationInput = {
   provider?: 'appointments';
   environment: IntegrationEnvironment;
@@ -107,6 +115,8 @@ function buildDefaultGoogleConfig(input: {
     javascriptOrigin: input.javascriptOrigin,
     redirectUri: input.redirectUri,
     scopes: MINIMUM_GOOGLE_SCOPES,
+    connectedGoogleEmail: '',
+    oauthConnectedAt: null,
     encryptedSecrets: {},
     updatedAt: null,
     updatedBy: null,
@@ -168,6 +178,8 @@ function toAdminConfig(config: StoredGoogleIntegration): GoogleIntegrationAdminC
     javascriptOrigin: config.javascriptOrigin,
     redirectUri: config.redirectUri,
     scopes: config.scopes,
+    connectedGoogleEmail: config.connectedGoogleEmail || '',
+    oauthConnectedAt: config.oauthConnectedAt || null,
     updatedAt: config.updatedAt,
     updatedBy: config.updatedBy,
     secrets: {
@@ -289,6 +301,8 @@ async function readStore(): Promise<IntegrationStore> {
         ...(parsed.google?.[environment] || {}),
         provider: 'google',
         environment,
+        connectedGoogleEmail: parsed.google?.[environment]?.connectedGoogleEmail || '',
+        oauthConnectedAt: parsed.google?.[environment]?.oauthConnectedAt || null,
       };
     }
 
@@ -482,6 +496,62 @@ export async function updateGoogleIntegrationConfig(input: UpdateGoogleIntegrati
     ].slice(0, 100);
     await writeStore(store);
   }
+
+  return {
+    config: toAdminConfig(next),
+    changedFields: [...changedFields],
+    audit: store.audit,
+  };
+}
+
+export async function storeGoogleOAuthTokens(input: StoreGoogleOAuthTokensInput, context: AuditContext) {
+  if (!isIntegrationEnvironment(input.environment)) {
+    throw new Error('Invalid integration environment.');
+  }
+
+  const store = await readStore();
+  const current = store.google[input.environment];
+  const next: StoredGoogleIntegration = {
+    ...current,
+    encryptedSecrets: { ...current.encryptedSecrets },
+  };
+  const changedFields = new Set<string>();
+
+  if (input.accessToken) {
+    next.encryptedSecrets.accessToken = encryptSecret(input.accessToken);
+    changedFields.add('accessToken');
+  }
+
+  if (input.refreshToken) {
+    next.encryptedSecrets.refreshToken = encryptSecret(input.refreshToken);
+    changedFields.add('refreshToken');
+  }
+
+  if (input.scopes !== undefined) {
+    const scopes = normalizeScopeInput(input.scopes);
+    if (JSON.stringify(scopes) !== JSON.stringify(current.scopes)) {
+      next.scopes = scopes;
+      changedFields.add('scopes');
+    }
+  }
+
+  if (input.connectedGoogleEmail !== undefined && input.connectedGoogleEmail !== current.connectedGoogleEmail) {
+    next.connectedGoogleEmail = normalizeEmail(input.connectedGoogleEmail);
+    changedFields.add('connectedGoogleEmail');
+  }
+
+  next.oauthConnectedAt = new Date().toISOString();
+  changedFields.add('oauthConnectedAt');
+  next.enabled = true;
+  changedFields.add('enabled');
+  next.updatedAt = new Date().toISOString();
+  next.updatedBy = context.actor;
+  store.google[input.environment] = next;
+  store.audit = [
+    buildAuditEntry(next, context, current.updatedAt ? 'update' : 'create', [...changedFields]),
+    ...store.audit,
+  ].slice(0, 100);
+  await writeStore(store);
 
   return {
     config: toAdminConfig(next),

@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import type { PageSection, SiteSettings, FeaturedItem } from '@/lib/db';
 import ImageUploader from '@/components/admin/ImageUploader';
 import IntegrationsPanel from '@/components/admin/IntegrationsPanel';
+import AppointmentsPanel from '@/components/admin/AppointmentsPanel';
 
 type NoticeState = {
   message: string;
   tone: 'error' | 'success';
 };
 
-const adminTabs = ['settings', 'sections', 'featured', 'integrations'] as const;
+const adminTabs = ['settings', 'sections', 'featured', 'appointments', 'integrations'] as const;
 type AdminTab = (typeof adminTabs)[number];
 
 export default function Dashboard() {
@@ -27,6 +28,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('settings');
 
   useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (adminTabs.includes(requestedTab as AdminTab)) {
+      setActiveTab(requestedTab as AdminTab);
+    }
+
     const loadDashboard = async () => {
       try {
         const [contentRes, sessionRes] = await Promise.all([
@@ -158,9 +164,9 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/admin/content', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'featured_add', 
-          updates: { title: "New Collection", content_text: "Description", image_url: "", action_text: "View More", action_link: "/", is_active: true, order_index: featured.length } 
+        body: JSON.stringify({
+          type: 'featured_add',
+          updates: { title: "New Collection", content_text: "Description", image_url: "", action_text: "View More", action_link: "/", is_active: true, order_index: featured.length }
         })
       });
 
@@ -280,7 +286,9 @@ export default function Dashboard() {
                   ? 'Single Sections'
                   : tab === 'featured'
                     ? 'Featured Collections (Carousel)'
-                    : 'Integrations & OAuth'}
+                    : tab === 'appointments'
+                      ? 'Appointments'
+                      : 'Integrations & OAuth'}
             </button>
           ))}
         </div>
@@ -292,7 +300,7 @@ export default function Dashboard() {
             {notice.message}
           </div>
         )}
-        
+
         {activeTab === 'settings' && (
           <div className="bg-white border border-zinc-100 rounded-2xl p-8 shadow-sm max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
             <h2 className="font-semibold text-lg uppercase tracking-wider text-zinc-800 mb-6">Brand Identity</h2>
@@ -306,16 +314,16 @@ export default function Dashboard() {
                 <textarea rows={3} value={settings.site_description} onChange={e => setSettings({ ...settings, site_description: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-3 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all resize-none" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ImageUploader 
-                  label="Header Logo" 
-                  currentUrl={settings.logo_url} 
+                <ImageUploader
+                  label="Header Logo"
+                  currentUrl={settings.logo_url}
                   onUploadSuccess={(url) => setSettings((current) => current ? { ...current, logo_url: url } : current)}
                   onRemove={() => setSettings((current) => current ? { ...current, logo_url: '' } : current)}
                   onUploadStateChange={(isUploading: boolean) => setUploadState('settings-logo', isUploading)}
                 />
-                <ImageUploader 
-                  label="Tab Favicon" 
-                  currentUrl={settings.favicon_url} 
+                <ImageUploader
+                  label="Tab Favicon"
+                  currentUrl={settings.favicon_url}
                   onUploadSuccess={(url) => setSettings((current) => current ? { ...current, favicon_url: url } : current)}
                   isFavicon={true}
                   onRemove={() => setSettings((current) => current ? { ...current, favicon_url: '' } : current)}
@@ -401,9 +409,9 @@ export default function Dashboard() {
                     <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Content Text</label>
                     <textarea rows={5} value={section.content_text} onChange={e => setSections(sections.map(s => s.id === section.id ? { ...s, content_text: e.target.value } : s))} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-3 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all resize-none" />
                   </div>
-                  <ImageUploader 
-                    label="Section Image" 
-                    currentUrl={section.image_url || ''} 
+                  <ImageUploader
+                    label="Section Image"
+                    currentUrl={section.image_url || ''}
                     onUploadSuccess={(url) => setSections((current) => current.map(s => s.id === section.id ? { ...s, image_url: url } : s))}
                     onRemove={() => setSections((current) => current.map(s => s.id === section.id ? { ...s, image_url: '' } : s))}
                     onUploadStateChange={(isUploading: boolean) => setUploadState(`section-${section.id}`, isUploading)}
@@ -433,7 +441,7 @@ export default function Dashboard() {
                  + Add New Collection
                </button>
              </div>
-             
+
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {featured.map((item) => (
                    <div key={item.id} data-testid={`featured-card-${item.id}`} className="bg-white border-2 border-amber-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col h-full relative">
@@ -449,9 +457,9 @@ export default function Dashboard() {
                         <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Short Description</label>
                         <textarea data-testid={`featured-content-${item.id}`} rows={3} value={item.content_text} onChange={e => setFeatured(featured.map(s => s.id === item.id ? { ...s, content_text: e.target.value } : s))} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-2 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all resize-none" />
                       </div>
-                      <ImageUploader 
-                        label="Main Photo" 
-                        currentUrl={item.image_url} 
+                      <ImageUploader
+                        label="Main Photo"
+                        currentUrl={item.image_url}
                         onUploadSuccess={(url) => setFeatured((current) => current.map(s => s.id === item.id ? { ...s, image_url: url } : s))}
                         onRemove={() => setFeatured((current) => current.map(s => s.id === item.id ? { ...s, image_url: '' } : s))}
                         onUploadStateChange={(isUploading: boolean) => setUploadState(`featured-${item.id}`, isUploading)}
@@ -470,7 +478,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="pt-4 mt-4 border-t border-zinc-100 flex justify-center">
                       <button data-testid={`save-featured-${item.id}`} onClick={() => handleUpdateFeatured(item.id)} disabled={saving === item.id || isUploadingTarget(`featured-${item.id}`)} className={`w-full text-white text-sm font-medium px-4 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 ${savedKeys[item.id] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
                         {saving === item.id ? '...' : isUploadingTarget(`featured-${item.id}`) ? 'Uploading...' : savedKeys[item.id] ? '✓ Saved!' : 'Save and Rotate'}
@@ -484,6 +492,10 @@ export default function Dashboard() {
 
         {activeTab === 'integrations' && (
           <IntegrationsPanel />
+        )}
+
+        {activeTab === 'appointments' && (
+          <AppointmentsPanel />
         )}
       </div>
     </div>

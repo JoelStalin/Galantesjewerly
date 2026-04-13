@@ -163,28 +163,39 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
     if 'BEGIN PRIVATE KEY' in serialized or IMAP_APP_PASSWORD and IMAP_APP_PASSWORD in serialized:
         return 'Admin integrations response serialized a sensitive secret.'
 
-    configs = integrations.data.get('appointmentConfigs') or []
-    config = next((item for item in configs if item.get('environment') == ENVIRONMENT), None)
+    appointment_configs = integrations.data.get('appointmentConfigs') or []
+    google_configs = integrations.data.get('configs') or []
+    config = next((item for item in appointment_configs if item.get('environment') == ENVIRONMENT), None)
+    google_config = next((item for item in google_configs if item.get('environment') == ENVIRONMENT), {})
     if not config:
         return f'No appointments integration config found for environment {ENVIRONMENT!r}.'
+
+    has_service_account_calendar = bool(
+        config.get('googleServiceAccountEmail')
+        and get_secret_state(config, 'googlePrivateKey').get('isSet')
+    )
+    has_google_oauth = bool(
+        google_config.get('googleClientId')
+        and get_secret_state(google_config, 'googleClientSecret').get('isSet')
+        and get_secret_state(google_config, 'refreshToken').get('isSet')
+    )
+    has_smtp = bool(get_secret_state(config, 'gmailSmtpPassword').get('isSet'))
 
     missing = []
     if not config.get('googleCalendarEnabled'):
         missing.append('Google Calendar enabled')
     if not config.get('googleCalendarId'):
         missing.append('Google Calendar ID')
-    if not config.get('googleServiceAccountEmail'):
-        missing.append('Google service account email')
-    if not get_secret_state(config, 'googlePrivateKey').get('isSet'):
-        missing.append('Google private key')
+    if not has_service_account_calendar and not has_google_oauth:
+        missing.append('Google service account credentials or connected Google OAuth owner account')
     if not config.get('gmailNotificationsEnabled'):
         missing.append('Gmail notifications enabled')
     if (config.get('gmailRecipientInbox') or '').lower() != EXPECTED_GMAIL_RECIPIENT.lower():
         missing.append(f'Gmail recipient inbox = {EXPECTED_GMAIL_RECIPIENT}')
     if (config.get('gmailSender') or '').lower() != EXPECTED_GMAIL_SENDER.lower():
         missing.append(f'Gmail sender = {EXPECTED_GMAIL_SENDER}')
-    if not get_secret_state(config, 'gmailSmtpPassword').get('isSet'):
-        missing.append('Gmail SMTP App Password')
+    if not has_smtp and not has_google_oauth:
+        missing.append('Gmail SMTP App Password or connected Google OAuth owner account')
 
     report['admin_config'] = {
         'environment': config.get('environment'),
@@ -196,6 +207,9 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
         'gmailRecipientInbox': config.get('gmailRecipientInbox'),
         'gmailSender': config.get('gmailSender'),
         'gmailSmtpPasswordSet': bool(get_secret_state(config, 'gmailSmtpPassword').get('isSet')),
+        'googleOauthOwnerConnected': has_google_oauth,
+        'googleOauthConnectedEmail': google_config.get('connectedGoogleEmail'),
+        'googleOauthRefreshTokenSet': bool(get_secret_state(google_config, 'refreshToken').get('isSet')),
         'appointmentDurationMinutes': config.get('appointmentDurationMinutes'),
         'appointmentTimezone': config.get('appointmentTimezone'),
     }
@@ -216,7 +230,7 @@ def admin_preflight(report: dict, artifact_dir: Path) -> str | None:
     report['cases'].append({
         'name': 'production_preflight',
         'status': 'pass',
-        'details': 'Health, admin masked settings, Calendar test, and Gmail SMTP test passed.',
+        'details': 'Health, admin masked settings, Calendar test, and Gmail delivery auth test passed.',
     })
     return None
 

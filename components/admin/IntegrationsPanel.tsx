@@ -23,6 +23,14 @@ type AppointmentConfigMap = Record<IntegrationEnvironment, AppointmentIntegratio
 type PendingSecrets = Partial<Record<GoogleSecretField, string>>;
 type PendingAppointmentSecrets = Partial<Record<AppointmentSecretField, string>>;
 
+const adminGoogleScopes = [
+  'openid',
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/gmail.send',
+] as const;
+
 const secretLabels: Record<GoogleSecretField, string> = {
   googleClientSecret: 'Google Client Secret',
   apiKey: 'Google API Key',
@@ -86,8 +94,11 @@ export default function IntegrationsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [origin, setOrigin] = useState('');
 
   useEffect(() => {
+    setOrigin(window.location.origin);
+
     const loadIntegrations = async () => {
       try {
         const response = await fetch('/api/admin/integrations');
@@ -118,6 +129,7 @@ export default function IntegrationsPanel() {
   const activeConfig = configs?.[activeEnvironment] || null;
   const activeAppointmentConfig = appointmentConfigs?.[activeEnvironment] || null;
   const scopeText = useMemo(() => activeConfig?.scopes.join(' ') || '', [activeConfig]);
+  const ownerCallbackUrl = origin ? `${origin}/api/admin/google/oauth/callback` : '/api/admin/google/oauth/callback';
 
   const updateActiveConfig = (updates: Partial<GoogleIntegrationAdminConfig>) => {
     if (!activeConfig || !configs) {
@@ -393,6 +405,10 @@ export default function IntegrationsPanel() {
     }
   };
 
+  const connectGoogleOwnerAccount = () => {
+    window.location.href = `/api/admin/google/oauth/start?environment=${activeEnvironment}`;
+  };
+
   if (loading) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white p-8 text-sm text-zinc-500">
@@ -444,6 +460,36 @@ export default function IntegrationsPanel() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 lg:col-span-2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-800">Connect Owner Google Account</h3>
+                <p className="mt-2 text-xs leading-5 text-zinc-600">
+                  This authorizes Calendar and Gmail API with Google OAuth, so appointments can be created in the owner calendar
+                  and emails can be sent without storing a mailbox password.
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Add this redirect URI in Google Cloud: <span className="font-mono text-zinc-800">{ownerCallbackUrl}</span>
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Required owner scopes: <span className="font-mono">{adminGoogleScopes.join(' ')}</span>
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Connected account: {activeConfig.connectedGoogleEmail || 'Not connected'}.
+                  {' '}Refresh token: {activeConfig.secrets.refreshToken.isSet ? activeConfig.secrets.refreshToken.maskedValue : 'not stored'}.
+                  {' '}Connected at: {formatDate(activeConfig.oauthConnectedAt)}.
+                </p>
+              </div>
+              <button
+                data-testid="connect-google-owner-oauth"
+                onClick={connectGoogleOwnerAccount}
+                className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-amber-600"
+              >
+                Connect Google Owner
+              </button>
+            </div>
+          </div>
+
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 lg:col-span-2">
             <input
               data-testid="integration-enabled"
@@ -502,7 +548,9 @@ export default function IntegrationsPanel() {
               className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-amber-300"
               autoComplete="off"
             />
-            <p className="mt-2 text-xs text-zinc-400">Recommended minimum for ecommerce login: openid email profile.</p>
+            <p className="mt-2 text-xs text-zinc-400">
+              Public customer login should stay minimal: openid email profile. The admin owner connection above requests Calendar and Gmail scopes separately.
+            </p>
           </div>
         </div>
 
@@ -626,6 +674,9 @@ export default function IntegrationsPanel() {
               placeholder="calendar-bot@project.iam.gserviceaccount.com"
               autoComplete="off"
             />
+            <p className="mt-2 text-xs text-zinc-400">
+              Optional when the owner Google account is connected with OAuth. Keep this for service-account deployments.
+            </p>
           </div>
 
           <div>

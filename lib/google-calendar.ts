@@ -1,13 +1,19 @@
 import { importPKCS8, SignJWT } from 'jose';
 import { getDecryptedAppointmentIntegration } from '@/lib/integrations';
+import { getGoogleOAuthRuntimeConfig, refreshGoogleOAuthAccessToken } from '@/lib/google-oauth';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
 import type { AppointmentRecord, ContactSubmission } from '@/lib/appointments';
 
 export type CalendarRuntimeConfig = {
+  environment: IntegrationEnvironment;
   enabled: boolean;
   calendarId: string;
   serviceAccountEmail: string;
   privateKey: string;
+  oauthClientId: string;
+  oauthClientSecret: string;
+  oauthRefreshToken: string;
+  oauthConnectedGoogleEmail: string;
   timezone: string;
   durationMinutes: number;
 };
@@ -55,23 +61,38 @@ function normalizePrivateKey(value: string) {
 
 export async function getCalendarRuntimeConfig(environment: IntegrationEnvironment): Promise<CalendarRuntimeConfig> {
   const stored = await getDecryptedAppointmentIntegration(environment);
+  const googleOAuth = await getGoogleOAuthRuntimeConfig(environment);
 
   return {
+    environment,
     enabled: stored.googleCalendarEnabled,
     calendarId: stored.googleCalendarId || process.env.GOOGLE_CALENDAR_ID || '',
     serviceAccountEmail: stored.googleServiceAccountEmail || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
     privateKey: normalizePrivateKey(stored.secrets.googlePrivateKey || process.env.GOOGLE_PRIVATE_KEY || ''),
+    oauthClientId: googleOAuth.clientId,
+    oauthClientSecret: googleOAuth.clientSecret,
+    oauthRefreshToken: googleOAuth.refreshToken,
+    oauthConnectedGoogleEmail: googleOAuth.connectedGoogleEmail,
     timezone: stored.appointmentTimezone || 'America/New_York',
     durationMinutes: stored.appointmentDurationMinutes || 60,
   };
+}
+
+function hasServiceAccountConfig(config: CalendarRuntimeConfig) {
+  return Boolean(config.serviceAccountEmail && config.privateKey);
+}
+
+function hasGoogleOAuthConfig(config: CalendarRuntimeConfig) {
+  return Boolean(config.oauthClientId && config.oauthClientSecret && config.oauthRefreshToken);
 }
 
 function assertCalendarConfig(config: CalendarRuntimeConfig) {
   const missing = [
     !config.enabled ? 'Google Calendar integration is disabled' : '',
     !config.calendarId ? 'Google Calendar ID' : '',
-    !config.serviceAccountEmail ? 'Google service account email' : '',
-    !config.privateKey ? 'Google private key' : '',
+    !hasServiceAccountConfig(config) && !hasGoogleOAuthConfig(config)
+      ? 'Google service account credentials or connected Google OAuth account'
+      : '',
   ].filter(Boolean);
 
   if (missing.length > 0) {
@@ -84,7 +105,11 @@ function getAppointmentTestMode() {
 }
 
 function cacheKey(config: CalendarRuntimeConfig) {
-  return `${config.serviceAccountEmail}:${config.calendarId}`;
+  if (hasGoogleOAuthConfig(config)) {
+    return `oauth:${config.oauthClientId}:${config.calendarId}`;
+  }
+
+  return `service:${config.serviceAccountEmail}:${config.calendarId}`;
 }
 
 async function getAccessToken(config: CalendarRuntimeConfig) {
@@ -94,6 +119,23 @@ async function getAccessToken(config: CalendarRuntimeConfig) {
   const cached = tokenCache.get(key);
   if (cached && cached.expiresAt > Date.now() + 60_000) {
     return cached.token;
+  }
+
+  if (hasGoogleOAuthConfig(config)) {
+    const token = await refreshGoogleOAuthAccessToken({
+      environment: config.environment,
+      clientId: config.oauthClientId,
+      clientSecret: config.oauthClientSecret,
+      refreshToken: config.oauthRefreshToken,
+      accessToken: '',
+      connectedGoogleEmail: config.oauthConnectedGoogleEmail,
+    });
+    tokenCache.set(key, {
+      token,
+      expiresAt: Date.now() + 55 * 60 * 1000,
+    });
+
+    return token;
   }
 
   const privateKey = await importPKCS8(config.privateKey, 'RS256');
