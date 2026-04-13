@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Extend product.template form view -->
+    <record id="product_template_form_view_galantes" model="ir.ui.view">
+        <field name="name">product.template.form (galantes_jewelry)</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id">product.product_template_form_view</field>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Jewelry Info" name="jewelry_info">
+                    <group>
+                        <field name="material" />
+                        <field name="slug" readonly="1" />
+                        <field name="available_on_website" />
+                        <field name="availability_status" readonly="1" />
+                    </group>
+                    <group>
+                        <field name="buy_url" readonly="1" />
+                        <field name="public_url" readonly="1" />
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Product template tree view -->
+    <record id="product_template_tree_view_galantes" model="ir.ui.view">
+        <field name="name">product.template.tree (galantes_jewelry)</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id">product.product_template_tree_view</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='categ_id']" position="after">
+                <field name="material" />
+                <field name="availability_status" />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Published products list (for shop) -->
+    <record id="product_template_search_view_galantes" model="ir.ui.view">
+        <field name="name">product.template.search (galantes_jewelry)</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id">product.product_template_search_view</field>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='categ_id']" position="after">
+                <filter name="available_website" string="Available on Website" domain="[('available_on_website', '=', True)]" />
+                <filter name="material_gold" string="Gold" domain="[('material', '=', 'gold')]" />
+                <filter name="material_silver" string="Silver" domain="[('material', '=', 'silver')]" />
+                <filter name="material_platinum" string="Platinum" domain="[('material', '=', 'platinum')]" />
+                <filter name="in_stock" string="In Stock" domain="[('availability_status', '=', 'in_stock')]" />
+                <filter name="preorder" string="Pre-order" domain="[('availability_status', '=', 'preorder')]" />
+            </xpath>
+        </field>
+    </record>
+</odoo>
