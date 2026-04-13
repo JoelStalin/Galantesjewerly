@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: "package-lock\\.json"
+      - id: end-of-file-fixer
+        exclude: "package-lock\\.json"
+      - id: check-merge-conflict
+      - id: check-json
+        exclude: "package-lock\\.json"
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: TypeScript type check
+        language: node
+        entry: npx tsc --noEmit
+        pass_filenames: false
+        types: [ts]
+        additional_dependencies: []
+
+      - id: eslint
+        name: ESLint
+        language: node
+        entry: npx eslint --max-warnings=0
+        types_or: [ts, tsx]
+        additional_dependencies: []
