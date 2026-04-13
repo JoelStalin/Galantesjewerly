@@ -11,7 +11,26 @@ python tests/e2e/profile_manager.py --profile Default
 python tests/e2e/admin_image_session_flow.py
 python tests/e2e/public_smoke.py
 npm run e2e:appointments
+npm run e2e:appointments:production
 ```
+
+## Production Appointment Calendar/Gmail Flow
+
+`npm run e2e:appointments:production` is a guarded real-production test. It first checks `/api/health`,
+masked admin integration settings, Calendar connectivity, Gmail SMTP connectivity, and IMAP access to the recipient.
+It only creates a real appointment when all required credentials exist and `E2E_PRODUCTION_REAL_SEND=1` is set.
+
+Required local environment for the real run:
+
+```bash
+set E2E_PRODUCTION_REAL_SEND=1
+set GMAIL_RECEIPT_USER=ceo@galantesjewelry.com
+set GMAIL_RECEIPT_IMAP_APP_PASSWORD=<google-workspace-app-password>
+npm run e2e:appointments:production
+```
+
+Use Gmail/Google Workspace App Passwords or OAuth credentials only. Do not use or store the normal mailbox password.
+The recipient App Password stays local and is never saved in the repo or admin panel.
 
 ## URLs Tested
 
@@ -26,6 +45,8 @@ npm run e2e:appointments
 - `/contact`
 - `/api/contact`
 - `/api/admin/integrations`
+- `/api/admin/integrations/test`
+- `/api/contact/availability`
 
 ## Primary Selectors
 
