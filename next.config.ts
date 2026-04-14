@@ -5,6 +5,12 @@ const disableImageOptimization = process.platform === 'android'
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: [
+    "googleapis",
+    "google-auth-library",
+    "@sendgrid/mail",
+    "nodemailer",
+  ],
   images: {
     unoptimized: disableImageOptimization,
   },
