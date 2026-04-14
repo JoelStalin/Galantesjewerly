@@ -16,6 +16,7 @@ echo "Docker is not installed. Falling back to standalone Node runtime."
 npm ci
 
 if [ "$(node -p 'process.platform')" = "android" ]; then
+  export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
   npm run build:android
   sh scripts/install_termux_service.sh
   echo "Android Termux service installed. Check server.log and sv status."

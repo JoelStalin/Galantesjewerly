@@ -33,6 +33,7 @@ cd "$APP_DIR"
 npm ci
 
 if [ "$(node -p 'process.platform')" = "android" ]; then
+  export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
   npm run build:android
 else
   npm run build
