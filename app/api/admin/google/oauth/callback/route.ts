@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth';
 import { integrationEnvironments, type IntegrationEnvironment } from '@/lib/integration-types';
 import { storeGoogleOAuthTokens } from '@/lib/integrations';
-import { getExpiredGoogleOAuthCookieOptions } from '@/lib/google-login';
+import { getExpiredGoogleOAuthCookieOptions, getPublicUrl } from '@/lib/google-login';
 import {
   exchangeGoogleOAuthCode,
   getAdminGoogleOAuthRedirectUri,
@@ -49,7 +49,9 @@ function getAuditContext(request: Request, actor: string) {
 }
 
 function redirectWithStatus(request: Request, status: string) {
-  const response = NextResponse.redirect(new URL(`/admin/dashboard?tab=integrations&google_owner_oauth=${status}`, request.url));
+  const response = NextResponse.redirect(
+    getPublicUrl(`/admin/dashboard?tab=integrations&google_owner_oauth=${status}`, request),
+  );
   response.cookies.set({
     ...getExpiredGoogleOAuthCookieOptions(request),
     name: ADMIN_GOOGLE_CONNECT_STATE_COOKIE,
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
   const session = await getAdminSessionFromRequest(request);
 
   if (!session) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return NextResponse.redirect(getPublicUrl('/admin/login', request));
   }
 
   const requestUrl = new URL(request.url);

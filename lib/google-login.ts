@@ -62,6 +62,28 @@ export function sanitizeReturnTo(value: string | null | undefined) {
   return value;
 }
 
+export function getPublicBaseUrl(request: RequestLike) {
+  const siteUrl = process.env.SITE_URL?.trim().replace(/\/+$/, '');
+
+  if (siteUrl) {
+    return siteUrl;
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = forwardedHost || request.headers.get('host') || '';
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+
+  if (host && !host.startsWith('0.0.0.0')) {
+    return `${forwardedProto}://${host}`;
+  }
+
+  return 'https://galantesjewelry.com';
+}
+
+export function getPublicUrl(path: string, request: RequestLike) {
+  return new URL(path, getPublicBaseUrl(request)).toString();
+}
+
 export function getGoogleOAuthCookieOptions(request: RequestLike, maxAge = 600) {
   return {
     httpOnly: true,

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth';
 import { getDecryptedGoogleIntegration } from '@/lib/integrations';
 import { integrationEnvironments, type IntegrationEnvironment } from '@/lib/integration-types';
-import { getGoogleOAuthCookieOptions } from '@/lib/google-login';
+import { getGoogleOAuthCookieOptions, getPublicUrl } from '@/lib/google-login';
 import { GOOGLE_ADMIN_OAUTH_SCOPES, getAdminGoogleOAuthRedirectUri } from '@/lib/google-oauth';
 
 const ADMIN_GOOGLE_CONNECT_STATE_COOKIE = 'admin_google_connect_state';
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const session = await getAdminSessionFromRequest(request);
 
   if (!session) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return NextResponse.redirect(getPublicUrl('/admin/login', request));
   }
 
   try {
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
     if (!clientId || !clientSecret) {
       return NextResponse.redirect(
-        new URL('/admin/dashboard?tab=integrations&google_owner_oauth=missing_client', request.url),
+        getPublicUrl('/admin/dashboard?tab=integrations&google_owner_oauth=missing_client', request),
       );
     }
 
@@ -71,6 +71,6 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error('[Admin Google OAuth] start failed:', error instanceof Error ? error.message : 'unknown error');
-    return NextResponse.redirect(new URL('/admin/dashboard?tab=integrations&google_owner_oauth=error', request.url));
+    return NextResponse.redirect(getPublicUrl('/admin/dashboard?tab=integrations&google_owner_oauth=error', request));
   }
 }

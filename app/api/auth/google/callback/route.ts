@@ -5,6 +5,7 @@ import {
   GOOGLE_USER_COOKIE,
   assertGoogleLoginConfig,
   getExpiredGoogleOAuthCookieOptions,
+  getPublicUrl,
   getGoogleLoginConfig,
   getGoogleUserCookieOptions,
   sanitizeReturnTo,
@@ -149,7 +150,7 @@ export async function GET(request: Request) {
       picture: tokenInfo.picture,
     });
 
-    const response = NextResponse.redirect(new URL(returnTo, request.url));
+    const response = NextResponse.redirect(getPublicUrl(returnTo, request));
     response.cookies.set({
       ...getGoogleUserCookieOptions(request),
       name: GOOGLE_USER_COOKIE,
@@ -168,7 +169,7 @@ export async function GET(request: Request) {
 
     return response;
   } catch (error) {
-    const response = NextResponse.redirect(new URL('/?google_login=error', request.url));
+    const response = NextResponse.redirect(getPublicUrl('/?google_login=error', request));
     response.cookies.set({
       ...getExpiredGoogleOAuthCookieOptions(request),
       name: GOOGLE_OAUTH_STATE_COOKIE,

@@ -1,5 +1,6 @@
 import { getDecryptedGoogleIntegration } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
+import { getPublicUrl } from '@/lib/google-login';
 
 export const GOOGLE_ADMIN_OAUTH_SCOPES = [
   'openid',
@@ -32,7 +33,7 @@ type GoogleTokenResponse = {
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 export function getAdminGoogleOAuthRedirectUri(request: Request) {
-  return new URL('/api/admin/google/oauth/callback', request.url).toString();
+  return getPublicUrl('/api/admin/google/oauth/callback', request);
 }
 
 export async function getGoogleOAuthRuntimeConfig(
