@@ -8,6 +8,7 @@ import { GOOGLE_ADMIN_OAUTH_SCOPES, getAdminGoogleOAuthRedirectUri } from '@/lib
 
 const ADMIN_GOOGLE_CONNECT_STATE_COOKIE = 'admin_google_connect_state';
 const ADMIN_GOOGLE_CONNECT_ENV_COOKIE = 'admin_google_connect_environment';
+const ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE = 'admin_google_connect_redirect_uri';
 
 function parseEnvironment(value: string | null): IntegrationEnvironment {
   if (integrationEnvironments.includes(value as IntegrationEnvironment)) {
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     const state = crypto.randomBytes(24).toString('base64url');
-    const redirectUri = getAdminGoogleOAuthRedirectUri(request);
+    const redirectUri = config.redirectUri || getAdminGoogleOAuthRedirectUri(request);
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
 
     authUrl.searchParams.set('client_id', clientId);
@@ -60,6 +61,11 @@ export async function GET(request: Request) {
       ...getGoogleOAuthCookieOptions(request),
       name: ADMIN_GOOGLE_CONNECT_ENV_COOKIE,
       value: environment,
+    });
+    response.cookies.set({
+      ...getGoogleOAuthCookieOptions(request),
+      name: ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE,
+      value: redirectUri,
     });
 
     return response;

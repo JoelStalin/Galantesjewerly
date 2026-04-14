@@ -12,6 +12,7 @@ import {
 
 const ADMIN_GOOGLE_CONNECT_STATE_COOKIE = 'admin_google_connect_state';
 const ADMIN_GOOGLE_CONNECT_ENV_COOKIE = 'admin_google_connect_environment';
+const ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE = 'admin_google_connect_redirect_uri';
 
 function getCookieValue(cookieHeader: string | null, cookieName: string) {
   if (!cookieHeader) {
@@ -59,6 +60,11 @@ function redirectWithStatus(request: Request, status: string) {
     name: ADMIN_GOOGLE_CONNECT_ENV_COOKIE,
     value: '',
   });
+  response.cookies.set({
+    ...getExpiredGoogleOAuthCookieOptions(request),
+    name: ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE,
+    value: '',
+  });
   return response;
 }
 
@@ -73,6 +79,8 @@ export async function GET(request: Request) {
   const cookieHeader = request.headers.get('cookie');
   const expectedState = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_STATE_COOKIE);
   const environment = parseEnvironment(getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_ENV_COOKIE));
+  const redirectUri = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE)
+    || getAdminGoogleOAuthRedirectUri(request);
 
   try {
     const error = requestUrl.searchParams.get('error');
@@ -96,7 +104,7 @@ export async function GET(request: Request) {
       code,
       clientId: runtimeConfig.clientId,
       clientSecret: runtimeConfig.clientSecret,
-      redirectUri: getAdminGoogleOAuthRedirectUri(request),
+      redirectUri,
     });
 
     if (!tokenPayload.refresh_token && !runtimeConfig.refreshToken) {

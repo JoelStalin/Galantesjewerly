@@ -130,7 +130,8 @@ export default function IntegrationsPanel() {
   const activeConfig = configs?.[activeEnvironment] || null;
   const activeAppointmentConfig = appointmentConfigs?.[activeEnvironment] || null;
   const scopeText = useMemo(() => activeConfig?.scopes.join(' ') || '', [activeConfig]);
-  const ownerCallbackUrl = origin ? `${origin}/api/admin/google/oauth/callback` : '/api/admin/google/oauth/callback';
+  const ownerCallbackUrl = activeConfig?.redirectUri
+    || (origin ? `${origin}/api/admin/google/oauth/callback` : '/api/admin/google/oauth/callback');
 
   const updateActiveConfig = (updates: Partial<GoogleIntegrationAdminConfig>) => {
     if (!activeConfig || !configs) {

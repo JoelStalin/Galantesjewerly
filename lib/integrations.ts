@@ -82,17 +82,17 @@ const DEFAULT_GOOGLE_CONFIGS: Record<IntegrationEnvironment, StoredGoogleIntegra
   development: buildDefaultGoogleConfig({
     environment: 'development',
     javascriptOrigin: 'http://localhost:3000',
-    redirectUri: 'http://localhost:3000/api/auth/google/callback',
+    redirectUri: 'http://localhost:3000/auth/google/callback',
   }),
   staging: buildDefaultGoogleConfig({
     environment: 'staging',
     javascriptOrigin: 'https://staging.galantesjewelry.com',
-    redirectUri: 'https://staging.galantesjewelry.com/api/auth/google/callback',
+    redirectUri: 'https://staging.galantesjewelry.com/auth/google/callback',
   }),
   production: buildDefaultGoogleConfig({
     environment: 'production',
     javascriptOrigin: 'https://galantesjewelry.com',
-    redirectUri: 'https://galantesjewelry.com/api/auth/google/callback',
+    redirectUri: 'https://galantesjewelry.com/auth/google/callback',
   }),
 };
 
