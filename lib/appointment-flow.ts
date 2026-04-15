@@ -12,6 +12,7 @@ import {
 } from '@/lib/google-calendar';
 import { resolveGoogleEnvironmentFromHost } from '@/lib/google-login';
 import { getMailRuntimeConfig, sendAppointmentNotification } from '@/lib/mailer';
+import { syncAppointmentToOdoo } from '@/lib/odoo-sync';
 
 type ProcessAppointmentInput = {
   submission: ContactSubmission;
@@ -160,6 +161,24 @@ export async function processAppointmentSubmission(input: ProcessAppointmentInpu
       emailDeliveryStatus: 'sent',
     });
 
+    const odooSync = await syncAppointmentToOdoo({
+      record: { ...record, googleEventId: event.id, googleEventLink: event.htmlLink },
+      submission: input.submission,
+      start,
+      end,
+      googleEventId: event.id,
+      googleEventLink: event.htmlLink,
+    });
+
+    await updateAppointmentRecord(record.id, {
+      odooSyncStatus: odooSync.status,
+      odooPartnerId: odooSync.partnerId,
+      odooAppointmentId: odooSync.appointmentId,
+      odooErrorMessage: odooSync.errorMessage,
+    });
+
+    console.log(`[${input.logPrefix || 'APPOINTMENTS'}] Odoo sync: ${odooSync.status}${odooSync.errorMessage ? ` — ${odooSync.errorMessage}` : ''}`);
+
     return {
       statusCode: input.successStatusCode || 200,
       body: {
@@ -167,6 +186,7 @@ export async function processAppointmentSubmission(input: ProcessAppointmentInpu
         appointmentId: record.id,
         message: 'Appointment request created successfully.',
         googleEventLink: event.htmlLink,
+        ...(odooSync.appointmentId && { odooAppointmentId: odooSync.appointmentId }),
       },
     };
   } catch (error) {
