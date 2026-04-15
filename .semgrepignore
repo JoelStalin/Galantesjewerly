@@ -1,0 +1,16 @@
+# Semgrep ignore patterns
+
+# Build artifacts and generated files
+temp_standalone/
+.next/
+node_modules/
+
+# Claude worktrees (not production code)
+.claude/worktrees/
+
+# Nginx $host is intentional — reverse proxy to upstream Next.js, not user-controlled
+# nosemgrep: generic.nginx.security.request-host-used.request-host-used
+infra/nginx/
+
+# Next.js internal bundled templates use dangerouslySetInnerHTML (framework code, not user input)
+# nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml
