@@ -5,7 +5,7 @@ import {
   GOOGLE_USER_COOKIE,
   assertGoogleLoginConfig,
   getExpiredGoogleOAuthCookieOptions,
-  getPublicUrl,
+  getGoogleRedirectBaseUrl,
   getGoogleLoginConfig,
   getGoogleUserCookieOptions,
   sanitizeReturnTo,
@@ -114,6 +114,7 @@ export async function GET(request: Request) {
   const cookieHeader = request.headers.get('cookie');
   const expectedState = getCookieValue(cookieHeader, GOOGLE_OAUTH_STATE_COOKIE);
   const returnTo = sanitizeReturnTo(getCookieValue(cookieHeader, GOOGLE_OAUTH_RETURN_COOKIE));
+  let redirectBaseUrl = '';
 
   try {
     const code = requestUrl.searchParams.get('code');
@@ -135,6 +136,7 @@ export async function GET(request: Request) {
     }
 
     assertGoogleLoginConfig(config);
+    redirectBaseUrl = getGoogleRedirectBaseUrl(config.redirectUri, request);
 
     const tokenPayload = await exchangeCodeForTokens({
       code,
@@ -150,7 +152,7 @@ export async function GET(request: Request) {
       picture: tokenInfo.picture,
     });
 
-    const response = NextResponse.redirect(getPublicUrl(returnTo, request));
+    const response = NextResponse.redirect(new URL(returnTo, redirectBaseUrl).toString());
     response.cookies.set({
       ...getGoogleUserCookieOptions(request),
       name: GOOGLE_USER_COOKIE,
@@ -169,7 +171,9 @@ export async function GET(request: Request) {
 
     return response;
   } catch (error) {
-    const response = NextResponse.redirect(getPublicUrl('/?google_login=error', request));
+    const response = NextResponse.redirect(
+      new URL('/?google_login=error', redirectBaseUrl || getGoogleRedirectBaseUrl(undefined, request)).toString(),
+    );
     response.cookies.set({
       ...getExpiredGoogleOAuthCookieOptions(request),
       name: GOOGLE_OAUTH_STATE_COOKIE,

@@ -32,6 +32,66 @@ type RequestLike = {
   url?: string;
 };
 
+function getConfiguredSiteUrl() {
+  const candidates = [
+    process.env.GOOGLE_PUBLIC_BASE_URL,
+    process.env.SITE_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = candidate?.trim().replace(/\/+$/, '');
+    if (!normalized) {
+      continue;
+    }
+
+    try {
+      const url = new URL(normalized);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return url.toString().replace(/\/+$/, '');
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return '';
+}
+
+function isLoopbackHostname(hostname: string) {
+  return ['localhost', '127.0.0.1', '[::1]', '0.0.0.0', '::', '[::]'].includes(hostname);
+}
+
+function normalizeHostname(hostname: string) {
+  const normalized = hostname.trim().toLowerCase();
+
+  if (normalized === '0.0.0.0' || normalized === '::' || normalized === '[::]') {
+    return 'localhost';
+  }
+
+  return normalized;
+}
+
+function normalizeHostWithPort(host: string) {
+  const trimmed = host.trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  const ipv6LoopbackMatch = trimmed.match(/^\[(::|::1)\](?::(\d+))?$/i);
+  if (ipv6LoopbackMatch) {
+    const [, , port] = ipv6LoopbackMatch;
+    return port ? `localhost:${port}` : 'localhost';
+  }
+
+  const [hostname, ...rest] = trimmed.split(':');
+  const normalizedHostname = normalizeHostname(hostname);
+  const port = rest.join(':');
+
+  return port ? `${normalizedHostname}:${port}` : normalizedHostname;
+}
+
 function getGoogleSessionKey() {
   const secret =
     process.env.GOOGLE_SESSION_SECRET ||
@@ -42,9 +102,9 @@ function getGoogleSessionKey() {
 }
 
 export function resolveGoogleEnvironmentFromHost(host: string): IntegrationEnvironment {
-  const normalizedHost = host.split(':')[0]?.toLowerCase() || '';
+  const normalizedHost = normalizeHostname(host.split(':')[0] || '');
 
-  if (normalizedHost === 'localhost' || normalizedHost === '127.0.0.1') {
+  if (isLoopbackHostname(normalizedHost)) {
     return 'development';
   }
 
@@ -64,23 +124,42 @@ export function sanitizeReturnTo(value: string | null | undefined) {
 }
 
 export function getPublicBaseUrl(request: RequestLike) {
-  const siteUrl = process.env.SITE_URL?.trim().replace(/\/+$/, '');
+  const siteUrl = getConfiguredSiteUrl();
 
   if (siteUrl) {
     return siteUrl;
   }
 
-  const forwardedHost = request.headers.get('x-forwarded-host');
-  const host = forwardedHost || request.headers.get('host') || '';
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = normalizeHostWithPort(forwardedHost || request.headers.get('host') || '');
   const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
 
-  if (host && !host.startsWith('0.0.0.0')) {
-    return `${forwardedProto}://${host}`;
+  if (host) {
+    const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : forwardedProto;
+    return `${protocol}://${host}`;
   }
 
   return 'https://galantesjewelry.com';
 }
 
+export function getPublicUrl(pathname: string, request: RequestLike) {
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return new URL(normalizedPath, getPublicBaseUrl(request)).toString();
+}
+
+export function getGoogleRedirectBaseUrl(redirectUri: string | undefined, request: RequestLike) {
+  const normalizedRedirectUri = redirectUri?.trim();
+
+  if (normalizedRedirectUri) {
+    try {
+      return new URL(normalizedRedirectUri).origin;
+    } catch {
+      // Fall through to the canonical public base URL.
+    }
+  }
+
+  return getPublicBaseUrl(request);
+}
 export function getGoogleOAuthCookieOptions(request: RequestLike, maxAge = 600) {
   return {
     httpOnly: true,
@@ -107,26 +186,6 @@ export function getGoogleUserCookieOptions(request: RequestLike) {
     sameSite: 'lax' as const,
     secure: shouldUseSecureCookies(request),
   };
-}
-
-export function getPublicUrl(pathname: string, request: RequestLike) {
-  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
-
-  if (request.url) {
-    return new URL(normalizedPath, request.url).toString();
-  }
-
-  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
-  const host = forwardedHost || request.headers.get('host')?.split(',')[0]?.trim();
-  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
-
-  if (host) {
-    const protocol = forwardedProto || (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
-    return `${protocol}://${host}${normalizedPath}`;
-  }
-
-  const fallbackOrigin = process.env.SITE_URL || 'http://localhost:3000';
-  return new URL(normalizedPath, fallbackOrigin).toString();
 }
 
 export async function getGoogleLoginConfig(request: RequestLike): Promise<GoogleLoginConfig> {
