@@ -44,6 +44,16 @@ const appointmentSecretLabels: Record<AppointmentSecretField, string> = {
   sendGridApiKey: 'SendGrid API Key',
 };
 
+const weekdayOptions = [
+  { value: 0, label: 'Sun' },
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+];
+
 function toConfigMap<T extends { environment: IntegrationEnvironment }>(configs: T[]) {
   return configs.reduce((accumulator, config) => {
     accumulator[config.environment] = config;
@@ -292,6 +302,10 @@ export default function IntegrationsPanel() {
           gmailSender: activeAppointmentConfig.gmailSender,
           appointmentDurationMinutes: activeAppointmentConfig.appointmentDurationMinutes,
           appointmentTimezone: activeAppointmentConfig.appointmentTimezone,
+          appointmentStartTime: activeAppointmentConfig.appointmentStartTime,
+          appointmentEndTime: activeAppointmentConfig.appointmentEndTime,
+          appointmentSlotIntervalMinutes: activeAppointmentConfig.appointmentSlotIntervalMinutes,
+          appointmentAvailableWeekdays: activeAppointmentConfig.appointmentAvailableWeekdays,
           secrets: pendingAppointmentSecrets[activeEnvironment],
           clearSecrets: clearAppointmentSecrets[activeEnvironment],
         }),
@@ -709,6 +723,76 @@ export default function IntegrationsPanel() {
           </div>
 
           <div>
+            <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Booking Window Start</label>
+            <input
+              data-testid="appointment-start-time"
+              type="time"
+              step={900}
+              value={activeAppointmentConfig.appointmentStartTime}
+              onChange={(event) => updateActiveAppointmentConfig({ appointmentStartTime: event.target.value })}
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Booking Window End</label>
+            <input
+              data-testid="appointment-end-time"
+              type="time"
+              step={900}
+              value={activeAppointmentConfig.appointmentEndTime}
+              onChange={(event) => updateActiveAppointmentConfig({ appointmentEndTime: event.target.value })}
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Slot Interval Minutes</label>
+            <input
+              data-testid="appointment-slot-interval"
+              type="number"
+              min={15}
+              max={240}
+              step={15}
+              value={activeAppointmentConfig.appointmentSlotIntervalMinutes}
+              onChange={(event) => updateActiveAppointmentConfig({ appointmentSlotIntervalMinutes: Number(event.target.value) })}
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Available Booking Days</label>
+            <div className="flex flex-wrap gap-2">
+              {weekdayOptions.map((option) => {
+                const checked = activeAppointmentConfig.appointmentAvailableWeekdays.includes(option.value);
+
+                return (
+                  <label key={option.value} className="flex items-center gap-2 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => {
+                        const current = new Set(activeAppointmentConfig.appointmentAvailableWeekdays);
+                        if (event.target.checked) {
+                          current.add(option.value);
+                        } else {
+                          current.delete(option.value);
+                        }
+
+                        updateActiveAppointmentConfig({
+                          appointmentAvailableWeekdays: Array.from(current).sort((left, right) => left - right),
+                        });
+                      }}
+                      className="h-4 w-4 accent-amber-500"
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
             <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Gmail Recipient Inbox</label>
             <input
               data-testid="gmail-recipient"
@@ -742,6 +826,9 @@ export default function IntegrationsPanel() {
               const secretState = activeAppointmentConfig.secrets[field];
               const clearChecked = clearAppointmentSecrets[activeEnvironment].includes(field);
               const isPrivateKey = field === 'googlePrivateKey';
+              const placeholder = field === 'sendGridApiKey'
+                ? 'SendGrid API key'
+                : 'Gmail app password';
               const commonClassName = 'w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm outline-none transition-all focus:ring-2 focus:ring-amber-300';
 
               return (
@@ -766,7 +853,7 @@ export default function IntegrationsPanel() {
                       value={pendingAppointmentSecrets[activeEnvironment][field] || ''}
                       onChange={(event) => updateAppointmentSecretDraft(field, event.target.value)}
                       className={commonClassName}
-                      placeholder={secretState.isSet ? secretState.maskedValue : appointmentSecretLabels[field]}
+                      placeholder={secretState.isSet ? secretState.maskedValue : placeholder}
                       autoComplete="new-password"
                     />
                   )}

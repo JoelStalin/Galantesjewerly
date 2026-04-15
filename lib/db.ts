@@ -5,7 +5,7 @@ import { getDataRoot } from '@/lib/runtime-paths';
 
 export interface PageSection {
   id: string;
-  section_identifier: string;    
+  section_identifier: string;
   title: string;
   subtitle?: string;
   content_text: string;
@@ -144,11 +144,11 @@ async function performInit() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
   } catch {}
-  
+
   try {
     const fileContent = await fs.readFile(dbFile, 'utf-8');
     const parsed = JSON.parse(fileContent) as Partial<DBData>;
-    
+
     // Migration logic moved here to run only once per process
     let needsUpdate = false;
     if (!parsed.settings) {
@@ -174,7 +174,7 @@ async function performInit() {
       sections: parsed.sections ?? INITIAL_DATA.sections,
       featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
     };
-    
+
     if (needsUpdate) {
       await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
     }

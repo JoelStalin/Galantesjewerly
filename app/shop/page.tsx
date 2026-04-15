@@ -5,7 +5,7 @@
  * Fetches products via integration-contracts/shop-product.v1.ts schema.
  */
 
-import { getOdooClient } from '@/lib/odoo/client';
+import { getOdooClient, type ShopProduct } from '@/lib/odoo/client';
 import { ProductGrid } from '@/components/shop/ProductGrid';
 import { Metadata } from 'next';
 
@@ -19,7 +19,7 @@ export const revalidate = 3600; // Revalidate every hour
 
 export default async function ShopPage() {
   const client = getOdooClient();
-  let products = [];
+  let products: ShopProduct[] = [];
   let error: string | null = null;
 
   try {
@@ -42,7 +42,7 @@ export default async function ShopPage() {
             Our Jewelry Collection
           </h1>
           <p className="text-lg opacity-90">
-            Handpicked fine jewelry from Galante's, celebrating the spirit of
+            Handpicked fine jewelry from Galante&apos;s, celebrating the spirit of
             the Florida Keys
           </p>
         </div>
@@ -87,7 +87,7 @@ export default async function ShopPage() {
       {/* CTA Section */}
       <section className="bg-accent py-16 px-6 md:px-12 text-primary-dark text-center">
         <h2 className="text-3xl font-serif font-bold mb-4">
-          Can't Find What You're Looking For?
+          Can&apos;t Find What You&apos;re Looking For?
         </h2>
         <p className="text-lg opacity-90 mb-8">
           Contact our concierge team for custom orders and personalized

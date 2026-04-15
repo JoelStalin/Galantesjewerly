@@ -47,6 +47,7 @@ export interface OdooClientConfig {
 class OdooClient {
   private baseUrl: string;
   private timeout: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cache: Map<string, { data: any; timestamp: number }>;
   private cacheTTL: number; // in milliseconds
 
@@ -198,9 +199,11 @@ class OdooClient {
   private async fetch(
     endpoint: string,
     options: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       query?: Record<string, any>;
       headers?: Record<string, string>;
     } = {},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = new URL(endpoint, this.baseUrl);
 

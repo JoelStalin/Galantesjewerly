@@ -158,6 +158,10 @@ def configure_mock_integrations(base_url: str) -> None:
             'gmailSender': 'joelstalin2105@gmail.com',
             'appointmentDurationMinutes': 60,
             'appointmentTimezone': 'America/New_York',
+            'appointmentStartTime': '09:00',
+            'appointmentEndTime': '18:00',
+            'appointmentSlotIntervalMinutes': 30,
+            'appointmentAvailableWeekdays': [0, 1, 2, 3, 4, 5, 6],
             'secrets': {
                 'googlePrivateKey': private_key,
                 'gmailSmtpPassword': smtp_password,
@@ -199,8 +203,17 @@ def set_native_value(driver, wait: WebDriverWait, test_id: str, value: str) -> N
         """
         const element = arguments[0];
         const value = arguments[1];
+        const prototype = element.tagName === 'TEXTAREA'
+          ? window.HTMLTextAreaElement.prototype
+          : window.HTMLInputElement.prototype;
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+        const setter = descriptor && descriptor.set;
         element.scrollIntoView({ block: 'center' });
-        element.value = value;
+        if (setter) {
+          setter.call(element, value);
+        } else {
+          element.value = value;
+        }
         element.dispatchEvent(new Event('input', { bubbles: true }));
         element.dispatchEvent(new Event('change', { bubbles: true }));
         """,
@@ -222,7 +235,10 @@ def submit_contact_form(driver, wait: WebDriverWait, base_url: str, artifact_dir
         'Bridal & Engagement',
     )
     set_native_value(driver, wait, 'contact-appointment-date', requested_date)
-    set_native_value(driver, wait, 'contact-appointment-time', '10:30')
+    wait.until(lambda current: current.find_elements(*by_test_id('contact-slot-10-30')))
+    slot_button = wait.until(EC.element_to_be_clickable(by_test_id('contact-slot-10-30')))
+    driver.execute_script('arguments[0].scrollIntoView({block: "center"});', slot_button)
+    slot_button.click()
     set_text(driver, wait, 'contact-message', 'Functional Selenium test for Galantes appointment booking.')
 
     save_screenshot(driver, artifact_dir, '01_contact_form_ready')
@@ -264,6 +280,10 @@ def assert_local_appointment_record(app_data_dir: Path, expected: dict) -> dict:
         raise AssertionError(f"Calendar event ID was not recorded: {latest.get('googleEventId')!r}")
     if not latest.get('googleEventLink'):
         raise AssertionError('Calendar event link was not recorded.')
+    if latest.get('odooSyncStatus') != 'synced':
+        raise AssertionError(f"Unexpected Odoo sync status: {latest.get('odooSyncStatus')!r}")
+    if not str(latest.get('odooAppointmentId', '')).startswith('mock-odoo-'):
+        raise AssertionError(f"Odoo appointment ID was not recorded: {latest.get('odooAppointmentId')!r}")
 
     return latest
 
@@ -329,13 +349,15 @@ def main() -> None:
             'id': latest_record['id'],
             'status': latest_record['status'],
             'googleEventId': latest_record['googleEventId'],
+            'odooAppointmentId': latest_record['odooAppointmentId'],
+            'odooSyncStatus': latest_record['odooSyncStatus'],
             'emailDeliveryStatus': latest_record['emailDeliveryStatus'],
             'timezone': latest_record['timezone'],
         }
         report['cases'].append({
             'name': 'calendar_and_gmail_pipeline',
             'status': 'pass',
-            'details': 'Mock Calendar event and Gmail delivery were recorded by the backend audit log.',
+            'details': 'Mock Calendar event, Odoo sync, and Gmail delivery were recorded by the backend audit log.',
         })
         report['status'] = 'pass'
         print('Appointment frontend Selenium suite completed successfully.')

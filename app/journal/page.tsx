@@ -5,7 +5,7 @@ export default function JournalPage() {
     <div className="max-w-4xl mx-auto py-24 px-6 text-center">
       <h1 className="text-5xl mb-6">The Journal</h1>
       <p className="text-lg opacity-80 mb-16">Stories of heritage, the Florida Keys, and fine craftsmanship.</p>
-      
+
       <div className="flex flex-col gap-16 text-left">
         <article className="border-b border-stone-200 pb-12">
           <p className="text-xs text-accent uppercase tracking-widest font-bold mb-3">Guide</p>

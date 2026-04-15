@@ -1,0 +1,14 @@
+extends: existence
+message: "Avoid informal word '%s' in brand copy — use elevated language."
+level: suggestion
+ignorecase: true
+tokens:
+  - '\bstuff\b'
+  - '\bthing\b'
+  - '\bawesome\b'
+  - '\bcool\b'
+  - '\bguys\b'
+  - '\bkinda\b'
+  - '\bsorta\b'
+  - '\bgonna\b'
+  - '\bwanna\b'

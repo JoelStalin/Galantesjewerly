@@ -12,4 +12,4 @@ The tone is sophisticated, cálido (warm), local, and concierge-level. It should
 ## Don'ts
 - Do not sell strictly on price (avoid "cheap", "bargain", "discount").
 - Do not use overly aggressive marketing language.
-- Do not sound mass-market or generic.  
+- Do not sound mass-market or generic.

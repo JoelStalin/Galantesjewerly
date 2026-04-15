@@ -1,4 +1,4 @@
-exclude: "^(temp_standalone/|node_modules/|\\.next/|package-lock\\.json)"
+exclude: "^(temp_standalone/|node_modules/|\\.next/|package-lock\\.json|\\.claude/worktrees/)"
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -23,6 +23,6 @@ repos:
       - id: eslint
         name: ESLint
         language: node
-        entry: npx eslint --max-warnings=0
+        entry: npx eslint --max-warnings=0 --no-warn-ignored
         types_or: [ts, tsx]
         additional_dependencies: []

@@ -17,6 +17,10 @@ export type CalendarRuntimeConfig = {
   oauthConnectedGoogleEmail: string;
   timezone: string;
   durationMinutes: number;
+  startTime: string;
+  endTime: string;
+  slotIntervalMinutes: number;
+  availableWeekdays: number[];
 };
 
 export type CreatedCalendarEvent = {
@@ -47,6 +51,12 @@ export async function getCalendarRuntimeConfig(environment: IntegrationEnvironme
     oauthConnectedGoogleEmail: googleOAuth.connectedGoogleEmail,
     timezone: stored.appointmentTimezone || 'America/New_York',
     durationMinutes: stored.appointmentDurationMinutes || 60,
+    startTime: stored.appointmentStartTime || '09:00',
+    endTime: stored.appointmentEndTime || '18:00',
+    slotIntervalMinutes: stored.appointmentSlotIntervalMinutes || 30,
+    availableWeekdays: stored.appointmentAvailableWeekdays?.length
+      ? stored.appointmentAvailableWeekdays
+      : [0, 1, 2, 3, 4, 5, 6],
   };
 }
 

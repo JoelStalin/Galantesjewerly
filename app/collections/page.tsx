@@ -7,7 +7,7 @@ export default function CollectionsPage() {
       <p className="text-lg opacity-80 max-w-2xl mx-auto mb-16">
         Curated selections reflecting the beauty of the sea and the elegance of classic design.
       </p>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
         <div className="group text-left cursor-pointer">
           <div className="w-full h-96 bg-stone-100 mb-6 relative overflow-hidden">
@@ -17,7 +17,7 @@ export default function CollectionsPage() {
           <p className="opacity-70 text-sm mb-4">Capturing our Florida Keys heritage in 14k gold and sterling silver.</p>
           <a href="/contact" className="text-xs uppercase tracking-widest font-bold text-primary underline">Inquire About Pieces</a>
         </div>
-        
+
         <div className="group text-left cursor-pointer">
           <div className="w-full h-96 bg-stone-100 mb-6 relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>

@@ -28,7 +28,7 @@ export default function RepairsPage() {
           </ul>
         </div>
       </div>
-      
+
       <div className="mt-16">
         <a href="/contact?intent=repair" className="bg-primary text-white px-8 py-4 text-xs uppercase tracking-widest font-semibold hover:bg-primary-dark transition-colors">
           Request a Service Assessment

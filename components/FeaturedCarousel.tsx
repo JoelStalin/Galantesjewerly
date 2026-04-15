@@ -34,10 +34,10 @@ export function FeaturedCarousel({ items }: { items: FeaturedItem[] }) {
           {visibleItems.map((feat, i) => (
              <div key={`${feat.id}-${startIndex}-${i}`} data-testid={`featured-public-card-${feat.id}`} data-title={feat.title} className="flex flex-col items-center text-center">
                 <div className="w-full h-80 bg-stone-100 mb-6 relative overflow-hidden group">
-                   <div 
+                   <div
                      data-testid={`featured-public-image-${feat.id}`}
                      data-image-url={feat.image_url}
-                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" 
+                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
                      style={{ backgroundImage: `url('${feat.image_url}')` }}
                    ></div>
                 </div>
@@ -51,16 +51,16 @@ export function FeaturedCarousel({ items }: { items: FeaturedItem[] }) {
              </div>
           ))}
        </div>
-       
+
        {items.length > 3 && (
          <div className="flex justify-center gap-3 mt-12">
             {items.map((_, idx) => (
-              <button 
+              <button
                 key={idx}
                 data-testid={`featured-dot-${idx}`}
-                onClick={() => { 
-                  setFade(false); 
-                  setTimeout(() => { setStartIndex(idx); setFade(true); }, 300); 
+                onClick={() => {
+                  setFade(false);
+                  setTimeout(() => { setStartIndex(idx); setFade(true); }, 300);
                 }}
                 className={`h-2 rounded-full transition-all duration-300 ${idx === startIndex ? 'bg-primary w-8' : 'bg-primary/20 w-2 hover:bg-primary/50'}`}
                 aria-label={`Ver colección ${idx + 1}`}

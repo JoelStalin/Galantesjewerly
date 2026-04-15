@@ -8,13 +8,13 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def run_functional_check():
     print("🚀 Iniciando Pruebas Funcionales en Dominio Público...")
-    
+
     chrome_options = Options()
     chrome_options.add_argument("--headless") # Headless for automated execution
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     # Use local profile as per rules if needed, but for public check a fresh session is fine
-    
+
     driver = webdriver.Chrome(options=chrome_options)
     wait = WebDriverWait(driver, 15)
 
@@ -37,7 +37,7 @@ def run_functional_check():
         wait.until(EC.presence_of_element_located((By.NAME, "username")))
         print("✅ Admin Login UI: OK")
 
-        # 4. Regression: Image Bridge Test 
+        # 4. Regression: Image Bridge Test
         # (Assuming we have a known image ID or we check the API directly)
         print("🔍 Verificando Image Bridge API...")
         driver.get("https://admin.galantesjewelry.com/api/image?id=test.webp")

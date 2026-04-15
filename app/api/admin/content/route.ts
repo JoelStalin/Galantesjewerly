@@ -36,12 +36,12 @@ export async function PUT(request: Request) {
 
   try {
     const { id, updates, type } = await request.json();
-    
+
     if (type === 'settings' && updates) {
       const updatedSettings = await updateSettings(updates);
       return NextResponse.json({ success: true, settings: updatedSettings });
     }
-    
+
     if (type === 'featured_add' && updates) {
       const newItem = await addFeaturedItem(updates);
       return NextResponse.json({ success: true, featured: newItem });
@@ -58,7 +58,7 @@ export async function PUT(request: Request) {
       if (!updated) return NextResponse.json({ error: 'Section not found' }, { status: 404 });
       return NextResponse.json({ success: true, section: updated });
     }
-    
+
     return NextResponse.json({ error: 'Invalid payload type' }, { status: 400 });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

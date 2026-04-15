@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude worktrees and local settings
+    ".claude/worktrees/**",
+    // Standalone build artifacts
+    "temp_standalone/**",
   ]),
 ]);
 

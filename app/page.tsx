@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const sections = await getAllSections();
   const featured = await getFeaturedItems();
-  
+
   const getSection = (id: string) => sections.find(s => s.section_identifier === id);
 
   const hero = getSection('hero');

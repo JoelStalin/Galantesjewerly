@@ -77,6 +77,10 @@ export async function processAppointmentSubmission(input: ProcessAppointmentInpu
       errorMessage: '',
       clientIp: input.clientIp,
       userAgent: input.userAgent,
+      odooSyncStatus: 'not_attempted',
+      odooPartnerId: '',
+      odooAppointmentId: '',
+      odooErrorMessage: '',
     });
     recordId = record.id;
 

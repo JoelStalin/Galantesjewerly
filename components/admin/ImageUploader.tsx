@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 interface ImageUploaderProps {
@@ -116,16 +117,18 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, onUp
   return (
     <div className="space-y-3">
       <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">{label}</label>
-      
+
       <div className="flex items-start gap-4">
         {/* Preview Area */}
         <div className="relative w-20 h-20 rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 flex items-center justify-center overflow-hidden flex-shrink-0 group">
           {(preview || currentUrl) ? (
-            <img 
-              src={preview || currentUrl} 
-              alt="Preview" 
+            <Image
+              src={preview || currentUrl}
+              alt="Preview"
               data-testid={previewTestId}
-              className="w-full h-full object-contain"
+              className="object-contain"
+              fill
+              unoptimized
             />
           ) : (
             <div className="text-zinc-300">
@@ -145,7 +148,7 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, onUp
             {isFavicon ? 'Se convertirá automáticamente a 32x32px (Cuadrado)' : 'Formatos recomendados: JPG, PNG, WEBP.'}
           </div>
           <div className="flex flex-wrap gap-2">
-            <button 
+            <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="text-[11px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded border border-amber-200 transition-all"
@@ -170,17 +173,17 @@ export default function ImageUploader({ label, currentUrl, onUploadSuccess, onUp
               {error}
             </div>
           )}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
             data-testid={inputTestId}
-            className="hidden" 
+            className="hidden"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
           />
         </div>
       </div>
-      
+
       {/* Hidden canvas for processing */}
       <canvas ref={canvasRef} className="hidden" />
     </div>

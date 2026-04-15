@@ -5,22 +5,20 @@
  * Slug matches Odoo product.template.slug field.
  */
 
-import { getOdooClient, ShopProduct } from '@/lib/odoo/client';
+import { getOdooClient } from '@/lib/odoo/client';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Metadata } from 'next';
-
-interface ProductPageProps {
-  params: { slug: string };
-}
 
 export const revalidate = 3600; // Revalidate every hour
 
 export async function generateMetadata({
   params,
-}: ProductPageProps): Promise<Metadata> {
+}: PageProps<'/shop/[slug]'>): Promise<Metadata> {
+  const { slug } = await params;
   const client = getOdooClient();
-  const product = await client.getProductBySlug(params.slug);
+  const product = await client.getProductBySlug(slug);
 
   if (!product) {
     return { title: 'Product Not Found' };
@@ -37,9 +35,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params }: PageProps<'/shop/[slug]'>) {
+  const { slug } = await params;
   const client = getOdooClient();
-  const product = await client.getProductBySlug(params.slug);
+  const product = await client.getProductBySlug(slug);
 
   if (!product) {
     notFound();
@@ -53,9 +52,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {/* Breadcrumb */}
       <nav className="max-w-6xl mx-auto px-6 py-4 text-sm">
         <div className="flex items-center gap-2 text-gray-600">
-          <a href="/shop" className="hover:text-accent">
+          <Link href="/shop" className="hover:text-accent">
             Shop
-          </a>
+          </Link>
           <span>/</span>
           {product.category && (
             <>
@@ -213,7 +212,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             {/* Additional Info */}
             <div className="mt-12 p-6 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-4">About Galante's</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">About Galante&apos;s</h3>
               <p className="text-sm text-gray-600">
                 Every piece is selected or created with care. Need a custom
                 design or have questions? Our concierge team is here to help you

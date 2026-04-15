@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 
 const nextCli = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
 const modes = [
-  { mode: 'success', expectedStatus: 200, expectedRecordStatus: 'email_sent' },
-  { mode: 'conflict', expectedStatus: 409, expectedRecordStatus: 'calendar_conflict' },
-  { mode: 'calendar_error', expectedStatus: 500, expectedRecordStatus: 'calendar_failed' },
-  { mode: 'mail_error', expectedStatus: 502, expectedRecordStatus: 'email_failed' },
+  { mode: 'success', expectedStatus: 200, expectedRecordStatus: 'email_sent', expectedOdooSyncStatus: 'synced' },
+  { mode: 'conflict', expectedStatus: 409, expectedRecordStatus: 'calendar_conflict', expectedOdooSyncStatus: 'not_attempted' },
+  { mode: 'calendar_error', expectedStatus: 500, expectedRecordStatus: 'calendar_failed', expectedOdooSyncStatus: 'not_attempted' },
+  { mode: 'mail_error', expectedStatus: 502, expectedRecordStatus: 'email_failed', expectedOdooSyncStatus: 'synced' },
+  { mode: 'odoo_error', expectedStatus: 200, expectedRecordStatus: 'email_sent', expectedOdooSyncStatus: 'failed' },
 ];
 
 function sleep(ms) {
@@ -99,6 +100,10 @@ async function runCase(testCase, index) {
       gmailSender: 'joelstalin2105@gmail.com',
       appointmentDurationMinutes: 60,
       appointmentTimezone: 'America/New_York',
+      appointmentStartTime: '09:00',
+      appointmentEndTime: '18:00',
+      appointmentSlotIntervalMinutes: 30,
+      appointmentAvailableWeekdays: [0, 1, 2, 3, 4, 5, 6],
       secrets: {
         googlePrivateKey: privateKey,
         gmailSmtpPassword: smtpPassword,
@@ -128,9 +133,18 @@ async function runCase(testCase, index) {
       honeypot: '',
     });
     assert.equal(contactResponse.status, testCase.expectedStatus, `${testCase.mode}: unexpected contact status`);
+    const contactBody = await contactResponse.json();
 
     const latestRecord = await readLatestRecord(dataDir);
     assert.equal(latestRecord.status, testCase.expectedRecordStatus, `${testCase.mode}: unexpected record status`);
+    assert.equal(latestRecord.odooSyncStatus, testCase.expectedOdooSyncStatus, `${testCase.mode}: unexpected Odoo sync status`);
+
+    if (testCase.expectedOdooSyncStatus === 'synced') {
+      assert.ok(String(latestRecord.odooAppointmentId).length > 0, `${testCase.mode}: Odoo appointment ID missing`);
+      if (contactBody.success || contactResponse.status === 502) {
+        assert.ok(String(contactBody.odooAppointmentId || '').length > 0, `${testCase.mode}: response Odoo appointment ID missing`);
+      }
+    }
 
     if (testCase.mode === 'success') {
       const apiV1Response = await postJson(`${baseUrl}/api/v1/appointments`, {

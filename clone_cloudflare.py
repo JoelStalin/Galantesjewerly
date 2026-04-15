@@ -9,10 +9,10 @@ def copy_profile():
     import getpass
     src_base = os.path.join(os.environ['LOCALAPPDATA'], 'Google', 'Chrome', 'User Data')
     dest_base = os.path.join(os.environ['TEMP'], 'ChromeProxy')
-    
+
     if not os.path.exists(dest_base):
         os.makedirs(dest_base)
-        
+
     def safe_copy(src, dst):
         try:
             if os.path.isdir(src):
@@ -28,7 +28,7 @@ def copy_profile():
 
     print("Clonando 'Local State' (Claves de sesión)...")
     safe_copy(os.path.join(src_base, 'Local State'), os.path.join(dest_base, 'Local State'))
-    
+
     print("Clonando 'Profile 6' al vuelo (Ignorando archivos bloqueados)...")
     safe_copy(os.path.join(src_base, 'Profile 6'), os.path.join(dest_base, 'Profile 6'))
     return dest_base
@@ -36,26 +36,26 @@ def copy_profile():
 def main():
     print("🚀 Auto-mágico activado. Abriendo una instancia paralela transparente...")
     temp_dir = copy_profile()
-    
+
     options = webdriver.ChromeOptions()
     options.add_argument(f"user-data-dir={temp_dir}")
     options.add_argument("profile-directory=Profile 6")
     options.add_argument("--start-maximized")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    
+
     try:
         driver = webdriver.Chrome(options=options)
     except Exception as e:
         print(f"❌ Error lanzando temp chrome: {e}")
         return
-        
+
     url = "https://dash.cloudflare.com/8cbbddeadb799052dcc0844332ed93d3/tunnels/08d437c9-56ad-4910-80f9-33cca283d727/routes"
     driver.get(url)
-    
+
     print("⏳ Esperando carga del entorno Zero Trust (12 s)...")
     time.sleep(12)
-    
+
     try:
         inputs = driver.find_elements(By.TAG_NAME, "input")
         changed = False
@@ -69,7 +69,7 @@ def main():
                 changed = True
                 print("✅ Campo modificado con éxito a localhost:3000")
                 break
-                
+
         if changed:
             buttons = driver.find_elements(By.TAG_NAME, "button")
             for btn in buttons:
@@ -81,11 +81,11 @@ def main():
                         break
                     except Exception as e:
                         pass
-        
+
         # Exportar DOM por si algo falló
         with open("cloudflare_route_latest.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
-        
+
     except Exception as e:
         print(f"❌ Error manipulando DOM: {e}")
 

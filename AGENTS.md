@@ -12,3 +12,84 @@ Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** pro
 
 > 📚 **Contexto Global de Arquitectura**: Para comprender a fondo las decisiones técnicas sobre cómo opera Node.js en Termux (Android) y los fallos de configuración de red documentados con Cloudflare Zero Trust Tunnels, lee el archivo `context/operations/termux_cloudflare_architecture.md`. NUNCA modifiques esa base arquitectónica sin una justificación de red.
 <!-- END:selenium-testing-rules -->
+
+<!-- BEGIN:appointment-system-rules -->
+# Appointment System Rules (Mega Prompt Maestro v3)
+
+## Core Architecture
+- **Backend**: Node.js + Express (via Next.js API routes)
+- **Google Calendar**: OAuth2 + API v3 for event creation
+- **Odoo**: JSON-2 API for appointment persistence
+- **Email**: SendGrid for confirmations with ICS attachments
+- **Orchestration**: Multi-CLI support (Claude Code, Codex CLI, Gemini CLI)
+- **Memory**: Hierarchical system (hot/warm/cold) for agent continuity
+
+## API Contract
+- **Endpoint**: POST /api/v1/appointments
+- **Required Fields**: name, email, date, time, duration
+- **Optional Fields**: description, serviceType, notes, timezone, phone, metadata
+- **Response**: { success, appointmentId, googleEventId, odooAppointmentId, message }
+
+## Security Rules
+- Zero hardcoded secrets (100% process.env)
+- Input sanitization and validation (Zod schemas)
+- Rate limiting: 8 requests per 15 minutes per IP
+- CORS restricted to known origins
+- Error responses: no stack traces in production
+
+## Odoo Integration Rules
+- Use JSON-2 API exclusively (no XML-RPC)
+- Prefer bearer token authentication
+- Sync flow: Next.js → Odoo (one-way for Phase 1)
+- Models: res.partner (customers), galante.appointment (appointments)
+- Idempotent operations (avoid duplicates)
+
+## Memory System Rules
+- Hot memory ≤200 lines (critical context only)
+- Warm memory: architecture, decisions, patterns
+- Cold memory: history, logs, summaries
+- Never load full transcripts in agent context
+- Curate sessions automatically after completion
+
+## CLI Orchestration Rules
+- Provider order: configurable via MODEL_PROVIDER_ORDER
+- Automatic fallback on QUOTA_EXHAUSTED, RATE_LIMITED, etc.
+- Preserve taskId across handoffs
+- Checkpoint before each provider switch
+- Structured output required
+
+## Task Ledger Rules
+- Every task needs evidence for completion
+- States: pending → in_progress → completed (no skipping)
+- No advancement without validation
+- Handoffs logged with context
+- Checkpoints enable resumability
+
+## Development Rules
+- Modular structure: config/, services/, controllers/, utils/
+- Consistent error handling (AppError class)
+- Logging: structured, level-based
+- Testing: unit + integration + E2E (≥85% coverage)
+- Documentation: executable and up-to-date
+
+## Skills Available
+- `calendar-oauth-recovery`: Handle OAuth2 token refresh failures
+- `appointment-validation`: Validate and sanitize appointment payloads
+- `provider-handoff`: Manage CLI provider switching
+- `memory-curation`: Maintain memory hierarchy
+- `odoo-json2-sync`: Synchronize with Odoo backend
+- `odoo-webhook-verification`: Validate Odoo webhook signatures
+
+## Critical Paths
+- Check `memory/current/now.md` before any work
+- Update task status in `task-ledger/tasks.json`
+- Run tests after any change
+- Update memory after significant decisions
+- Document blockers in `memory/current/blockers.md`
+
+## Emergency Procedures
+- If CLI provider fails: fallback to next in MODEL_PROVIDER_ORDER
+- If Odoo unavailable: log error, continue with Google Calendar only
+- If Google quota exceeded: queue appointment for retry
+- If memory corrupted: rebuild from task-ledger + docs
+<!-- END:appointment-system-rules -->

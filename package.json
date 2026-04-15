@@ -2,6 +2,7 @@
   "name": "galantesjewelry",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +10,7 @@
     "start": "node scripts/start-standalone.mjs",
     "start:express": "node server/express-app.js",
     "start:next": "next start",
+    "start:appointments": "node scripts/start-appointments.mjs",
     "lint": "eslint app components lib proxy.ts",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -27,6 +27,7 @@ export type AppointmentStatus =
   | 'validation_failed';
 
 export type EmailDeliveryStatus = 'not_sent' | 'sent' | 'failed' | 'skipped';
+export type OdooSyncStatus = 'not_attempted' | 'synced' | 'failed' | 'skipped';
 
 export type AppointmentRecord = {
   id: string;
@@ -44,6 +45,10 @@ export type AppointmentRecord = {
   status: AppointmentStatus;
   googleEventId: string;
   googleEventLink: string;
+  odooSyncStatus: OdooSyncStatus;
+  odooPartnerId: string;
+  odooAppointmentId: string;
+  odooErrorMessage: string;
   emailDeliveryStatus: EmailDeliveryStatus;
   errorMessage: string;
   clientIp: string;

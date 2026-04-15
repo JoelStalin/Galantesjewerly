@@ -38,6 +38,10 @@ export type AppointmentIntegrationAdminConfig = {
   gmailSender: string;
   appointmentDurationMinutes: number;
   appointmentTimezone: string;
+  appointmentStartTime: string;
+  appointmentEndTime: string;
+  appointmentSlotIntervalMinutes: number;
+  appointmentAvailableWeekdays: number[];
   secrets: Record<AppointmentSecretField, MaskedSecretState>;
   updatedAt: string | null;
   updatedBy: string | null;

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     const fileBuffer = await readFile(filePath);
     const ext = storageId.split('.').pop();
-    
+
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': ext === 'png' ? 'image/png' : 'image/webp',

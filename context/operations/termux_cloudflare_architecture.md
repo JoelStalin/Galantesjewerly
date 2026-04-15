@@ -13,7 +13,7 @@ Actualmente, todo el tráfico público del dominio (`galantesjewelry.com`) es pr
 
 ### A. Diagnóstico de Error 1016 (Origin DNS Error)
 *   **Causa detectada**: El Dashboard de Zero Trust intentaba enviar las peticiones a un resolver inexistente del lado del cliente (como `nginx` o `web` remanente del stack Dockerizado de Windows).
-*   **Solución Permanente**: Todo tráfico del túnel apuntando a la app *deberá* estar ruteado estrictamente a `http://127.0.0.1:3000` o en su defecto a la IP local del Android `http://192.168.12.193:3000` en la configuración web de Cloudflare. 
+*   **Solución Permanente**: Todo tráfico del túnel apuntando a la app *deberá* estar ruteado estrictamente a `http://127.0.0.1:3000` o en su defecto a la IP local del Android `http://192.168.12.193:3000` en la configuración web de Cloudflare.
 
 ### B. Mapeo DNS y Carga WWW (Error NXDOMAIN)
 *   **Problema**: Al escribir el dominio a secas, navegadores como Chrome forzaban silenciosamente redicción a `www.` o abortaban si no existía, tirando la red completa con NXDOMAIN.

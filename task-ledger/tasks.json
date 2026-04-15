@@ -1,0 +1,223 @@
+{
+  "version": "1.0",
+  "project": "Galantes Jewelry - Mega Prompt Maestro v3",
+  "phases": [
+    {
+      "id": "SETUP",
+      "name": "Phase 0 - Setup",
+      "tasks": [
+        {
+          "id": "SETUP-001",
+          "title": "Create core directory structure",
+          "description": "Create src/, bots/, memory/, task-ledger/, .agents/ directories with subfolders",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:00:00Z",
+          "evidence": ["Directory structure created successfully"],
+          "dependencies": []
+        },
+        {
+          "id": "SETUP-002",
+          "title": "Create .env.example with all variables",
+          "description": "Extend existing .env.example with Google, SendGrid, Odoo, CLI orchestration variables",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:00:00Z",
+          "evidence": ["Variables added for appointment system, orchestration, memory"],
+          "dependencies": []
+        },
+        {
+          "id": "SETUP-003",
+          "title": "Create/update AGENTS.md",
+          "description": "Extend existing AGENTS.md with appointment module rules and skills",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:30:00Z",
+          "evidence": ["Appointment system rules added to AGENTS.md"],
+          "dependencies": []
+        },
+        {
+          "id": "SETUP-004",
+          "title": "Create/update CLAUDE.md and GEMINI.md",
+          "description": "Create compact context files for Claude and modular context for Gemini",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:30:00Z",
+          "evidence": ["CLAUDE.md updated, GEMINI.md created with modular imports"],
+          "dependencies": []
+        },
+        {
+          "id": "SETUP-005",
+          "title": "Create base memory files",
+          "description": "Create memory/README.md and memory/current/ files (now.md, next-actions.md, etc.)",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:30:00Z",
+          "evidence": ["Memory structure and current state files created"],
+          "dependencies": []
+        },
+        {
+          "id": "SETUP-006",
+          "title": "Create task-ledger base files",
+          "description": "Create tasks.json, tasks.md, execution-log.ndjson, handoffs.json",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:00:00Z",
+          "updated": "2026-04-14T12:30:00Z",
+          "evidence": ["Task ledger files created with Phase 0 tasks"],
+          "dependencies": []
+        }
+      ]
+    },
+    {
+      "id": "GC",
+      "name": "Phase 1A - Google Calendar Core",
+      "tasks": [
+        {
+          "id": "GC-001",
+          "title": "OAuth2 Configuration",
+          "description": "Create src/config/googleAuth.js for token lifecycle management",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:00:00Z",
+          "evidence": ["src/config/googleAuth.js created with OAuth2 client, token management, refresh logic", "Syntax validated successfully"],
+          "dependencies": []
+        },
+        {
+          "id": "GC-002",
+          "title": "Calendar Service",
+          "description": "Create src/services/calendarService.js for event insertion",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:05:00Z",
+          "evidence": ["src/services/calendarService.js created with createCalendarEvent function, error handling for API codes", "Syntax validated successfully"],
+          "dependencies": ["GC-001"]
+        },
+        {
+          "id": "GC-003",
+          "title": "Email Service",
+          "description": "Create src/services/emailService.js for SendGrid integration",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:10:00Z",
+          "evidence": ["src/services/emailService.js created with SendGrid integration, HTML/text email templates, error handling", "Syntax validated successfully"],
+          "dependencies": []
+        },
+        {
+          "id": "GC-004",
+          "title": "Validation & Utils",
+          "description": "Create validation.js, dateTime.js, logger.js",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:15:00Z",
+          "evidence": ["src/utils/validation.js created with payload validation, sanitization, email/date/time checks", "src/utils/dateTime.js created with ISO UTC conversion, business hours validation, date calculations", "src/utils/logger.js created with structured logging, levels, file output, service-specific loggers", "All syntax validated successfully"],
+          "dependencies": []
+        },
+        {
+          "id": "GC-005",
+          "title": "Middlewares",
+          "description": "Create errorHandler.js and notFound.js",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:20:00Z",
+          "evidence": ["src/middlewares/errorHandler.js created with global error handling, specific error types, AppError class", "src/middlewares/notFound.js created for 404 handling", "All syntax validated successfully"],
+          "dependencies": []
+        },
+        {
+          "id": "GC-006",
+          "title": "Controller",
+          "description": "Create src/controllers/appointmentController.js",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T12:30:00Z",
+          "updated": "2026-04-14T13:25:00Z",
+          "evidence": ["src/controllers/appointmentController.js created with createAppointment function, validation, calendar/email integration, error handling", "Syntax validated successfully"],
+          "dependencies": ["GC-001", "GC-002", "GC-003", "GC-004", "GC-005"]
+        }
+      ]
+    },
+    {
+      "id": "APP",
+      "name": "Phase 1B - Application Setup",
+      "tasks": [
+        {
+          "id": "APP-001",
+          "title": "Create routes and app.js",
+          "description": "Create src/routes/appointmentRoutes.js and app.js for Express server setup",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T13:30:00Z",
+          "updated": "2026-04-14T13:35:00Z",
+          "evidence": ["src/routes/appointmentRoutes.js created with POST /api/v1/appointments route", "app.js created with Express setup, middlewares, routes, error handling", "Syntax validated successfully"],
+          "dependencies": ["GC-006"]
+        }
+      ]
+    },
+    {
+      "id": "TEST",
+      "name": "Phase 1C - Validation & Testing",
+      "tasks": [
+        {
+          "id": "TEST-001",
+          "title": "Implement functional test bot",
+          "description": "Create bots/setupAndTestBot.js for environment verification and functional tests",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-14T13:30:00Z",
+          "updated": "2026-04-14T14:00:00Z",
+          "evidence": ["bots/setupAndTestBot.js created with comprehensive environment checks", "All dependencies installed (express, body-parser, dotenv, @sendgrid/mail)", ".env configured with required variables", "token.json created with placeholder OAuth tokens", "Bot executed successfully - all 15 checks/tests passed"],
+          "dependencies": ["APP-001"]
+        }
+      ]
+    },
+    {
+      "id": "ODOO_PREP",
+      "name": "Phase 1D - Odoo Preparation",
+      "tasks": [
+        {
+          "id": "ODOO-PREP-001",
+          "title": "Prepare Odoo integration transition",
+          "description": "Create src/config/odooClient.js and update memory for Odoo phase",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "system",
+          "created": "2026-04-14T13:30:00Z",
+          "updated": "2026-04-14T19:45:00Z",
+          "evidence": [
+            "Created src/config/odooClient.js with JSON-2 config parsing, endpoint builders, bearer auth headers, and timeout-aware request helpers",
+            "Added tests/unit/src/config/odooClient.test.ts covering env parsing, headers, endpoint URLs, success path, and error handling",
+            "Updated memory/current files for the Odoo preparation phase, including JSON-2 contract details and key consistency risks"
+          ],
+          "dependencies": ["TEST-001"]
+        }
+      ]
+    }
+  ],
+  "currentPhase": "ODOO_PREP",
+  "currentTask": "ODOO-PREP-001",
+  "lastUpdated": "2026-04-14T19:45:00Z"
+}

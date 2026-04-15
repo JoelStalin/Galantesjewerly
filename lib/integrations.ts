@@ -60,6 +60,10 @@ type UpdateAppointmentIntegrationInput = {
   gmailSender?: string;
   appointmentDurationMinutes?: number;
   appointmentTimezone?: string;
+  appointmentStartTime?: string;
+  appointmentEndTime?: string;
+  appointmentSlotIntervalMinutes?: number;
+  appointmentAvailableWeekdays?: number[];
   secrets?: Partial<Record<AppointmentSecretField, string>>;
   clearSecrets?: AppointmentSecretField[];
 };
@@ -75,6 +79,10 @@ const integrationsFile = path.join(dataDir, 'integrations.json');
 const MINIMUM_GOOGLE_SCOPES = ['openid', 'email', 'profile'];
 const DEFAULT_TIMEZONE = 'America/New_York';
 const DEFAULT_DURATION_MINUTES = 60;
+const DEFAULT_START_TIME = '09:00';
+const DEFAULT_END_TIME = '18:00';
+const DEFAULT_SLOT_INTERVAL_MINUTES = 30;
+const DEFAULT_AVAILABLE_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 const DEFAULT_GMAIL_SENDER = 'joelstalin2105@gmail.com';
 const DEFAULT_GMAIL_RECIPIENT = 'ceo@galantesjewelry.com';
 
@@ -135,6 +143,10 @@ function buildDefaultAppointmentConfig(environment: IntegrationEnvironment): Sto
     gmailSender: DEFAULT_GMAIL_SENDER,
     appointmentDurationMinutes: DEFAULT_DURATION_MINUTES,
     appointmentTimezone: DEFAULT_TIMEZONE,
+    appointmentStartTime: DEFAULT_START_TIME,
+    appointmentEndTime: DEFAULT_END_TIME,
+    appointmentSlotIntervalMinutes: DEFAULT_SLOT_INTERVAL_MINUTES,
+    appointmentAvailableWeekdays: DEFAULT_AVAILABLE_WEEKDAYS,
     encryptedSecrets: {},
     updatedAt: null,
     updatedBy: null,
@@ -203,6 +215,10 @@ function toAppointmentAdminConfig(config: StoredAppointmentIntegration): Appoint
     gmailSender: config.gmailSender,
     appointmentDurationMinutes: config.appointmentDurationMinutes,
     appointmentTimezone: config.appointmentTimezone,
+    appointmentStartTime: config.appointmentStartTime,
+    appointmentEndTime: config.appointmentEndTime,
+    appointmentSlotIntervalMinutes: config.appointmentSlotIntervalMinutes,
+    appointmentAvailableWeekdays: config.appointmentAvailableWeekdays,
     updatedAt: config.updatedAt,
     updatedBy: config.updatedBy,
     secrets: {
@@ -579,6 +595,49 @@ function normalizeDuration(value?: number) {
   return Math.round(duration);
 }
 
+function validateTimeString(value?: string, label = 'Appointment time') {
+  const normalized = normalizeOptionalText(value);
+
+  if (!/^\d{2}:\d{2}$/.test(normalized)) {
+    throw new Error(`${label} must use HH:MM format.`);
+  }
+
+  const [hours, minutes] = normalized.split(':').map(Number);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    throw new Error(`${label} is invalid.`);
+  }
+
+  return normalized;
+}
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function validateSlotInterval(value?: number) {
+  const interval = Number(value);
+
+  if (!Number.isFinite(interval) || interval < 15 || interval > 240) {
+    throw new Error('Appointment slot interval must be between 15 and 240 minutes.');
+  }
+
+  return Math.round(interval);
+}
+
+function validateAvailableWeekdays(value?: number[]) {
+  const normalized = Array.isArray(value)
+    ? Array.from(new Set(value.map((day) => Number(day)).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)))
+    : DEFAULT_AVAILABLE_WEEKDAYS;
+
+  if (normalized.length === 0) {
+    throw new Error('At least one appointment weekday must be enabled.');
+  }
+
+  return normalized.sort((left, right) => left - right);
+}
+
 function validateTimeZone(value?: string) {
   const timezone = normalizeOptionalText(value) || DEFAULT_TIMEZONE;
 
@@ -645,6 +704,63 @@ export async function updateAppointmentIntegrationConfig(input: UpdateAppointmen
       next.appointmentTimezone = timezone;
       changedFields.add('appointmentTimezone');
     }
+  }
+
+  if (input.appointmentStartTime !== undefined) {
+    const startTime = validateTimeString(input.appointmentStartTime, 'Appointment start time');
+    if (startTime !== current.appointmentStartTime) {
+      next.appointmentStartTime = startTime;
+      changedFields.add('appointmentStartTime');
+    }
+  }
+
+  if (input.appointmentEndTime !== undefined) {
+    const endTime = validateTimeString(input.appointmentEndTime, 'Appointment end time');
+    if (endTime !== current.appointmentEndTime) {
+      next.appointmentEndTime = endTime;
+      changedFields.add('appointmentEndTime');
+    }
+  }
+
+  if (input.appointmentSlotIntervalMinutes !== undefined) {
+    const interval = validateSlotInterval(input.appointmentSlotIntervalMinutes);
+    if (interval !== current.appointmentSlotIntervalMinutes) {
+      next.appointmentSlotIntervalMinutes = interval;
+      changedFields.add('appointmentSlotIntervalMinutes');
+    }
+  }
+
+  if (input.appointmentAvailableWeekdays !== undefined) {
+    const weekdays = validateAvailableWeekdays(input.appointmentAvailableWeekdays);
+    if (JSON.stringify(weekdays) !== JSON.stringify(current.appointmentAvailableWeekdays)) {
+      next.appointmentAvailableWeekdays = weekdays;
+      changedFields.add('appointmentAvailableWeekdays');
+    }
+  }
+
+  const effectiveStartTime = input.appointmentStartTime !== undefined
+    ? next.appointmentStartTime
+    : current.appointmentStartTime;
+  const effectiveEndTime = input.appointmentEndTime !== undefined
+    ? next.appointmentEndTime
+    : current.appointmentEndTime;
+  const effectiveDuration = input.appointmentDurationMinutes !== undefined
+    ? next.appointmentDurationMinutes
+    : current.appointmentDurationMinutes;
+  const effectiveInterval = input.appointmentSlotIntervalMinutes !== undefined
+    ? next.appointmentSlotIntervalMinutes
+    : current.appointmentSlotIntervalMinutes;
+
+  if (timeToMinutes(effectiveStartTime) >= timeToMinutes(effectiveEndTime)) {
+    throw new Error('Appointment end time must be later than the start time.');
+  }
+
+  if (timeToMinutes(effectiveStartTime) + effectiveDuration > timeToMinutes(effectiveEndTime)) {
+    throw new Error('Appointment duration does not fit inside the configured booking window.');
+  }
+
+  if (effectiveInterval > effectiveDuration) {
+    throw new Error('Appointment slot interval cannot be longer than the appointment duration.');
   }
 
   for (const field of input.clearSecrets || []) {

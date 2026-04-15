@@ -29,6 +29,7 @@ type GoogleLoginConfig = {
 
 type RequestLike = {
   headers: Headers;
+  url?: string;
 };
 
 function getGoogleSessionKey() {
@@ -80,10 +81,6 @@ export function getPublicBaseUrl(request: RequestLike) {
   return 'https://galantesjewelry.com';
 }
 
-export function getPublicUrl(path: string, request: RequestLike) {
-  return new URL(path, getPublicBaseUrl(request)).toString();
-}
-
 export function getGoogleOAuthCookieOptions(request: RequestLike, maxAge = 600) {
   return {
     httpOnly: true,
@@ -110,6 +107,26 @@ export function getGoogleUserCookieOptions(request: RequestLike) {
     sameSite: 'lax' as const,
     secure: shouldUseSecureCookies(request),
   };
+}
+
+export function getPublicUrl(pathname: string, request: RequestLike) {
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+
+  if (request.url) {
+    return new URL(normalizedPath, request.url).toString();
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = forwardedHost || request.headers.get('host')?.split(',')[0]?.trim();
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+
+  if (host) {
+    const protocol = forwardedProto || (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
+    return `${protocol}://${host}${normalizedPath}`;
+  }
+
+  const fallbackOrigin = process.env.SITE_URL || 'http://localhost:3000';
+  return new URL(normalizedPath, fallbackOrigin).toString();
 }
 
 export async function getGoogleLoginConfig(request: RequestLike): Promise<GoogleLoginConfig> {
