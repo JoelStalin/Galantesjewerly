@@ -29,8 +29,8 @@ export async function GET(request: Request) {
     const requestUrl = new URL(request.url);
     const environment = parseEnvironment(requestUrl.searchParams.get('environment'));
     const config = await getDecryptedGoogleIntegration(environment);
-    const clientId = config.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || '';
-    const clientSecret = config.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || '';
+    const clientId = config.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '';
+    const clientSecret = config.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '';
 
     if (!clientId || !clientSecret) {
       return NextResponse.redirect(
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     const state = crypto.randomBytes(24).toString('base64url');
-    const redirectUri = config.redirectUri || getAdminGoogleOAuthRedirectUri(request);
+    const redirectUri = config.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || getAdminGoogleOAuthRedirectUri(request);
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
 
     authUrl.searchParams.set('client_id', clientId);

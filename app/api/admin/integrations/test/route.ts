@@ -66,11 +66,15 @@ export async function POST(request: Request) {
 
     const config = await getGoogleIntegrationForEnvironment(resolvedEnvironment);
 
+    const clientId = config.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '';
+    const redirectUri = config.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || '';
+    const clientSecret = config.encryptedSecrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '';
+
     const missingFields = [
-      !config.googleClientId ? 'googleClientId' : '',
-      !config.redirectUri ? 'redirectUri' : '',
+      !clientId ? 'googleClientId' : '',
+      !redirectUri ? 'redirectUri' : '',
       !config.javascriptOrigin ? 'javascriptOrigin' : '',
-      !config.encryptedSecrets.googleClientSecret ? 'googleClientSecret' : '',
+      !clientSecret ? 'googleClientSecret' : '',
     ].filter(Boolean);
 
     if (missingFields.length > 0) {

@@ -195,9 +195,9 @@ export async function getGoogleLoginConfig(request: RequestLike): Promise<Google
   return {
     environment,
     enabled: stored.enabled,
-    clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || '',
-    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
-    redirectUri: stored.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || '',
+    clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '',
+    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
+    redirectUri: stored.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || '',
     javascriptOrigin: stored.javascriptOrigin || process.env.GOOGLE_OAUTH_JAVASCRIPT_ORIGIN || '',
     scopes: stored.scopes.length > 0
       ? stored.scopes

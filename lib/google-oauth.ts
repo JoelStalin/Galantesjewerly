@@ -43,8 +43,8 @@ export async function getGoogleOAuthRuntimeConfig(
 
   return {
     environment,
-    clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || '',
-    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
+    clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '',
+    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
     refreshToken: stored.secrets.refreshToken || process.env.GOOGLE_OAUTH_REFRESH_TOKEN || '',
     accessToken: stored.secrets.accessToken || '',
     connectedGoogleEmail: stored.connectedGoogleEmail || '',
