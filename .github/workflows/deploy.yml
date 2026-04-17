@@ -1,0 +1,41 @@
+name: Deploy to GCP Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: SSH and Deploy to GCP
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: yoeli
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/galantesjewelry
+            # Sincronizar secretos en el servidor
+            sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}/" .env.prod
+            sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}/" .env.prod
+            sed -i "s/^ODOO_PASSWORD=.*/ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}/" .env.prod
+            sed -i "s/^ODOO_API_KEY=.*/ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}/" .env.prod
+
+            # Desplegar stack
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build
+
+            # Verificar salud
+            sleep 10
+            sudo docker ps

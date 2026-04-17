@@ -1,0 +1,82 @@
+{
+  "settings": {
+    "favicon_url": "/favicon.ico",
+    "logo_url": "/assets/branding/logo.png",
+    "site_title": "Galante's Jewelry by the Sea | Coastal Fine Jewelry",
+    "site_description": "Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.",
+    "instagram_url": "https://instagram.com/galantesjewelry",
+    "facebook_url": "https://facebook.com/galantesjewelry",
+    "whatsapp_number": "1234567890"
+  },
+  "sections": [
+    {
+      "id": "1",
+      "section_identifier": "hero",
+      "title": "Galante's Jewelry by the Sea",
+      "content_text": "The Coastal Concierge",
+      "image_url": "/assets/images/hero.webp",
+      "action_text": "Book Appointment",
+      "action_link": "/contact",
+      "is_active": true
+    },
+    {
+      "id": "2",
+      "section_identifier": "philosophy",
+      "title": "Barefoot Luxury from Islamorada",
+      "content_text": "We curate and craft fine nautical jewelry designed to celebrate the spirit of the Florida Keys. Whether you are marking an anniversary, planning a destination wedding, or restoring an heirloom timepiece, our concierge service ensures every detail is attended to with master craftsmanship.",
+      "image_url": "",
+      "is_active": true
+    },
+    {
+      "id": "6",
+      "section_identifier": "review",
+      "title": "Words from Our Patrons",
+      "content_text": "\"Galante's created the most breathtaking engagement ring for my fiancé. Their attention to detail and personal concierge service made our Islamorada trip truly unforgettable.\"",
+      "subtitle": "— Sarah & James, Florida",
+      "image_url": "",
+      "is_active": true
+    },
+    {
+      "id": "7",
+      "section_identifier": "cta",
+      "title": "Begin Your Story",
+      "content_text": "Whether you are visiting the Florida Keys or are a local resident, we invite you to experience jewelry curation as it should be.",
+      "action_text": "Schedule Your Consultation",
+      "action_link": "/contact",
+      "image_url": "",
+      "is_active": true
+    }
+  ],
+  "featured_items": [
+    {
+      "id": "f1",
+      "title": "Destination Weddings",
+      "content_text": "Bespoke engagement rings and wedding bands designed to capture your moment by the sea.",
+      "image_url": "/assets/images/featured-bridal.png",
+      "action_text": "Discover Bridal",
+      "action_link": "/bridal",
+      "is_active": true,
+      "order_index": 0
+    },
+    {
+      "id": "f2",
+      "title": "Nautical Gold & Silver",
+      "content_text": "Signature pieces honoring our coastal heritage, from mariner links to compass pendants.",
+      "image_url": "/assets/images/featured-nautical.png",
+      "action_text": "View Collections",
+      "action_link": "/collections",
+      "is_active": true,
+      "order_index": 1
+    },
+    {
+      "id": "f3",
+      "title": "Master Repair",
+      "content_text": "Entrust your cherished watches and heirlooms to our master jewelers for restoration.",
+      "image_url": "/assets/images/featured-repairs.png",
+      "action_text": "Service Details",
+      "action_link": "/repairs",
+      "is_active": true,
+      "order_index": 2
+    }
+  ]
+}

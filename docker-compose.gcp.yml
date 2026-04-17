@@ -1,0 +1,255 @@
+# =========================================================================
+# Docker Compose — Galante's Jewelry (Google Cloud Platform / GCE)
+# =========================================================================
+# Target: VM `galantes-prod-vm` en proyecto `deft-haven-493016-m4`
+#
+# Diferencias vs docker-compose.production.yml:
+#  - NO incluye servicio cloudflared (DNS apunta directo a la IP de GCP)
+#  - NO monta `../cell_odoo/addons/enterprise` (no existe en la VM)
+#  - Nginx expone 80 y 443 (TLS termina aqu\u00ed, certs Let's Encrypt)
+#  - Volumen certbot/letsencrypt montado en Nginx
+#  - Health checks con reintentos m\u00e1s largos (primer arranque de Odoo)
+#
+# Usage (desde la VM):
+#   docker compose --env-file .env.gcp -f docker-compose.gcp.yml up -d
+# =========================================================================
+
+services:
+  # ========== NEXT.JS WEB APPLICATION ==========
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: galantes-web:gcp
+    container_name: galantes_web
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - APP_DATA_DIR=/app/data
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:?set ADMIN_SECRET_KEY}
+      - INTEGRATIONS_SECRET_KEY=${INTEGRATIONS_SECRET_KEY}
+      - APPOINTMENT_ENCRYPTION_KEY=${APPOINTMENT_ENCRYPTION_KEY}
+      - GOOGLE_SESSION_SECRET=${GOOGLE_SESSION_SECRET}
+      - SITE_URL=${SITE_URL:-https://galantesjewelry.com}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://galantesjewelry.com}
+      - GOOGLE_PUBLIC_BASE_URL=${GOOGLE_PUBLIC_BASE_URL:-https://galantesjewelry.com}
+      - SHOP_URL=${SHOP_URL:-https://shop.galantesjewelry.com}
+      - ODOO_URL=${ODOO_URL:-https://odoo.galantesjewelry.com}
+      # Odoo integration
+      - ODOO_ENABLED=${ODOO_ENABLED:-true}
+      - ODOO_BASE_URL=http://odoo:8069
+      - ODOO_DB=${ODOO_DB:-galantes_prod}
+      - ODOO_USERNAME=${ODOO_USERNAME:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD}
+      - ODOO_API_KEY=${ODOO_API_KEY}
+      - ODOO_SYNC_ON_APPOINTMENT_VALIDATED=${ODOO_SYNC_ON_APPOINTMENT_VALIDATED:-true}
+      # Google OAuth / Calendar
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_OAUTH_REFRESH_TOKEN=${GOOGLE_OAUTH_REFRESH_TOKEN}
+      - GOOGLE_OAUTH_JAVASCRIPT_ORIGIN=${GOOGLE_OAUTH_JAVASCRIPT_ORIGIN}
+      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI}
+      - GOOGLE_OAUTH_SCOPES=${GOOGLE_OAUTH_SCOPES:-openid email profile}
+      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+      - REDIRECT_URI=${REDIRECT_URI}
+      - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID}
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
+      # Email / SendGrid
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL}
+      - SENDGRID_ADMIN_TO=${SENDGRID_ADMIN_TO}
+      - GMAIL_SMTP_USER=${GMAIL_SMTP_USER}
+      - GMAIL_SMTP_PASS=${GMAIL_SMTP_PASS}
+      - GMAIL_NOTIFICATION_TO=${GMAIL_NOTIFICATION_TO}
+      # Meta
+      - META_APP_ID=${META_APP_ID}
+      - META_APP_SECRET=${META_APP_SECRET}
+      - META_ACCESS_TOKEN=${META_ACCESS_TOKEN}
+      - META_CATALOG_ID=${META_CATALOG_ID}
+      - META_SYNC_TOKEN=${META_SYNC_TOKEN:?set META_SYNC_TOKEN}
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+      - INSTAGRAM_BUSINESS_ACCOUNT_ID=${INSTAGRAM_BUSINESS_ACCOUNT_ID}
+      - WHATSAPP_BUSINESS_ACCOUNT_ID=${WHATSAPP_BUSINESS_ACCOUNT_ID}
+      # Security
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://galantesjewelry.com,https://www.galantesjewelry.com,https://shop.galantesjewelry.com}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-900000}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-8}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./data:/app/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - galante-net
+    depends_on:
+      odoo:
+        condition: service_started
+
+  # ========== ODOO 19 ERP BACKEND ==========
+  odoo:
+    build:
+      context: ./odoo
+      dockerfile: Dockerfile
+    image: galantes-odoo:gcp
+    container_name: galantes_odoo
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - HOST=postgres
+      - PORT=5432
+      - USER=${POSTGRES_USER:-odoo}
+      - PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      - POSTGRES_DB=${ODOO_DB:-galantes_prod}
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      - ODOO_DB=${ODOO_DB:-galantes_prod}
+      - ODOO_USERNAME=${ODOO_USERNAME:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD:?set ODOO_PASSWORD}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      - ODOO_AUTO_INSTALL_MODULES=${ODOO_AUTO_INSTALL_MODULES:-true}
+      - PGDATA=/var/lib/postgresql/data
+    expose:
+      - "8069"
+      - "8072"
+    volumes:
+      - odoo-data:/var/lib/odoo
+      # Custom addons only (NO enterprise bind mount — fixes prior deploy fail)
+      - ./odoo/addons:/mnt/extra-addons
+      - ./odoo/config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./odoo/logs:/var/log/odoo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8069/web/database/selector || curl -fsS http://localhost:8069 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - galante-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ========== POSTGRESQL DATABASE ==========
+  postgres:
+    image: postgres:15-alpine
+    container_name: galantes_db
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - POSTGRES_DB=${ODOO_DB:-galantes_prod}
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo} -d ${ODOO_DB:-galantes_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - galante-net
+    expose:
+      - "5432"
+
+  # ========== NGINX REVERSE PROXY (TLS terminator) ==========
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: galantes_nginx
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Nginx config: conf.d-gcp is the GCP-specific set (HTTPS + ACME).
+      # During bootstrap (before certs exist), the deploy script points this
+      # at conf.d-gcp-bootstrap (HTTP-only + ACME) by symlinking.
+      - ./infra/nginx/conf.d-active:/etc/nginx/conf.d:ro
+      # Let's Encrypt volumes (shared with certbot)
+      - letsencrypt-etc:/etc/letsencrypt:ro
+      - letsencrypt-webroot:/var/www/certbot:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - galante-net
+    depends_on:
+      web:
+        condition: service_started
+      odoo:
+        condition: service_started
+
+  # ========== CERTBOT (Let's Encrypt auto-renew loop) ==========
+  # Runs a renewal loop every 12h and reloads nginx on success.
+  # Initial issuance is done manually via scripts/gcp/03-issue-certs.sh.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: galantes_certbot
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    volumes:
+      - letsencrypt-etc:/etc/letsencrypt
+      - letsencrypt-webroot:/var/www/certbot
+    entrypoint: /bin/sh -c
+    command: >
+      "trap exit TERM;
+       while :; do
+         certbot renew --webroot --webroot-path=/var/www/certbot --quiet --deploy-hook 'touch /etc/letsencrypt/.renewed';
+         sleep 12h;
+       done"
+    networks:
+      - galante-net
+
+# ========== NETWORKS ==========
+networks:
+  galante-net:
+    driver: bridge
+
+# ========== VOLUMES ==========
+volumes:
+  odoo-data:
+    driver: local
+  postgres-data:
+    driver: local
+  letsencrypt-etc:
+    driver: local
+  letsencrypt-webroot:
+    driver: local
