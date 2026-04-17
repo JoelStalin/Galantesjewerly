@@ -1,0 +1,152 @@
+name: Deploy Android Termux
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      REMOTE_BUNDLE: ~/galantesjewelry_bundle.tar.gz
+      REMOTE_ENV: ~/galantesjewelry.env
+      REMOTE_SCRIPT: ~/galantesjewelry_deploy_termux_bundle.sh
+      REMOTE_STAGE: ~/galantesjewelry_ci
+      REMOTE_APP_DIR: ~/galantesjewelry
+      ANDROID_SSH_HOST: ssh.galantesjewelry.com
+      ANDROID_SSH_USER: u0_a382
+      ANDROID_SSH_USE_CLOUDFLARED: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deploy bundle
+        run: |
+          BUNDLE_PATH="$RUNNER_TEMP/galantesjewelry_bundle.tar.gz"
+          tar \
+            --exclude-vcs \
+            --exclude=node_modules \
+            --exclude=.next \
+            --exclude=.env \
+            --exclude=temp_standalone \
+            --exclude=temp_deploy \
+            --exclude=tests/e2e/artifacts \
+            --exclude=tests/e2e/.runtime \
+            --exclude=__pycache__ \
+            --exclude='*.zip' \
+            --exclude='*.tar.gz' \
+            --exclude='*.log' \
+            --exclude=.tmp-start-standalone.err.log \
+            --exclude=.tmp-start-standalone.out.log \
+            --exclude=test_error.png \
+            --exclude=cloudflare_route_latest.html \
+            --exclude=build_log.txt \
+            --exclude=data/blobs \
+            --exclude=data/cms.json \
+            -czf "$BUNDLE_PATH" .
+          echo "LOCAL_BUNDLE=$BUNDLE_PATH" >> "$GITHUB_ENV"
+
+      - name: Install SSH client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
+      - name: Install cloudflared
+        if: ${{ env.ANDROID_SSH_USE_CLOUDFLARED == 'true' }}
+        run: |
+          for attempt in 1 2 3; do
+            if curl --fail --location --show-error https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared; then
+              break
+            fi
+            if [ "$attempt" = "3" ]; then
+              echo "cloudflared download failed after 3 attempts"
+              exit 1
+            fi
+            sleep 5
+          done
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/cloudflared
+
+      - name: Configure SSH
+        env:
+          ANDROID_SSH_PRIVATE_KEY: ${{ secrets.ANDROID_SSH_PRIVATE_KEY }}
+          ANDROID_SSH_PRIVATE_KEY_B64: ${{ secrets.ANDROID_SSH_PRIVATE_KEY_B64 }}
+          TERMUX_SSH_KEY: ${{ secrets.TERMUX_SSH_KEY }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          [ -n "$ANDROID_SSH_HOST" ] || { echo "ANDROID_SSH_HOST is empty"; exit 1; }
+          [ -n "$ANDROID_SSH_USER" ] || { echo "ANDROID_SSH_USER is empty"; exit 1; }
+          mkdir -p ~/.ssh
+          if [ -n "$ANDROID_SSH_PRIVATE_KEY" ]; then
+            printf '%s\n' "$ANDROID_SSH_PRIVATE_KEY" > ~/.ssh/android_termux
+          elif [ -n "$ANDROID_SSH_PRIVATE_KEY_B64" ]; then
+            printf '%s' "$ANDROID_SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/android_termux
+          elif [ -n "$TERMUX_SSH_KEY" ]; then
+            printf '%s\n' "$TERMUX_SSH_KEY" > ~/.ssh/android_termux
+          else
+            echo "No SSH key secret found. Define ANDROID_SSH_PRIVATE_KEY, ANDROID_SSH_PRIVATE_KEY_B64, or TERMUX_SSH_KEY."
+            exit 1
+          fi
+          chmod 600 ~/.ssh/android_termux
+          {
+            echo "Host android-termux"
+            echo "  HostName $ANDROID_SSH_HOST"
+            echo "  User $ANDROID_SSH_USER"
+            echo "  IdentityFile ~/.ssh/android_termux"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking accept-new"
+            if [ "$ANDROID_SSH_USE_CLOUDFLARED" = "true" ]; then
+              echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h"
+            fi
+          } >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          if [ -n "$CF_ACCESS_CLIENT_ID" ] && [ -n "$CF_ACCESS_CLIENT_SECRET" ]; then
+            {
+              echo "CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID"
+              echo "CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Upload bundle and env
+        env:
+          ANDROID_APP_ENV: ${{ secrets.ANDROID_APP_ENV }}
+        run: |
+          [ -n "$ANDROID_APP_ENV" ] || { echo "ANDROID_APP_ENV secret is missing"; exit 1; }
+          retry() {
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              if "$@"; then
+                return 0
+              fi
+              echo "Command failed on attempt $attempt: $*"
+              attempt=$((attempt + 1))
+              sleep 8
+            done
+            return 1
+          }
+          ENV_FILE="$RUNNER_TEMP/android.env"
+          printf '%s' "$ANDROID_APP_ENV" > "$ENV_FILE"
+          retry scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
+          retry scp "$ENV_FILE" android-termux:$REMOTE_ENV
+          retry scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
+          retry ssh android-termux "chmod 700 $REMOTE_SCRIPT"
+
+      - name: Deploy on Android
+        run: |
+          ssh android-termux "
+            APP_DIR=$REMOTE_APP_DIR \
+            BUNDLE_PATH=$REMOTE_BUNDLE \
+            ENV_SOURCE=$REMOTE_ENV \
+            STAGING_DIR=$REMOTE_STAGE \
+            sh $REMOTE_SCRIPT
+          "
+
+      - name: Verify public health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          if [ -n "$HEALTHCHECK_URL" ]; then
+            curl --fail --show-error --silent "$HEALTHCHECK_URL"
+          fi

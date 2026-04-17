@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Product Gallery Form View -->
+    <record id="product_gallery_form_view" model="ir.ui.view">
+        <field name="name">galantes.product.gallery.form</field>
+        <field name="model">galantes.product.gallery</field>
+        <field name="arch" type="xml">
+            <form string="Product Gallery Image">
+                <group>
+                    <field name="product_id" />
+                    <field name="sequence" />
+                </group>
+                <group>
+                    <field name="image" widget="image" />
+                    <field name="alt_text" />
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <!-- Product Gallery Tree View -->
+    <record id="product_gallery_tree_view" model="ir.ui.view">
+        <field name="name">galantes.product.gallery.tree</field>
+        <field name="model">galantes.product.gallery</field>
+        <field name="arch" type="xml">
+            <list string="Product Gallery" editable="bottom">
+                <field name="product_id" />
+                <field name="sequence" widget="handle" />
+                <field name="alt_text" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Product Gallery Search View -->
+    <record id="product_gallery_search_view" model="ir.ui.view">
+        <field name="name">galantes.product.gallery.search</field>
+        <field name="model">galantes.product.gallery</field>
+        <field name="arch" type="xml">
+            <search string="Product Gallery">
+                <field name="product_id" />
+                <field name="alt_text" />
+            </search>
+        </field>
+    </record>
+
+    <!-- Action to open Product Gallery -->
+    <record id="product_gallery_action" model="ir.actions.act_window">
+        <field name="name">Product Gallery</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">galantes.product.gallery</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,28 @@
+exclude: "^(temp_standalone/|node_modules/|\\.next/|package-lock\\.json|\\.claude/worktrees/)"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: TypeScript type check
+        language: node
+        entry: npx tsc --noEmit
+        pass_filenames: false
+        types: [ts]
+        additional_dependencies: []
+
+      - id: eslint
+        name: ESLint
+        language: node
+        entry: npx eslint --max-warnings=0 --no-warn-ignored
+        types_or: [ts, tsx]
+        additional_dependencies: []
