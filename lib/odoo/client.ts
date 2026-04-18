@@ -5,28 +5,71 @@
  * Follows integration-contracts/shop-product.v1.ts schema.
  *
  * Usage:
- *   const client = createOdooClient();
- *   const products = await client.getProducts();
- *   const product = await client.getProductBySlug('engagement-ring-14k-gold');
+ *   const client = getOdooClient();
+ *   const products = await client.getProducts({ q: 'ring', sort: 'featured', page: 1 });
+ *   const product  = await client.getProductBySlug('engagement-ring-14k-gold');
+ *   const related  = await client.getRelatedProducts('engagement-ring-14k-gold', 4);
+ *   const cats     = await client.getCategories();
  */
 
+// ---------------------------------------------------------------------------
+// Shared types (exported for use across the storefront)
+// ---------------------------------------------------------------------------
+
 export type ShopProduct = {
+  /** Odoo product.template.id */
   id: string;
+  /** URL-friendly slug used in /shop/<slug> */
   slug: string;
   name: string;
+  /** One-line value proposition (product cards) */
+  tagline?: string;
+  /** 1–3 sentence sales copy (cards + listing previews) */
   shortDescription?: string;
+  /** Full customer-facing copy (detail page) */
   longDescription?: string;
+  /** Specifications: metal, stone, dimensions, etc. */
+  productDetails?: string;
+  /** Care instructions, shipping notes, packaging */
+  careAndShipping?: string;
   price: number;
   currency: string;
   availability: 'in_stock' | 'out_of_stock' | 'preorder';
   imageUrl?: string;
   gallery?: string[];
   sku?: string;
+  /** Human-readable material label (e.g. '14K Gold') */
   material?: string;
+  /** Raw material code for filtering (e.g. 'gold_14k') */
+  materialCode?: string;
   category?: string;
+  categoryId?: number | null;
   buyUrl: string;
   publicUrl?: string;
   isFeatured?: boolean;
+};
+
+export type CategoryData = {
+  id: number;
+  name: string;
+  /** URL-friendly version of name */
+  slug: string;
+  /** Number of published products in this category */
+  count: number;
+  parentId?: number | null;
+};
+
+/** Combined search/filter/sort/pagination query for getProducts() */
+export type ShopQuery = {
+  /** Full-text search: name, tagline, short description, SKU */
+  q?: string;
+  category?: string;
+  material?: string;
+  sort?: 'featured' | 'newest' | 'price_asc' | 'price_desc' | 'alphabetical';
+  min_price?: number;
+  max_price?: number;
+  page?: number;
+  page_size?: number;
 };
 
 export type PaginatedResponse<T> = {
@@ -35,56 +78,65 @@ export type PaginatedResponse<T> = {
     page: number;
     pageSize: number;
     total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
   };
 };
 
 export interface OdooClientConfig {
   baseUrl?: string;
   timeout?: number;
-  cache?: boolean;
   cacheTTL?: number;
 }
+
+// ---------------------------------------------------------------------------
+// OdooClient class
+// ---------------------------------------------------------------------------
 
 class OdooClient {
   private baseUrl: string;
   private timeout: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cache: Map<string, { data: any; timestamp: number }>;
-  private cacheTTL: number; // in milliseconds
+  private cacheTTL: number;
 
   constructor(config: OdooClientConfig = {}) {
     this.baseUrl =
       config.baseUrl || process.env.ODOO_BASE_URL || 'http://localhost:8069';
     this.timeout = config.timeout || 10000;
     this.cache = new Map();
-    this.cacheTTL = config.cacheTTL || 5 * 60 * 1000; // 5 minutes default
+    this.cacheTTL = config.cacheTTL || 5 * 60 * 1000; // 5 minutes
   }
 
+  // ── Public API ─────────────────────────────────────────────────────────────
+
   /**
-   * Fetch all published products
+   * Fetch a paginated, filtered, and sorted product list.
+   *
+   * Accepts either a ShopQuery object (new) or legacy (page, pageSize) numbers.
    */
   async getProducts(
-    page: number = 1,
-    pageSize: number = 20,
+    queryOrPage: ShopQuery | number = 1,
+    legacyPageSize: number = 24,
   ): Promise<PaginatedResponse<ShopProduct>> {
-    const cacheKey = `products-${page}-${pageSize}`;
+    const params = this._buildProductParams(queryOrPage, legacyPageSize);
+    const cacheKey = `products-${JSON.stringify(params)}`;
 
-    // Check cache
     if (this.isCacheValid(cacheKey)) {
       return this.cache.get(cacheKey)!.data;
     }
 
     try {
-      const response = await this.fetch('/api/products', {
-        query: { page, pageSize },
-      });
-
-      // Cache the result
-      this.cache.set(cacheKey, {
-        data: response,
-        timestamp: Date.now(),
-      });
-
+      const response = await this.fetch('/api/products', { query: params });
+      // Normalise pagination: API may not have hasNext/hasPrev on older builds
+      if (response.pagination && response.pagination.hasNext === undefined) {
+        const p = response.pagination;
+        p.hasNext = p.page < p.pages;
+        p.hasPrev = p.page > 1;
+        p.pages = p.pages || Math.max(1, Math.ceil(p.total / p.pageSize));
+      }
+      this.cache.set(cacheKey, { data: response, timestamp: Date.now() });
       return response;
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -92,30 +144,18 @@ class OdooClient {
     }
   }
 
-  /**
-   * Fetch product by slug
-   */
+  /** Fetch a single product by its URL slug. */
   async getProductBySlug(slug: string): Promise<ShopProduct | null> {
     const cacheKey = `product-${slug}`;
 
-    // Check cache
     if (this.isCacheValid(cacheKey)) {
       return this.cache.get(cacheKey)!.data;
     }
 
     try {
       const response = await this.fetch(`/api/products/${slug}`);
-
-      if (!response.data) {
-        return null;
-      }
-
-      // Cache the result
-      this.cache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now(),
-      });
-
+      if (!response.data) return null;
+      this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
       return response.data;
     } catch (error) {
       console.error(`Failed to fetch product ${slug}:`, error);
@@ -123,42 +163,50 @@ class OdooClient {
     }
   }
 
-  /**
-   * Fetch products by category
-   */
-  async getProductsByCategory(
-    category: string,
-    page: number = 1,
-    pageSize: number = 20,
-  ): Promise<PaginatedResponse<ShopProduct>> {
-    const cacheKey = `category-${category}-${page}-${pageSize}`;
+  /** Fetch related products for the detail page (by slug). */
+  async getRelatedProducts(
+    slug: string,
+    limit: number = 4,
+  ): Promise<ShopProduct[]> {
+    const cacheKey = `related-${slug}-${limit}`;
 
     if (this.isCacheValid(cacheKey)) {
       return this.cache.get(cacheKey)!.data;
     }
 
     try {
-      const response = await this.fetch('/api/products', {
-        query: { category, page, pageSize },
+      const response = await this.fetch(`/api/products/${slug}/related`, {
+        query: { limit },
       });
-
-      this.cache.set(cacheKey, {
-        data: response,
-        timestamp: Date.now(),
-      });
-
-      return response;
+      const data = response.data || [];
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
     } catch (error) {
-      console.error(`Failed to fetch category ${category}:`, error);
-      throw new Error(
-        `Unable to load products in category "${category}". Please try again later.`,
-      );
+      console.error(`Failed to fetch related products for ${slug}:`, error);
+      return [];
     }
   }
 
-  /**
-   * Get featured/promoted products
-   */
+  /** Fetch all categories that have at least one published product. */
+  async getCategories(): Promise<CategoryData[]> {
+    const cacheKey = 'categories';
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data;
+    }
+
+    try {
+      const response = await this.fetch('/api/categories');
+      const data: CategoryData[] = response.data || [];
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      return [];
+    }
+  }
+
+  /** Featured products for homepage / collections block. */
   async getFeaturedProducts(limit: number = 6): Promise<ShopProduct[]> {
     const cacheKey = `featured-${limit}`;
 
@@ -170,22 +218,27 @@ class OdooClient {
       const response = await this.fetch('/api/products/featured', {
         query: { limit },
       });
-
-      this.cache.set(cacheKey, {
-        data: response.data || [],
-        timestamp: Date.now(),
-      });
-
-      return response.data || [];
+      const data = response.data || [];
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
     } catch (error) {
       console.error('Failed to fetch featured products:', error);
-      return []; // Return empty array on error, don't block page
+      return [];
     }
   }
 
   /**
-   * Clear cache for a specific key or all
+   * Fetch products by category (legacy helper – prefer getProducts({ category })).
+   * @deprecated Use getProducts({ category, page, page_size }) instead.
    */
+  async getProductsByCategory(
+    category: string,
+    page: number = 1,
+    pageSize: number = 24,
+  ): Promise<PaginatedResponse<ShopProduct>> {
+    return this.getProducts({ category, page, page_size: pageSize });
+  }
+
   clearCache(key?: string): void {
     if (key) {
       this.cache.delete(key);
@@ -194,9 +247,33 @@ class OdooClient {
     }
   }
 
-  /**
-   * Internal: Make HTTP request with timeout & error handling
-   */
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  /** Build the query-param object accepted by /api/products. */
+  private _buildProductParams(
+    queryOrPage: ShopQuery | number,
+    legacyPageSize: number,
+  ): Record<string, string | number> {
+    if (typeof queryOrPage === 'number') {
+      return { page: queryOrPage, page_size: legacyPageSize };
+    }
+
+    const q = queryOrPage;
+    const params: Record<string, string | number> = {
+      page: q.page ?? 1,
+      page_size: q.page_size ?? legacyPageSize,
+    };
+
+    if (q.q)         params.q         = q.q;
+    if (q.category)  params.category  = q.category;
+    if (q.material)  params.material  = q.material;
+    if (q.sort)      params.sort      = q.sort;
+    if (q.min_price != null) params.min_price = q.min_price;
+    if (q.max_price != null) params.max_price = q.max_price;
+
+    return params;
+  }
+
   private async fetch(
     endpoint: string,
     options: {
@@ -208,7 +285,6 @@ class OdooClient {
   ): Promise<any> {
     const url = new URL(endpoint, this.baseUrl);
 
-    // Add query parameters
     if (options.query) {
       Object.entries(options.query).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -240,37 +316,27 @@ class OdooClient {
     }
   }
 
-  /**
-   * Check if cache entry is still valid
-   */
   private isCacheValid(key: string): boolean {
     const entry = this.cache.get(key);
     if (!entry) return false;
-
-    const age = Date.now() - entry.timestamp;
-    return age < this.cacheTTL;
+    return Date.now() - entry.timestamp < this.cacheTTL;
   }
 }
 
-/**
- * Create a singleton OdooClient instance for product/shop data fetching.
- * NOTE: This client is for the public REST API (GET /api/products).
- * For appointment sync (JSON-2 API), use @/src/config/odooClient.js instead.
- */
+// ---------------------------------------------------------------------------
+// Singleton factory
+// ---------------------------------------------------------------------------
+
 let clientInstance: OdooClient | null = null;
 
-/** @deprecated Use getOdooClient() for shop/product data. For appointment sync use src/config/odooClient.js */
+/** @deprecated Use getOdooClient() */
 export function createOdooClient(config?: OdooClientConfig): OdooClient {
-  if (!clientInstance) {
-    clientInstance = new OdooClient(config);
-  }
+  if (!clientInstance) clientInstance = new OdooClient(config);
   return clientInstance;
 }
 
 export function getOdooClient(): OdooClient {
-  if (!clientInstance) {
-    clientInstance = new OdooClient();
-  }
+  if (!clientInstance) clientInstance = new OdooClient();
   return clientInstance;
 }
 
