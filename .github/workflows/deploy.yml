@@ -7,26 +7,45 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
+    env:
+      GCP_SSH_USER: yoeli
+      # Fallback: IP is already public in GITHUB_SECRETS_GUIDE.md
+      GCP_VM_IP_FALLBACK: "136.114.48.210"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Validate required secrets
+        env:
+          GCP_SSH_PRIVATE_KEY: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          GCP_VM_IP: ${{ secrets.GCP_VM_IP }}
+        run: |
+          MISSING=""
+          [ -z "$GCP_SSH_PRIVATE_KEY" ] && MISSING="$MISSING GCP_SSH_PRIVATE_KEY"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required secrets:$MISSING"
+            echo "Please add them in Settings → Environments → Production → Secrets"
+            exit 1
+          fi
+          # Resolve host: prefer secret, fall back to documented fallback
+          RESOLVED_HOST="${GCP_VM_IP:-$GCP_VM_IP_FALLBACK}"
+          echo "GCP_DEPLOY_HOST=$RESOLVED_HOST" >> "$GITHUB_ENV"
+          echo "Deploying to host: $RESOLVED_HOST"
 
       - name: SSH and Deploy to GCP
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.GCP_VM_IP }}
-          username: yoeli
+          host: ${{ env.GCP_DEPLOY_HOST }}
+          username: ${{ env.GCP_SSH_USER }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd ~/galantesjewelry
+
+            # Pull latest code
+            git pull origin main
+
             # Sincronizar secretos en el servidor
             sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}/" .env.prod
             sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}/" .env.prod
@@ -37,5 +56,5 @@ jobs:
             sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build
 
             # Verificar salud
-            sleep 10
-            sudo docker ps
+            sleep 15
+            sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

@@ -67,6 +67,7 @@ jobs:
           done
           chmod +x cloudflared
           sudo mv cloudflared /usr/local/bin/cloudflared
+          cloudflared --version
 
       - name: Configure SSH
         env:
@@ -90,6 +91,8 @@ jobs:
             exit 1
           fi
           chmod 600 ~/.ssh/android_termux
+
+          # Build SSH config — include CF Access tokens in ProxyCommand if available
           {
             echo "Host android-termux"
             echo "  HostName $ANDROID_SSH_HOST"
@@ -97,17 +100,52 @@ jobs:
             echo "  IdentityFile ~/.ssh/android_termux"
             echo "  IdentitiesOnly yes"
             echo "  StrictHostKeyChecking accept-new"
+            echo "  ConnectTimeout 30"
+            echo "  ServerAliveInterval 30"
+            echo "  ServerAliveCountMax 3"
             if [ "$ANDROID_SSH_USE_CLOUDFLARED" = "true" ]; then
-              echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h"
+              if [ -n "$CF_ACCESS_CLIENT_ID" ] && [ -n "$CF_ACCESS_CLIENT_SECRET" ]; then
+                echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --id $CF_ACCESS_CLIENT_ID --secret $CF_ACCESS_CLIENT_SECRET"
+              else
+                echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h"
+              fi
             fi
           } >> ~/.ssh/config
           chmod 600 ~/.ssh/config
+
+          # Export CF Access tokens to environment so cloudflared picks them up via env vars
           if [ -n "$CF_ACCESS_CLIENT_ID" ] && [ -n "$CF_ACCESS_CLIENT_SECRET" ]; then
             {
               echo "CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID"
               echo "CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET"
             } >> "$GITHUB_ENV"
+            echo "CF Access credentials available — will authenticate via Cloudflare Access"
+          else
+            echo "CF Access credentials not set (CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET)."
+            echo "Attempting tunnel connection without service tokens."
+            echo "If this fails with 'websocket: bad handshake', add CF Access service tokens as GitHub secrets."
           fi
+
+      - name: Verify tunnel connectivity
+        if: ${{ env.ANDROID_SSH_USE_CLOUDFLARED == 'true' }}
+        run: |
+          echo "Testing cloudflared tunnel to $ANDROID_SSH_HOST ..."
+          for attempt in 1 2 3; do
+            if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=15 android-termux "echo tunnel-ok" 2>&1; then
+              echo "Tunnel is reachable."
+              break
+            fi
+            echo "Tunnel check attempt $attempt failed, retrying in 10s..."
+            if [ "$attempt" = "3" ]; then
+              echo "::error::Cannot reach $ANDROID_SSH_HOST via Cloudflare tunnel after 3 attempts."
+              echo "Possible causes:"
+              echo "  1. cloudflared service is not running on the Android/Termux device"
+              echo "  2. CF Access service tokens (CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET) are missing or invalid"
+              echo "  3. Cloudflare tunnel is offline — start it with: cloudflared tunnel run"
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Upload bundle and env
         env:
@@ -115,22 +153,23 @@ jobs:
         run: |
           [ -n "$ANDROID_APP_ENV" ] || { echo "ANDROID_APP_ENV secret is missing"; exit 1; }
           retry() {
-            attempt=1
+            local attempt=1
             while [ "$attempt" -le 3 ]; do
               if "$@"; then
                 return 0
               fi
               echo "Command failed on attempt $attempt: $*"
               attempt=$((attempt + 1))
-              sleep 8
+              sleep 10
             done
+            echo "Command failed after 3 attempts: $*"
             return 1
           }
           ENV_FILE="$RUNNER_TEMP/android.env"
           printf '%s' "$ANDROID_APP_ENV" > "$ENV_FILE"
-          retry scp "$LOCAL_BUNDLE" android-termux:$REMOTE_BUNDLE
-          retry scp "$ENV_FILE" android-termux:$REMOTE_ENV
-          retry scp scripts/deploy_termux_bundle.sh android-termux:$REMOTE_SCRIPT
+          retry scp "$LOCAL_BUNDLE" android-termux:"$REMOTE_BUNDLE"
+          retry scp "$ENV_FILE" android-termux:"$REMOTE_ENV"
+          retry scp scripts/deploy_termux_bundle.sh android-termux:"$REMOTE_SCRIPT"
           retry ssh android-termux "chmod 700 $REMOTE_SCRIPT"
 
       - name: Deploy on Android
