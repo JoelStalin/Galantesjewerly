@@ -19,11 +19,20 @@ export type ShopProduct = {
   /** Product name as entered in Odoo */
   name: string;
 
-  /** Short description (140–180 chars), used in product cards & Meta */
+  /** One-line value proposition shown on product cards (max ~100 chars) */
+  tagline?: string;
+
+  /** Short description (1–3 sentences), used in product cards & Meta */
   shortDescription?: string;
 
-  /** Full product description, used in detail pages & Meta */
+  /** Full product description, used in detail pages */
   longDescription?: string;
+
+  /** Key specifications: metal, stone, dimensions, finish, etc. */
+  productDetails?: string;
+
+  /** Care instructions, shipping notes, and packaging details */
+  careAndShipping?: string;
 
   /** Sale price (list_price in Odoo) */
   price: number;
@@ -43,17 +52,39 @@ export type ShopProduct = {
   /** SKU code (default_code) for inventory systems */
   sku?: string;
 
-  /** Material type (e.g., "gold", "silver", "platinum") */
+  /** Human-readable material label (e.g. "14K Gold") */
   material?: string;
 
-  /** Product category (e.g., "bridal", "rings", "nautical") */
+  /** Raw material code for filter queries (e.g. "gold_14k") */
+  materialCode?: string;
+
+  /** Product category name */
   category?: string;
 
-  /** Direct purchase URL pointing to shop.galantesjewelry.com/product/:slug */
+  /** Product category ID */
+  categoryId?: number | null;
+
+  /** Direct purchase URL pointing to shop.galantesjewelry.com/shop/:slug */
   buyUrl: string;
 
-  /** Canonical URL for SEO (shop.galantesjewelry.com/products/:slug) */
+  /** Canonical URL for SEO (same as buyUrl in current implementation) */
   publicUrl?: string;
+
+  /** Whether the product is pinned to featured sections */
+  isFeatured?: boolean;
+};
+
+export type CategoryData = {
+  /** Odoo product.category.id */
+  id: number;
+  /** Category display name */
+  name: string;
+  /** URL-friendly slug derived from name */
+  slug: string;
+  /** Number of published products in this category */
+  count: number;
+  /** Parent category ID (null for top-level) */
+  parentId?: number | null;
 };
 
 /**
@@ -61,18 +92,26 @@ export type ShopProduct = {
  *
  * List endpoint (GET /api/products):
  * {
+ *   success: true,
  *   data: ShopProduct[],
  *   pagination: {
  *     page: number,
  *     pageSize: number,
- *     total: number
+ *     total: number,
+ *     pages: number,
+ *     hasNext: boolean,
+ *     hasPrev: boolean
  *   }
  * }
  *
  * Detail endpoint (GET /api/products/:slug):
- * {
- *   data: ShopProduct
- * }
+ * { success: true, data: ShopProduct }
+ *
+ * Related endpoint (GET /api/products/:slug/related):
+ * { success: true, data: ShopProduct[] }
+ *
+ * Categories endpoint (GET /api/categories):
+ * { success: true, data: CategoryData[] }
  */
 
 /**
@@ -80,7 +119,8 @@ export type ShopProduct = {
  *
  * v1 (current):
  *  - Initial release: base product fields for shop and Meta
- *  - No breaking changes expected until new field categories emerge
+ *  - v1.1: Added tagline, productDetails, careAndShipping, materialCode,
+ *           categoryId, isFeatured; pagination extended with pages/hasNext/hasPrev
  *
  * Future breaking changes would increment to v2:
  *  - Removing or renaming required fields
