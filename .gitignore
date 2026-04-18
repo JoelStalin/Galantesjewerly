@@ -59,7 +59,7 @@ img_back/
 /tests/e2e/__pycache__/
 
 # env files (can opt-in for committing if needed)
-#.env*
+.env*
 
 # vercel
 .vercel
