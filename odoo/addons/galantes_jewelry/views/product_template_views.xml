@@ -1,52 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- Extend product.template form view -->
+    <!-- Extend product.template form view with full storefront governance -->
     <record id="product_template_form_view_galantes" model="ir.ui.view">
         <field name="name">product.template.form (galantes_jewelry)</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
-                <page string="Jewelry Info" name="jewelry_info">
-                    <group>
-                        <field name="material" />
-                        <field name="slug" readonly="1" />
-                        <field name="available_on_website" />
-                        <field name="availability_status" readonly="1" />
+                <page string="Storefront" name="jewelry_storefront">
+                    <!-- Publication & Merchandising -->
+                    <group string="Publication &amp; Merchandising">
+                        <field name="available_on_website"/>
+                        <field name="is_featured"/>
+                        <field name="sequence"/>
+                        <field name="material"/>
+                        <field name="availability_status" readonly="1"/>
                     </group>
-                    <group>
-                        <field name="buy_url" readonly="1" />
-                        <field name="public_url" readonly="1" />
+
+                    <!-- URL / SEO -->
+                    <group string="URL &amp; SEO">
+                        <field name="slug"
+                               help="Auto-generated from the product name. Customize to fix the storefront URL."/>
+                        <field name="buy_url" readonly="1"
+                               help="Storefront URL: https://shop.galantesjewelry.com/shop/&lt;slug&gt;"/>
+                    </group>
+
+                    <!-- Storefront copy -->
+                    <group string="Storefront Copy (English only — shown to customers)">
+                        <field name="tagline"
+                               placeholder="e.g. Handcrafted in 14K gold with a timeless silhouette"
+                               help="One-line value proposition shown on product cards (max ~100 chars)"/>
+                        <field name="storefront_short_description" widget="text"
+                               placeholder="1–3 sentences. Persuasive, concise, customer-safe. No internal notes."
+                               help="Shown on product cards and listing previews"/>
+                        <field name="storefront_long_description" widget="text"
+                               placeholder="Full product story for the detail page. Focus on craftsmanship and value."
+                               help="Displayed in the 'About This Piece' section on the detail page"/>
+                        <field name="product_details" widget="text"
+                               placeholder="Metal: 14K Yellow Gold&#10;Stone: 0.25ct Round Diamond&#10;Length: 18 inches&#10;Clasp: Lobster claw"
+                               help="Key specifications shown in the 'Product Details' section"/>
+                        <field name="care_and_shipping" widget="text"
+                               placeholder="Store in the provided jewelry box away from moisture.&#10;Complimentary gift packaging included.&#10;Free US shipping on orders over $200."
+                               help="Shown in the 'Shipping &amp; Care' section on the detail page"/>
                     </group>
                 </page>
             </xpath>
         </field>
     </record>
 
-    <!-- Product template tree view -->
+    <!-- Product template tree view – add material and availability columns -->
     <record id="product_template_tree_view_galantes" model="ir.ui.view">
         <field name="name">product.template.tree (galantes_jewelry)</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_tree_view"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='categ_id']" position="after">
-                <field name="material" />
-                <field name="availability_status" />
+                <field name="material"/>
+                <field name="is_featured" string="Featured"/>
+                <field name="available_on_website" string="On Website"/>
+                <field name="availability_status" string="Stock"/>
             </xpath>
         </field>
     </record>
 
-    <!-- Published products list (for shop) -->
+    <!-- Search filters -->
     <record id="product_template_search_view_galantes" model="ir.ui.view">
         <field name="name">product.template.search (galantes_jewelry)</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_search_view"/>
         <field name="arch" type="xml">
             <xpath expr="//search" position="inside">
-                <filter name="available_website" string="Available on Website" domain="[('available_on_website', '=', True)]" />
-                <filter name="material_gold" string="Gold" domain="[('material', '=', 'gold')]" />
-                <filter name="material_silver" string="Silver" domain="[('material', '=', 'silver')]" />
-                <filter name="material_platinum" string="Platinum" domain="[('material', '=', 'platinum')]" />
+                <filter name="available_website" string="Available on Website"
+                        domain="[('available_on_website', '=', True)]"/>
+                <filter name="is_featured" string="Featured"
+                        domain="[('is_featured', '=', True)]"/>
+                <separator/>
+                <filter name="material_gold" string="Gold"
+                        domain="[('material', 'in', ['gold','gold_14k','gold_18k','gold_24k'])]"/>
+                <filter name="material_rose_gold" string="Rose Gold"
+                        domain="[('material', 'in', ['rose_gold','rose_gold_14k'])]"/>
+                <filter name="material_white_gold" string="White Gold"
+                        domain="[('material', 'in', ['white_gold','white_gold_14k'])]"/>
+                <filter name="material_silver" string="Silver"
+                        domain="[('material', 'in', ['silver','silver_925'])]"/>
+                <filter name="material_platinum" string="Platinum"
+                        domain="[('material', '=', 'platinum')]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter name="group_material" string="Material"
+                            context="{'group_by': 'material'}"/>
+                    <filter name="group_category" string="Category"
+                            context="{'group_by': 'categ_id'}"/>
+                </group>
             </xpath>
         </field>
     </record>
