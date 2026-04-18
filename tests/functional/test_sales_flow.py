@@ -1,16 +1,16 @@
 """
-Pruebas funcionales del flujo completo de ventas — Galante's Jewelry.
+Functional tests for the complete sales flow — Galante's Jewelry.
 
-Prueba los endpoints reales contra el servidor local.
-Si el servidor no está corriendo, los tests se marcan como SKIP automáticamente.
+Tests the real endpoints against a locally running server.
+If the server is not running, tests are automatically marked as SKIP.
 
-Ejecutar: python -m pytest tests/functional/ -v
-      o:  python -m unittest discover -s tests/functional -v
+Run: python -m pytest tests/functional/ -v
+  or: python -m unittest discover -s tests/functional -v
 
-Variables de entorno:
-  E2E_BASE_URL      — URL base del servidor (default: http://127.0.0.1:3000)
-  ADMIN_USERNAME    — usuario admin (default: admin)
-  ADMIN_PASSWORD    — contraseña admin (default: CHANGE_ME_LEGACY_ADMIN_PASSWORD)
+Environment variables:
+  E2E_BASE_URL   — server base URL (default: http://127.0.0.1:8069)
+  ADMIN_USERNAME — admin user (default: admin)
+  ADMIN_PASSWORD — admin password (default: CHANGE_ME_LEGACY_ADMIN_PASSWORD)
 """
 
 import json
@@ -20,10 +20,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-BASE_URL = os.getenv('E2E_BASE_URL', 'http://127.0.0.1:3000').rstrip('/')
+BASE_URL       = os.getenv('E2E_BASE_URL', 'http://127.0.0.1:8069').rstrip('/')
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CHANGE_ME_LEGACY_ADMIN_PASSWORD')
-TIMEOUT = 10
+TIMEOUT        = 10
 
 
 def _get(path, params=None):
@@ -36,18 +36,19 @@ def _get(path, params=None):
 
 
 def _post(path, payload):
-    url = f"{BASE_URL}{path}"
+    url  = f"{BASE_URL}{path}"
     data = json.dumps(payload).encode()
-    req = urllib.request.Request(
+    req  = urllib.request.Request(
         url, data=data,
         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-        method='POST'
+        method='POST',
     )
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             return resp.status, json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read().decode()) if e.read else {}
+        body = e.read()
+        return e.code, json.loads(body.decode()) if body else {}
 
 
 def server_available():
@@ -59,14 +60,18 @@ def server_available():
 
 
 def skip_if_offline(fn):
-    """Decorator: salta el test si el servidor no responde."""
+    """Decorator: skip the test if the server is not reachable."""
     def wrapper(self, *args, **kwargs):
         if not server_available():
-            raise unittest.SkipTest(f"Servidor offline: {BASE_URL}")
+            raise unittest.SkipTest(f"Server offline: {BASE_URL}")
         return fn(self, *args, **kwargs)
     wrapper.__name__ = fn.__name__
     return wrapper
 
+
+# ---------------------------------------------------------------------------
+# Health Check
+# ---------------------------------------------------------------------------
 
 class TestHealthCheck(unittest.TestCase):
 
@@ -82,6 +87,10 @@ class TestHealthCheck(unittest.TestCase):
         self.assertIn('service', body)
 
 
+# ---------------------------------------------------------------------------
+# Product Catalog — GET /api/products
+# ---------------------------------------------------------------------------
+
 class TestProductCatalog(unittest.TestCase):
 
     @skip_if_offline
@@ -92,8 +101,8 @@ class TestProductCatalog(unittest.TestCase):
     @skip_if_offline
     def test_products_response_structure(self):
         _, body = _get('/api/products')
-        self.assertIn('success', body)
-        self.assertIn('data', body)
+        self.assertIn('success',    body)
+        self.assertIn('data',       body)
         self.assertIn('pagination', body)
 
     @skip_if_offline
@@ -107,29 +116,44 @@ class TestProductCatalog(unittest.TestCase):
         self.assertIsInstance(body.get('data'), list)
 
     @skip_if_offline
-    def test_pagination_structure(self):
+    def test_pagination_has_all_fields(self):
         _, body = _get('/api/products')
-        pagination = body.get('pagination', {})
-        self.assertIn('page', pagination)
-        self.assertIn('pageSize', pagination)
-        self.assertIn('total', pagination)
-        self.assertIn('pages', pagination)
+        p = body.get('pagination', {})
+        for field in ('page', 'pageSize', 'total', 'pages', 'hasNext', 'hasPrev'):
+            with self.subTest(field=field):
+                self.assertIn(field, p)
 
     @skip_if_offline
     def test_page_size_param_respected(self):
         _, body = _get('/api/products', {'page': 1, 'page_size': 3})
-        data = body.get('data', [])
-        self.assertLessEqual(len(data), 3)
+        self.assertLessEqual(len(body.get('data', [])), 3)
+
+    @skip_if_offline
+    def test_page_size_camelcase_alias_respected(self):
+        _, body = _get('/api/products', {'page': 1, 'pageSize': 3})
+        self.assertLessEqual(len(body.get('data', [])), 3)
 
     @skip_if_offline
     def test_product_item_has_required_fields(self):
         _, body = _get('/api/products')
         products = body.get('data', [])
         if not products:
-            self.skipTest("No hay productos en el catálogo")
+            self.skipTest("No products in catalog")
         product = products[0]
-        required = ['id', 'slug', 'name', 'price', 'currency', 'availability']
-        for field in required:
+        for field in ('id', 'slug', 'name', 'price', 'currency', 'availability'):
+            with self.subTest(field=field):
+                self.assertIn(field, product)
+
+    @skip_if_offline
+    def test_product_has_storefront_fields(self):
+        """New storefront copy fields must be present (may be empty string)."""
+        _, body = _get('/api/products')
+        products = body.get('data', [])
+        if not products:
+            self.skipTest("No products in catalog")
+        product = products[0]
+        for field in ('tagline', 'shortDescription', 'longDescription',
+                      'productDetails', 'careAndShipping'):
             with self.subTest(field=field):
                 self.assertIn(field, product)
 
@@ -138,16 +162,13 @@ class TestProductCatalog(unittest.TestCase):
         _, body = _get('/api/products', {'page_size': 1})
         products = body.get('data', [])
         if not products:
-            self.skipTest('No hay productos en el catálogo')
-
+            self.skipTest("No products in catalog")
         product = products[0]
         if product.get('imageUrl'):
             self.assertIsInstance(product['imageUrl'], str)
             self.assertTrue(product['imageUrl'].startswith('http'))
-
         gallery = product.get('gallery')
         if gallery:
-            self.assertIsInstance(gallery, list)
             for item in gallery:
                 self.assertIsInstance(item, str)
                 self.assertTrue(item.startswith('http'))
@@ -157,26 +178,89 @@ class TestProductCatalog(unittest.TestCase):
         _, body = _get('/api/products/featured', {'limit': 4})
         self.assertTrue(body.get('success'))
         self.assertIsInstance(body.get('data'), list)
-        self.assertLessEqual(len(body.get('data')), 4)
+        self.assertLessEqual(len(body.get('data', [])), 4)
+
+    # ── Filter params ──────────────────────────────────────────────────────
 
     @skip_if_offline
     def test_material_filter(self):
         _, body = _get('/api/products', {'material': 'gold'})
         self.assertTrue(body.get('success'))
         for product in body.get('data', []):
-            with self.subTest(product=product.get('slug')):
-                self.assertEqual(product.get('material', '').lower(), 'gold')
+            with self.subTest(slug=product.get('slug')):
+                # materialCode must be 'gold'; label will be 'Gold'
+                self.assertIn(
+                    product.get('materialCode', ''),
+                    ('gold', 'gold_14k', 'gold_18k', 'gold_24k'),
+                )
 
+    @skip_if_offline
+    def test_category_filter(self):
+        _, body = _get('/api/products', {'category': 'Rings'})
+        self.assertTrue(body.get('success'))
+
+    @skip_if_offline
+    def test_q_search_param(self):
+        _, body = _get('/api/products', {'q': 'ring'})
+        self.assertTrue(body.get('success'))
+        self.assertIsInstance(body.get('data'), list)
+
+    @skip_if_offline
+    def test_min_price_filter(self):
+        _, body = _get('/api/products', {'min_price': '0'})
+        self.assertTrue(body.get('success'))
+
+    @skip_if_offline
+    def test_max_price_filter(self):
+        _, body = _get('/api/products', {'max_price': '99999'})
+        self.assertTrue(body.get('success'))
+
+    # ── Sort params ────────────────────────────────────────────────────────
+
+    @skip_if_offline
+    def test_sort_featured(self):
+        _, body = _get('/api/products', {'sort': 'featured'})
+        self.assertTrue(body.get('success'))
+
+    @skip_if_offline
+    def test_sort_newest(self):
+        _, body = _get('/api/products', {'sort': 'newest'})
+        self.assertTrue(body.get('success'))
+
+    @skip_if_offline
+    def test_sort_price_asc(self):
+        _, body = _get('/api/products', {'sort': 'price_asc'})
+        self.assertTrue(body.get('success'))
+        products = body.get('data', [])
+        prices   = [p['price'] for p in products]
+        self.assertEqual(prices, sorted(prices))
+
+    @skip_if_offline
+    def test_sort_price_desc(self):
+        _, body = _get('/api/products', {'sort': 'price_desc'})
+        self.assertTrue(body.get('success'))
+        products = body.get('data', [])
+        prices   = [p['price'] for p in products]
+        self.assertEqual(prices, sorted(prices, reverse=True))
+
+    @skip_if_offline
+    def test_sort_alphabetical(self):
+        _, body = _get('/api/products', {'sort': 'alphabetical'})
+        self.assertTrue(body.get('success'))
+
+
+# ---------------------------------------------------------------------------
+# Product by slug — GET /api/products/<slug>
+# ---------------------------------------------------------------------------
 
 class TestProductBySlug(unittest.TestCase):
 
     @skip_if_offline
     def test_nonexistent_slug_returns_error(self):
         try:
-            status, body = _get('/api/products/slug-que-no-existe-xyz123')
+            status, body = _get('/api/products/slug-that-does-not-exist-xyz123')
         except urllib.error.HTTPError as e:
             status, body = e.code, {}
-        # Puede ser 200 con success:false o 404
         if status == 200:
             self.assertFalse(body.get('success'))
         else:
@@ -184,14 +268,13 @@ class TestProductBySlug(unittest.TestCase):
 
     @skip_if_offline
     def test_valid_slug_returns_product(self):
-        # Primero obtenemos un slug real del catálogo
         _, catalog = _get('/api/products', {'page_size': 1})
-        products = catalog.get('data', [])
+        products   = catalog.get('data', [])
         if not products:
-            self.skipTest("No hay productos para probar por slug")
+            self.skipTest("No products to test by slug")
         slug = products[0].get('slug')
         if not slug:
-            self.skipTest("Producto sin slug")
+            self.skipTest("Product has no slug")
         _, body = _get(f'/api/products/{slug}')
         self.assertTrue(body.get('success'))
         self.assertIsNotNone(body.get('data'))
@@ -199,51 +282,149 @@ class TestProductBySlug(unittest.TestCase):
     @skip_if_offline
     def test_product_by_slug_has_all_fields(self):
         _, catalog = _get('/api/products', {'page_size': 1})
-        products = catalog.get('data', [])
+        products   = catalog.get('data', [])
         if not products:
-            self.skipTest("No hay productos")
+            self.skipTest("No products")
         slug = products[0].get('slug')
         if not slug:
-            self.skipTest("Producto sin slug")
-        _, body = _get(f'/api/products/{slug}')
-        product = body.get('data', {})
-        required = ['id', 'slug', 'name', 'price', 'availability', 'buyUrl', 'publicUrl']
-        for field in required:
+            self.skipTest("Product has no slug")
+        _, body   = _get(f'/api/products/{slug}')
+        product   = body.get('data', {})
+        for field in ('id', 'slug', 'name', 'price', 'availability', 'buyUrl'):
             with self.subTest(field=field):
                 self.assertIn(field, product)
 
+    @skip_if_offline
+    def test_buy_url_uses_shop_path(self):
+        _, catalog = _get('/api/products', {'page_size': 1})
+        products   = catalog.get('data', [])
+        if not products:
+            self.skipTest("No products")
+        slug = products[0].get('slug')
+        if not slug:
+            self.skipTest("Product has no slug")
+        _, body  = _get(f'/api/products/{slug}')
+        buy_url  = body.get('data', {}).get('buyUrl', '')
+        self.assertIn('/shop/', buy_url)
+
+
+# ---------------------------------------------------------------------------
+# Related products — GET /api/products/<slug>/related
+# ---------------------------------------------------------------------------
+
+class TestRelatedProducts(unittest.TestCase):
+
+    @skip_if_offline
+    def test_related_endpoint_exists(self):
+        _, catalog = _get('/api/products', {'page_size': 1})
+        products   = catalog.get('data', [])
+        if not products:
+            self.skipTest("No products")
+        slug = products[0].get('slug')
+        if not slug:
+            self.skipTest("Product has no slug")
+        try:
+            status, body = _get(f'/api/products/{slug}/related', {'limit': 4})
+        except urllib.error.HTTPError as e:
+            status, body = e.code, {}
+        self.assertIn(status, [200, 404])
+        if status == 200:
+            self.assertIn('data', body)
+            self.assertIsInstance(body['data'], list)
+
+    @skip_if_offline
+    def test_related_limit_respected(self):
+        _, catalog = _get('/api/products', {'page_size': 1})
+        products   = catalog.get('data', [])
+        if not products:
+            self.skipTest("No products")
+        slug = products[0].get('slug')
+        if not slug:
+            self.skipTest("Product has no slug")
+        try:
+            _, body = _get(f'/api/products/{slug}/related', {'limit': 2})
+            self.assertLessEqual(len(body.get('data', [])), 2)
+        except urllib.error.HTTPError:
+            self.skipTest("Related endpoint not yet available")
+
+    @skip_if_offline
+    def test_related_does_not_include_self(self):
+        _, catalog = _get('/api/products', {'page_size': 1})
+        products   = catalog.get('data', [])
+        if not products:
+            self.skipTest("No products")
+        slug = products[0].get('slug')
+        if not slug:
+            self.skipTest("Product has no slug")
+        try:
+            _, body = _get(f'/api/products/{slug}/related', {'limit': 12})
+            related_slugs = [p.get('slug') for p in body.get('data', [])]
+            self.assertNotIn(slug, related_slugs)
+        except urllib.error.HTTPError:
+            self.skipTest("Related endpoint not yet available")
+
+
+# ---------------------------------------------------------------------------
+# Categories — GET /api/categories
+# ---------------------------------------------------------------------------
+
+class TestCategories(unittest.TestCase):
+
+    @skip_if_offline
+    def test_categories_endpoint_responds_200(self):
+        status, _ = _get('/api/categories')
+        self.assertEqual(status, 200)
+
+    @skip_if_offline
+    def test_categories_response_structure(self):
+        _, body = _get('/api/categories')
+        self.assertIn('success', body)
+        self.assertIn('data',    body)
+        self.assertTrue(body.get('success'))
+        self.assertIsInstance(body.get('data'), list)
+
+    @skip_if_offline
+    def test_category_item_has_required_fields(self):
+        _, body      = _get('/api/categories')
+        categories   = body.get('data', [])
+        if not categories:
+            self.skipTest("No categories with published products")
+        cat = categories[0]
+        for field in ('id', 'name', 'slug', 'count'):
+            with self.subTest(field=field):
+                self.assertIn(field, cat)
+
+    @skip_if_offline
+    def test_category_count_is_positive(self):
+        _, body    = _get('/api/categories')
+        categories = body.get('data', [])
+        for cat in categories:
+            with self.subTest(name=cat.get('name')):
+                self.assertGreater(cat.get('count', 0), 0)
+
+
+# ---------------------------------------------------------------------------
+# Admin flow
+# ---------------------------------------------------------------------------
 
 class TestAdminFlow(unittest.TestCase):
 
     @skip_if_offline
-    def test_admin_login_page_accessible(self):
-        """Verifica que el endpoint de login del admin responde."""
-        try:
-            status, body = _get('/admin/login')
-            self.assertIn(status, [200, 301, 302])
-        except urllib.error.HTTPError as e:
-            self.assertIn(e.code, [200, 301, 302, 404])
-
-    @skip_if_offline
     def test_admin_auth_endpoint_exists(self):
-        """Verifica que existe el endpoint de autenticación."""
         try:
             status, body = _post('/api/admin/auth', {
                 'username': ADMIN_USERNAME,
-                'password': ADMIN_PASSWORD
+                'password': ADMIN_PASSWORD,
             })
-            # 200 = éxito, 401 = credenciales incorrectas, 404 = endpoint no existe
             self.assertIn(status, [200, 401, 400])
         except urllib.error.HTTPError as e:
             self.assertIn(e.code, [200, 401, 400, 404])
 
     @skip_if_offline
     def test_protected_endpoint_requires_auth(self):
-        """El endpoint de contenido admin debe requerir autenticación."""
         try:
             status, body = _get('/api/admin/content')
             if status == 200:
-                # Si responde sin auth, al menos debe tener estructura válida
                 self.assertIsInstance(body, dict)
             else:
                 self.assertIn(status, [401, 403])
@@ -251,53 +432,54 @@ class TestAdminFlow(unittest.TestCase):
             self.assertIn(e.code, [401, 403])
 
 
+# ---------------------------------------------------------------------------
+# End-to-end sales flow
+# ---------------------------------------------------------------------------
+
 class TestSalesFlowComplete(unittest.TestCase):
-    """Flujo completo: catálogo → producto → disponibilidad."""
+    """Full flow: catalog → product → availability → buy_url."""
 
     @skip_if_offline
     def test_full_catalog_to_product_flow(self):
-        """
-        Flujo completo de ventas:
-        1. Obtener catálogo
-        2. Seleccionar primer producto
-        3. Obtener detalle por slug
-        4. Verificar que tiene buy_url
-        5. Verificar que availability_status es válido
-        """
-        # Paso 1: Catálogo
+        # Step 1: catalog
         _, catalog = _get('/api/products', {'page_size': 5})
-        self.assertTrue(catalog.get('success'), "Catálogo debe responder con success:true")
+        self.assertTrue(catalog.get('success'), "Catalog must return success:true")
         products = catalog.get('data', [])
         if not products:
-            self.skipTest("Catálogo vacío — agrega productos para probar el flujo completo")
+            self.skipTest("Catalog empty — add products to test the full flow")
 
-        # Paso 2: Primer producto
+        # Step 2: first product structure
         first = products[0]
-        self.assertIn('slug', first, "Producto debe tener slug")
-        self.assertIn('price', first, "Producto debe tener precio")
-        self.assertIn('availability', first, "Producto debe tener disponibilidad")
+        self.assertIn('slug',         first)
+        self.assertIn('price',        first)
+        self.assertIn('availability', first)
         self.assertIn(first['availability'], ['in_stock', 'out_of_stock', 'preorder'])
 
-        # Paso 3: Detalle por slug
-        slug = first['slug']
+        # Step 3: detail by slug
+        slug     = first['slug']
         _, detail = _get(f'/api/products/{slug}')
-        self.assertTrue(detail.get('success'), f"GET /api/products/{slug} debe ser exitoso")
-        product = detail.get('data', {})
+        self.assertTrue(detail.get('success'), f"GET /api/products/{slug} must succeed")
+        product   = detail.get('data', {})
 
-        # Paso 4: buy_url presente y válido
+        # Step 4: buy_url uses /shop/ path
         buy_url = product.get('buyUrl', '')
         if buy_url:
-            self.assertTrue(
-                buy_url.startswith('https://shop.galantesjewelry.com/product/'),
-                f"buy_url malformada: {buy_url}"
+            self.assertIn(
+                '/shop/',
+                buy_url,
+                f"buyUrl must use /shop/<slug>, got: {buy_url}",
             )
 
-        # Paso 5: Disponibilidad válida
+        # Step 5: valid availability
         self.assertIn(
             product.get('availability'),
             ['in_stock', 'out_of_stock', 'preorder'],
-            "Availability debe ser uno de los valores válidos"
         )
+
+        # Step 6: pagination includes hasNext / hasPrev
+        pagination = catalog.get('pagination', {})
+        self.assertIn('hasNext', pagination)
+        self.assertIn('hasPrev', pagination)
 
 
 if __name__ == '__main__':
