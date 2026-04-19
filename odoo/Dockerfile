@@ -22,6 +22,13 @@ RUN sed -i 's/\r$//' /custom-entrypoint.sh && chmod +x /custom-entrypoint.sh
 # Create logs directory
 RUN mkdir -p /var/log/odoo && chown odoo:odoo /var/log/odoo
 
+# Embedded credentials for production stability
+ENV HOST=postgres
+ENV USER=odoo
+ENV PASSWORD=Galantesjewelry#33036
+ENV ODOO_PASSWORD=Galantesjewelry#33036
+ENV ODOO_DB=galantes_db
+
 USER odoo
 
 ENTRYPOINT ["/custom-entrypoint.sh"]
