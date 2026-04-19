@@ -511,7 +511,7 @@ export const OdooService = {
     }
   },
 
-  private mapOrderState(state: string, invoiceStatus: string): string {
+  mapOrderState(state: string, invoiceStatus: string): string {
     const states: Record<string, string> = {
       'draft': 'Quotation',
       'sent': 'Quotation Sent',
@@ -530,7 +530,7 @@ export const OdooService = {
     return states[state] || state;
   },
 
-  private mapInvoiceState(state: string, paymentState: string): string {
+  mapInvoiceState(state: string, paymentState: string): string {
     if (paymentState === 'paid') return 'Paid';
     if (paymentState === 'in_payment') return 'Processing Payment';
     if (paymentState === 'partial') return 'Partially Paid';
