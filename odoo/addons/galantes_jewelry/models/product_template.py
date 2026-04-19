@@ -176,7 +176,7 @@ class GalantesProductTemplate(models.Model):
             self.slug = _slugify_text(self.name)
 
     # ── Computes ──────────────────────────────────────────────────────────────
-    @api.depends('slug', 'name', 'id')
+    @api.depends('slug', 'name')
     def _compute_storefront_urls(self):
         base = 'https://shop.galantesjewelry.com'
         for product in self:
