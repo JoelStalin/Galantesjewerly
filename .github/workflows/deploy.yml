@@ -26,16 +26,34 @@ jobs:
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           script: |
+            # Asegurar que estamos en el directorio correcto
+            mkdir -p ~/galantesjewelry
             cd ~/galantesjewelry
-            # Sincronizar secretos en el servidor
-            sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}/" .env.prod
-            sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}/" .env.prod
-            sed -i "s/^ODOO_PASSWORD=.*/ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}/" .env.prod
-            sed -i "s/^ODOO_API_KEY=.*/ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}/" .env.prod
 
-            # Desplegar stack
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build
+            # Sincronizar código (Si el repo no existe, clonar; si existe, resetear)
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/JoelStalin/Galantesjewerly.git .
+            else
+              git fetch --all
+              git reset --hard origin/main
+            fi
+
+            # Sincronizar secretos en el servidor (Crear .env.prod si no existe)
+            touch .env.prod
+            sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}/" .env.prod || echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.prod
+            sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}/" .env.prod || echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env.prod
+            sed -i "s/^ODOO_PASSWORD=.*/ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}/" .env.prod || echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}" >> .env.prod
+            sed -i "s/^ODOO_API_KEY=.*/ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}/" .env.prod || echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}" >> .env.prod
+            
+            # Asegurar que el token de Cloudflare esté presente
+            sed -i "s/^CF_TUNNEL_TOKEN_PROD=.*/CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}/" .env.prod || echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}" >> .env.prod
+
+            # Desplegar stack con recreación forzada de contenedores
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build --force-recreate
+
+            # Limpiar imágenes antiguas para ahorrar espacio
+            sudo docker image prune -f
 
             # Verificar salud
-            sleep 10
+            sleep 15
             sudo docker ps
