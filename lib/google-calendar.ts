@@ -81,8 +81,10 @@ function assertCalendarConfig(config: CalendarRuntimeConfig) {
   ].filter(Boolean);
 
   if (missing.length > 0) {
-    throw new Error(`Google Calendar is not configured: ${missing.join(', ')}`);
+    console.warn(`[Google Calendar] Configuration is incomplete: ${missing.join(', ')}. Calendar sync will be disabled.`);
+    return false;
   }
+  return true;
 }
 
 function getAppointmentTestMode() {
@@ -98,7 +100,9 @@ function cacheKey(config: CalendarRuntimeConfig) {
 }
 
 async function getCalendarAuthClient(config: CalendarRuntimeConfig) {
-  assertCalendarConfig(config);
+  if (!assertCalendarConfig(config)) {
+    throw new Error('Google Calendar is not configured. Please check your settings in the admin panel.');
+  }
 
   const key = cacheKey(config);
   const cached = authClientCache.get(key);

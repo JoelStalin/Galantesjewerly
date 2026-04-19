@@ -59,12 +59,16 @@ export function assertGoogleOAuthRuntimeConfig(config: GoogleOAuthRuntimeConfig)
   ].filter(Boolean);
 
   if (missing.length > 0) {
-    throw new Error(`Google OAuth is not connected: ${missing.join(', ')}`);
+    console.warn(`[Google OAuth] Configuration is incomplete: ${missing.join(', ')}. Calendar and Gmail features will be disabled.`);
+    return false;
   }
+  return true;
 }
 
 export async function refreshGoogleOAuthAccessToken(config: GoogleOAuthRuntimeConfig) {
-  assertGoogleOAuthRuntimeConfig(config);
+  if (!assertGoogleOAuthRuntimeConfig(config)) {
+    throw new Error('Google OAuth is not configured. Please connect your account in the admin panel.');
+  }
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
