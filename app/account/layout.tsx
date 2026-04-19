@@ -33,20 +33,26 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
             </div>
             
             <nav className="flex flex-col gap-2 font-semibold uppercase tracking-widest text-xs">
-              <Link 
-                href="/account/orders" 
+              <Link
+                href="/account/orders"
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Orders
               </Link>
-              <Link 
-                href="/account/invoices" 
+              <Link
+                href="/account/invoices"
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Invoices
               </Link>
-              <Link 
-                href="/auth/logout" 
+              <Link
+                href="/account/settings"
+                className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
+              >
+                Settings
+              </Link>
+              <Link
+                href="/auth/logout"
                 className="mt-4 text-red-500 transition-colors hover:text-red-600"
               >
                 Sign Out

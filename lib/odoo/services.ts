@@ -412,6 +412,105 @@ export const OdooService = {
     }
   },
 
+  /**
+   * Get full partner profile for the settings page
+   */
+  async getPartnerProfile(partnerId: number) {
+    try {
+      const partners = await client.call('res.partner', 'search_read', {
+        domain: [['id', '=', partnerId]],
+        fields: ['name', 'email', 'phone', 'street', 'street2', 'city', 'zip', 'country_id', 'state_id'],
+        limit: 1,
+      });
+      return partners && partners.length > 0 ? partners[0] : null;
+    } catch (error) {
+      console.error('Odoo Partner Profile Fetch Error:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Update partner profile fields (name, phone, address only — email is auth-managed)
+   */
+  async updatePartnerProfile(partnerId: number, data: {
+    name?: string;
+    phone?: string;
+    street?: string;
+    street2?: string;
+    city?: string;
+    zip?: string;
+  }) {
+    try {
+      const vals: Record<string, unknown> = {};
+      if (data.name)    vals.name    = data.name;
+      if (data.phone !== undefined) vals.phone = data.phone;
+      if (data.street !== undefined) vals.street = data.street;
+      if (data.street2 !== undefined) vals.street2 = data.street2;
+      if (data.city !== undefined)   vals.city   = data.city;
+      if (data.zip !== undefined)    vals.zip    = data.zip;
+
+      await client.call('res.partner', 'write', { ids: [partnerId], vals });
+      return { success: true };
+    } catch (error) {
+      console.error('Odoo Partner Update Error:', error);
+      return { success: false, error: String(error) };
+    }
+  },
+
+  /**
+   * Get orders with their linked invoices for the portal orders page
+   */
+  async getOrdersWithInvoices(partnerId: number) {
+    try {
+      const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
+
+      const orders = await client.call('sale.order', 'search_read', {
+        domain: [['partner_id', '=', partnerId]],
+        fields: ['name', 'date_order', 'state', 'amount_total', 'invoice_status', 'access_url', 'invoice_ids'],
+        order: 'date_order desc',
+      });
+
+      if (!orders || orders.length === 0) return [];
+
+      // Collect all invoice IDs across orders
+      const allInvoiceIds: number[] = orders.flatMap((o: any) => o.invoice_ids || []);
+
+      let invoiceMap: Record<number, any[]> = {};
+      if (allInvoiceIds.length > 0) {
+        const invoices = await client.call('account.move', 'search_read', {
+          domain: [['id', 'in', allInvoiceIds], ['move_type', '=', 'out_invoice']],
+          fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'sale_order_ids'],
+        });
+
+        // Build a map: orderId -> invoices[]
+        for (const inv of (invoices || [])) {
+          const enriched = {
+            ...inv,
+            display_status: this.mapInvoiceState(inv.state, inv.payment_state),
+            portal_url: inv.access_url ? `${baseUrl}${inv.access_url}` : null,
+          };
+          // Link invoice back to orders via sale_order_ids or invoice_ids on order
+          for (const order of orders) {
+            if ((order.invoice_ids || []).includes(inv.id)) {
+              if (!invoiceMap[order.id]) invoiceMap[order.id] = [];
+              invoiceMap[order.id].push(enriched);
+            }
+          }
+        }
+      }
+
+      return orders.map((o: any) => ({
+        ...o,
+        display_status: this.mapOrderState(o.state, o.invoice_status),
+        portal_url: o.access_url ? `${baseUrl}${o.access_url}` : null,
+        invoices: invoiceMap[o.id] || [],
+      }));
+    } catch (error) {
+      console.error('Odoo Orders+Invoices Fetch Error:', error);
+      return [];
+    }
+  },
+
   private mapOrderState(state: string, invoiceStatus: string): string {
     const states: Record<string, string> = {
       'draft': 'Quotation',
