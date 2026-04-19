@@ -35,18 +35,17 @@ export async function POST(request: Request) {
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
     const partnerId = parseInt(paymentIntent.metadata.odoo_partner_id);
+    const orderId = parseInt(paymentIntent.metadata.odoo_order_id);
 
-    // In a real production scenario, we should pass the line items here too
-    // For now, we assume Odoo has the cart or we reconstruct from metadata
-    console.log(`Payment successful for partner ${partnerId}. Creating Odoo Order...`);
+    console.log(`Payment successful for partner ${partnerId}, Order ${orderId}. Automating Odoo Billing...`);
 
     try {
-      // Logic to reconstruct lines or mark as paid in Odoo
-      // await OdooService.createOrder(partnerId, [...]);
-      console.log('Odoo Order created and confirmed.');
+      const { OdooService } = await import('@/lib/odoo/services');
+      const result = await OdooService.automateBillingFlow(orderId);
+      console.log(`Odoo billing automation complete: Order ${result.orderId}, Invoice ${result.invoiceId}`);
     } catch (error) {
-      console.error('Failed to sync payment with Odoo:', error);
-      // We return 200 anyway to Stripe to avoid retries, but log the critical error
+      console.error('Failed to automate billing flow in Odoo:', error);
+      // We return 200 anyway to Stripe to avoid retries, but we should have alerted here
     }
   }
 

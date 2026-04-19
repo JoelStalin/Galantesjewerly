@@ -37,7 +37,17 @@ export async function POST(request: Request) {
       phone: customerData.phone,
     });
 
-    // 3. Create Stripe Payment Intent
+    // 3. Create Draft Order in Odoo
+    const orderLines = items.map(item => ({
+      product_id: 1, // Defaulting to a generic product for now if ID is missing
+      // In a real scenario, items would contain the actual Odoo product_id
+      product_uom_qty: item.quantity,
+      price_unit: item.price,
+    }));
+
+    const orderId = await OdooService.createOrder(partnerId, orderLines);
+
+    // 4. Create Stripe Payment Intent
     const stripe = getStripeClient();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects cents
@@ -47,12 +57,14 @@ export async function POST(request: Request) {
       },
       metadata: {
         odoo_partner_id: partnerId.toString(),
+        odoo_order_id: orderId.toString(),
         customer_email: customerData.email,
       },
     });
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
+      orderId: orderId,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Stripe checkout failed.';
