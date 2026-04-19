@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- The Islamorada Solitaire -->
+        <record id="product_islamorada_solitaire" model="product.template">
+            <field name="name">The Islamorada Solitaire</field>
+            <field name="list_price">18500.0</field>
+            <field name="description_sale">2ct Diamond on Platinum with Coral Engravings. A masterpiece of coastal elegance.</field>
+            <field name="default_code">GJ-BR-001</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Mariner's Bond Band -->
+        <record id="product_mariners_bond_band" model="product.template">
+            <field name="name">Mariner's Bond Band</field>
+            <field name="list_price">2400.0</field>
+            <field name="description_sale">18k Rose Gold Nautical Knot Band. Symbolize your eternal bond.</field>
+            <field name="default_code">GJ-BR-002</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- The Compass Rose Pendant -->
+        <record id="product_compass_rose_pendant" model="product.template">
+            <field name="name">The Compass Rose Pendant</field>
+            <field name="list_price">3200.0</field>
+            <field name="description_sale">18k Gold with Sapphire Center. Never lose your way.</field>
+            <field name="default_code">GJ-NT-001</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Keys Azure Drop Earrings -->
+        <record id="product_keys_azure_earrings" model="product.template">
+            <field name="name">Keys Azure Drop Earrings</field>
+            <field name="list_price">5800.0</field>
+            <field name="description_sale">Aquamarine and Diamond Drops capturing the crystalline waters of the Florida Keys.</field>
+            <field name="default_code">GJ-CS-001</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Anchor of the Soul Bracelet -->
+        <record id="product_anchor_soul_bracelet" model="product.template">
+            <field name="name">Anchor of the Soul Bracelet</field>
+            <field name="list_price">8900.0</field>
+            <field name="description_sale">Diamond Pavé Anchor Cuff. A true statement of coastal luxury.</field>
+            <field name="default_code">GJ-NT-002</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Coastal Tide Ring -->
+        <record id="product_coastal_tide_ring" model="product.template">
+            <field name="name">Coastal Tide Ring</field>
+            <field name="list_price">4500.0</field>
+            <field name="description_sale">Blue Sapphire Gradient Wave Ring set in high-polish white gold.</field>
+            <field name="default_code">GJ-CS-002</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Siren's Pearl Necklace -->
+        <record id="product_sirens_pearl_necklace" model="product.template">
+            <field name="name">Siren's Pearl Necklace</field>
+            <field name="list_price">7200.0</field>
+            <field name="description_sale">South Sea Pearl with White Gold Mermaid Tail set with shimmering diamonds.</field>
+            <field name="default_code">GJ-NT-003</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Navigator's Chrono Link -->
+        <record id="product_navigators_chrono_link" model="product.template">
+            <field name="name">Navigator's Chrono Link</field>
+            <field name="list_price">1800.0</field>
+            <field name="description_sale">Solid Heavy Link Bracelet inspired by vintage ship anchor chains.</field>
+            <field name="default_code">GJ-CS-003</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Triton's Trident Tie Bar -->
+        <record id="product_tritons_trident_tie_bar" model="product.template">
+            <field name="name">Triton's Trident Tie Bar</field>
+            <field name="list_price">650.0</field>
+            <field name="description_sale">Sterling Silver and Gold Tie Bar for the coastal gentleman.</field>
+            <field name="default_code">GJ-NT-004</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+
+        <!-- Lighthouse Guardian Charm -->
+        <record id="product_lighthouse_guardian_charm" model="product.template">
+            <field name="name">Lighthouse Guardian Charm</field>
+            <field name="list_price">1200.0</field>
+            <field name="description_sale">Detailed 18k gold lighthouse charm with a tiny ruby crystal.</field>
+            <field name="default_code">GJ-CS-004</field>
+            <field name="website_published">True</field>
+            <field name="type">consu</field>
+        </record>
+    </data>
+</odoo>

@@ -28,6 +28,7 @@
         'views/product_template_views.xml',
         'views/product_gallery_views.xml',
         'data/product_category.xml',
+        'data/product_data.xml',
     ],
     'installable': True,
     'application': False,
