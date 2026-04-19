@@ -235,7 +235,10 @@ export async function createCalendarEvent(input: {
       dateTime: input.end.toISOString(),
       timeZone: input.config.timezone,
     },
-    attendees: [{ email: submission.email, displayName: submission.name, responseStatus: 'needsAction' }],
+    // Attendees only when using OAuth (service accounts need DWD to invite)
+    ...(hasGoogleOAuthConfig(input.config) ? {
+      attendees: [{ email: submission.email, displayName: submission.name, responseStatus: 'needsAction' }],
+    } : {}),
     reminders: {
       useDefault: false,
       overrides: [{ method: 'popup', minutes: 30 }],
