@@ -10,7 +10,7 @@ Cuando el asistente (tú) deba escribir, modificar o ejecutar un script de prueb
 
 Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** proactivamente después de cada implementación, cambio de infraestructura o despliegue. Asimismo, debes **aplicar todos los ajustes (settings) requeridos** de forma autónoma en el repositorio para asegurar que el ambiente quede funcionando de extremo a extremo antes de dar por concluida cualquier misión.
 
-> 📚 **Contexto Global de Arquitectura**: Para comprender a fondo las decisiones técnicas sobre cómo opera Node.js en Termux (Android) y los fallos de configuración de red documentados con Cloudflare Zero Trust Tunnels, lee el archivo `context/operations/termux_cloudflare_architecture.md`. NUNCA modifiques esa base arquitectónica sin una justificación de red.
+> 📚 **Infraestructura de Producción**: GCP VM `galantes-prod-vm` (us-central1-a, IP 136.114.48.210). Docker Compose con 5 servicios: web (Next.js), odoo, postgres, nginx, cloudflared. No usar Termux ni Android — la producción corre 100% en GCP.
 <!-- END:selenium-testing-rules -->
 
 <!-- BEGIN:appointment-system-rules -->
