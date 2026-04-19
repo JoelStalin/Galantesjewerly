@@ -140,12 +140,19 @@ class OdooClient {
       return response;
     } catch (error) {
       console.warn('Odoo API unreachable, serving luxury masterpiece collection fallback.', error);
+      
+      const pageNum = typeof params.page === 'number' ? params.page : 1;
+      const pageSizeNum = typeof params.page_size === 'number' ? params.page_size : 24;
+      
       return {
-        data: LUXURY_FALLBACK_PRODUCTS.slice((page - 1) * pageSize, page * pageSize),
+        data: LUXURY_FALLBACK_PRODUCTS.slice((pageNum - 1) * pageSizeNum, pageNum * pageSizeNum),
         pagination: {
-          page,
-          pageSize,
+          page: pageNum,
+          pageSize: pageSizeNum,
           total: LUXURY_FALLBACK_PRODUCTS.length,
+          pages: Math.ceil(LUXURY_FALLBACK_PRODUCTS.length / pageSizeNum),
+          hasNext: pageNum * pageSizeNum < LUXURY_FALLBACK_PRODUCTS.length,
+          hasPrev: pageNum > 1
         },
       };
     }
