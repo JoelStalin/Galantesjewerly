@@ -47,19 +47,29 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            # Sincronizar secretos (Crear .env.prod si no existe)
-            touch .env.prod
-            sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}/" .env.prod || echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.prod
-            sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}/" .env.prod || echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env.prod
-            sed -i "s/^ODOO_PASSWORD=.*/ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}/" .env.prod || echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}" >> .env.prod
-            sed -i "s/^ODOO_API_KEY=.*/ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}/" .env.prod || echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}" >> .env.prod
-            sed -i "s/^CF_TUNNEL_TOKEN_PROD=.*/CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}/" .env.prod || echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}" >> .env.prod
+            # Sincronizar secretos desde GitHub Actions → .env.prod
+            # Usar archivo temporal para escritura atómica
+            cat > /tmp/.env.prod.new << 'ENVEOF'
+ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
+POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+POSTGRES_USER=odoo
+ODOO_DB=galantes_db
+ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
+ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
+CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}
+STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+ENVEOF
+            mv /tmp/.env.prod.new ~/galantesjewelry/.env.prod
 
-            # Desplegar con Docker
-            echo "Levantando contenedores..."
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build --force-recreate
+            # Rebuild solo el contenedor web (Odoo/Postgres no cambian)
+            echo "Rebuilding web container..."
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
 
             # Limpieza y Verificación
             sudo docker image prune -f
-            sleep 15
+            sleep 20
             sudo docker ps
+            echo "Health check..."
+            curl -sf http://localhost:8080/api/health && echo "OK" || echo "WARN: health check failed"
