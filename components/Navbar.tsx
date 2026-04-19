@@ -4,9 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useCart } from '@/context/shop/CartContext';
+import { SiteSettings } from '@/lib/db';
+import { GoogleUserSessionPayload } from '@/lib/google-login';
 
 interface NavbarProps {
-  logoUrl: string;
+  settings: SiteSettings;
+  user?: GoogleUserSessionPayload | null;
 }
 
 const NAV_LINKS = [
@@ -17,16 +20,17 @@ const NAV_LINKS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export function Navbar({ logoUrl }: NavbarProps) {
+export function Navbar({ settings }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const { totalCount } = useCart();
+  const logoUrl = settings.logo_url;
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-primary/10 bg-background/95 px-6 py-4 backdrop-blur md:px-12">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 text-primary" onClick={() => setOpen(false)}>
-          <span className="sr-only">Galante&apos;s Jewelry</span>
+          <span className="sr-only">{settings.site_title}</span>
           <Image
             src={logoUrl}
             alt="Logo"
@@ -36,7 +40,7 @@ export function Navbar({ logoUrl }: NavbarProps) {
             unoptimized={logoUrl.startsWith('/api/image?')}
           />
           <span className="hidden font-serif text-lg uppercase tracking-[0.2em] md:inline">
-            Galante&apos;s Jewelry
+            {settings.site_title}
           </span>
         </Link>
 
@@ -47,6 +51,18 @@ export function Navbar({ logoUrl }: NavbarProps) {
               {label}
             </Link>
           ))}
+          {user ? (
+            <Link href="/account" className="transition-colors hover:text-accent flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+              Account
+            </Link>
+          ) : (
+            <Link href="/api/auth/google/start" className="transition-colors hover:text-accent">
+              Login
+            </Link>
+          )}
         </div>
 
         {/* Right side: Cart + Shop CTA + hamburger */}
@@ -102,6 +118,13 @@ export function Navbar({ logoUrl }: NavbarProps) {
               {label}
             </Link>
           ))}
+          <Link
+            href={user ? "/account" : "/api/auth/google/start"}
+            className="text-[13px] font-semibold uppercase tracking-[0.24em] text-primary transition-colors hover:text-accent"
+            onClick={() => setOpen(false)}
+          >
+            {user ? "Account" : "Login"}
+          </Link>
         </div>
       )}
     </nav>

@@ -247,59 +247,75 @@ function createOdooClient(overrides = {}) {
   async function call(model, method, payload = {}, options = {}) {
     const config = assertOdooConfig(resolveConfig());
     const fetchImpl = options.fetchImpl || fetch;
-    const controller = new AbortController();
-    const clearSignal = bindAbortSignal(controller, options.signal);
-    const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
+    const maxRetries = options.maxRetries || 3;
+    let lastError;
 
-    try {
-      const response = await fetchImpl(buildOdooJson2Url(model, method, config), {
-        method: 'POST',
-        headers: getOdooHeaders(config),
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const clearSignal = bindAbortSignal(controller, options.signal);
+      const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
 
-      const body = await parseResponseBody(response);
+      try {
+        if (attempt > 0) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`[Odoo] Retry attempt ${attempt}/${maxRetries} after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
 
-      if (!response.ok) {
-        throw new OdooRequestError(
-          body?.message || `Odoo JSON-2 request failed with status ${response.status}.`,
-          {
-            status: response.status,
-            body,
-            model,
-            method,
-          },
-        );
-      }
-
-      return body;
-    } catch (error) {
-      if (
-        error.name === 'OdooConfigError' ||
-        error.name === 'OdooRequestError' ||
-        error instanceof OdooConfigError ||
-        error instanceof OdooRequestError
-      ) {
-        throw error;
-      }
-
-      if (error?.name === 'AbortError') {
-        throw new OdooRequestError('Odoo JSON-2 request timed out or was aborted.', {
-          model,
-          method,
-          timeoutMs: config.timeoutMs,
+        const response = await fetchImpl(buildOdooJson2Url(model, method, config), {
+          method: 'POST',
+          headers: getOdooHeaders(config),
+          body: JSON.stringify(payload),
+          signal: controller.signal,
         });
-      }
 
-      throw new OdooRequestError(`Unable to reach Odoo JSON-2 API: ${error.message}`, {
+        const body = await parseResponseBody(response);
+
+        if (!response.ok) {
+          throw new OdooRequestError(
+            body?.message || `Odoo JSON-2 request failed with status ${response.status}.`,
+            {
+              status: response.status,
+              body,
+              model,
+              method,
+            },
+          );
+        }
+
+        clearTimeout(timeoutId);
+        clearSignal();
+        return body;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        clearSignal();
+        lastError = error;
+
+        // Don't retry if it's a configuration error or access denied
+        if (error.status === 401 || error.status === 403 || error.name === 'OdooConfigError') {
+          throw error;
+        }
+
+        console.warn(`[Odoo] Request attempt ${attempt} failed: ${error.message}`);
+        
+        if (attempt === maxRetries) {
+          break;
+        }
+      }
+    }
+
+    if (lastError?.name === 'AbortError') {
+      throw new OdooRequestError('Odoo JSON-2 request timed out or was aborted after retries.', {
         model,
         method,
+        timeoutMs: config.timeoutMs,
       });
-    } finally {
-      clearTimeout(timeoutId);
-      clearSignal();
     }
+
+    throw lastError || new OdooRequestError(`Unable to reach Odoo JSON-2 API after ${maxRetries} retries.`, {
+      model,
+      method,
+    });
   }
 
   return {

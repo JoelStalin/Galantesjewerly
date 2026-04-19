@@ -3,6 +3,7 @@ import Link from 'next/link';
 import './globals.css';
 import { getSettings, type SiteSettings } from '@/lib/db';
 import { Navbar } from '@/components/Navbar';
+import { OdooService } from '@/lib/odoo/services';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,15 @@ const FALLBACK_SETTINGS: SiteSettings = {
 
 async function loadSiteSettings(): Promise<SiteSettings> {
   try {
-    const settings = await getSettings();
-    return { ...FALLBACK_SETTINGS, ...(settings ?? {}) };
+    const localSettings = await getSettings();
+    const odooSettings = await OdooService.getCompanySettings();
+    
+    // Merge order: Fallback < Local CMS < Odoo (Odoo has final say)
+    return { 
+      ...FALLBACK_SETTINGS, 
+      ...(localSettings ?? {}),
+      ...(odooSettings ?? {})
+    };
   } catch {
     return FALLBACK_SETTINGS;
   }
@@ -44,9 +52,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 import { CartProvider } from '@/context/shop/CartContext';
+import { cookies } from 'next/headers';
+import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const finalSettings = await loadSiteSettings();
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
+  const user = sessionToken ? await verifyGoogleUserSession(sessionToken) : null;
 
   return (
     <html lang="en">
@@ -55,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="bg-background text-foreground flex min-h-screen flex-col">
         <CartProvider>
-          <Navbar logoUrl={finalSettings.logo_url} />
+          <Navbar settings={finalSettings} user={user} />
           <main className="flex-grow">{children}</main>
         </CartProvider>
         <Footer settings={finalSettings} />
