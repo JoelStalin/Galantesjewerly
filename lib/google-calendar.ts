@@ -239,14 +239,19 @@ export async function createCalendarEvent(input: {
       dateTime: input.end.toISOString(),
       timeZone: input.config.timezone,
     },
-    // Attendees only when using OAuth (service accounts need DWD to invite)
-    ...(hasGoogleOAuthConfig(input.config) ? {
-      attendees: [{ email: submission.email, displayName: submission.name, responseStatus: 'needsAction' }],
-    } : {}),
+    // Co-Work Mode: Include CEO and Customer
+    attendees: [
+      { email: 'ceo@galantesjewelry.com', displayName: 'Galantes CEO', responseStatus: 'accepted' },
+      { email: submission.email, displayName: submission.name, responseStatus: 'needsAction' }
+    ],
     reminders: {
       useDefault: false,
-      overrides: [{ method: 'popup', minutes: 30 }],
+      overrides: [
+        { method: 'email', minutes: 24 * 60 },
+        { method: 'popup', minutes: 30 }
+      ],
     },
+    sendUpdates: 'all' as any,
     extendedProperties: {
       private: {
         galantesAppointmentId: record.id,
@@ -261,7 +266,7 @@ export async function createCalendarEvent(input: {
     const response = await calendar.events.insert({
       calendarId: input.config.calendarId || 'primary',
       requestBody: event,
-      sendUpdates: 'none',
+      sendUpdates: 'all',
     });
 
     return {
