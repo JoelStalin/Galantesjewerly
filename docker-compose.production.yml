@@ -62,6 +62,7 @@ services:
       context: ./odoo
       dockerfile: Dockerfile
     container_name: galantes_odoo
+    command: odoo -u galantes_jewelry
     restart: always
     logging:
       driver: "json-file"
