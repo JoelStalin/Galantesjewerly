@@ -20,7 +20,7 @@ const NAV_LINKS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export function Navbar({ settings }: NavbarProps) {
+export function Navbar({ settings, user }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const { totalCount } = useCart();
   const logoUrl = settings.logo_url;

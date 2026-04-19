@@ -1,104 +1,473 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
-        <!-- The Islamorada Solitaire -->
-        <record id="product_islamorada_solitaire" model="product.template">
-            <field name="name">The Islamorada Solitaire</field>
-            <field name="list_price">18500.0</field>
-            <field name="description_sale">2ct Diamond on Platinum with Coral Engravings. A masterpiece of coastal elegance.</field>
-            <field name="default_code">GJ-BR-001</field>
-            <field name="website_published">True</field>
-            <field name="type">consu</field>
-        </record>
+    <!-- noupdate="0": data reloads on every module upgrade (-u galantes_jewelry).
+         Switch to noupdate="1" after initial client approval so manual Odoo edits
+         survive future deploys. -->
+    <data noupdate="0">
 
-        <!-- Mariner's Bond Band -->
-        <record id="product_mariners_bond_band" model="product.template">
-            <field name="name">Mariner's Bond Band</field>
-            <field name="list_price">2400.0</field>
-            <field name="description_sale">18k Rose Gold Nautical Knot Band. Symbolize your eternal bond.</field>
-            <field name="default_code">GJ-BR-002</field>
-            <field name="website_published">True</field>
-            <field name="type">consu</field>
-        </record>
+        <!-- ══════════════════════════════════════════════════════════════
+             RINGS
+        ══════════════════════════════════════════════════════════════ -->
 
-        <!-- The Compass Rose Pendant -->
-        <record id="product_compass_rose_pendant" model="product.template">
-            <field name="name">The Compass Rose Pendant</field>
-            <field name="list_price">3200.0</field>
-            <field name="description_sale">18k Gold with Sapphire Center. Never lose your way.</field>
-            <field name="default_code">GJ-NT-001</field>
-            <field name="website_published">True</field>
-            <field name="type">consu</field>
-        </record>
-
-        <!-- Keys Azure Drop Earrings -->
-        <record id="product_keys_azure_earrings" model="product.template">
-            <field name="name">Keys Azure Drop Earrings</field>
-            <field name="list_price">5800.0</field>
-            <field name="description_sale">Aquamarine and Diamond Drops capturing the crystalline waters of the Florida Keys.</field>
-            <field name="default_code">GJ-CS-001</field>
-            <field name="website_published">True</field>
-            <field name="type">consu</field>
-        </record>
-
-        <!-- Anchor of the Soul Bracelet -->
-        <record id="product_anchor_soul_bracelet" model="product.template">
-            <field name="name">Anchor of the Soul Bracelet</field>
-            <field name="list_price">8900.0</field>
-            <field name="description_sale">Diamond Pavé Anchor Cuff. A true statement of coastal luxury.</field>
-            <field name="default_code">GJ-NT-002</field>
-            <field name="website_published">True</field>
-            <field name="type">consu</field>
-        </record>
-
-        <!-- Coastal Tide Ring -->
         <record id="product_coastal_tide_ring" model="product.template">
             <field name="name">Coastal Tide Ring</field>
+            <field name="default_code">GJ-RG-001</field>
             <field name="list_price">4500.0</field>
-            <field name="description_sale">Blue Sapphire Gradient Wave Ring set in high-polish white gold.</field>
-            <field name="default_code">GJ-CS-002</field>
-            <field name="website_published">True</field>
             <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_rings"/>
+            <field name="material">white_gold</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">coastal-tide-ring</field>
+            <field name="tagline">Sapphire wave set in high-polish 18K white gold</field>
+            <field name="storefront_short_description">A gradient of blue sapphires follows the curve of this sculptural ring, evoking the tide that meets the Florida Keys shoreline. Set in luminous 18K white gold with a mirror-polished finish.</field>
+            <field name="storefront_long_description">The Coastal Tide Ring was born from a single image: the moment a wave breaks over white sand, scattering sapphires of every hue from pale aqua to deep ocean blue. Each stone is individually hand-selected to achieve the seamless gradient that makes this ring unmistakable. Crafted in 18K white gold, the band is precision-polished to a mirror finish that reflects the surrounding sky. Whether worn as a statement piece or stacked with complementary bands, the Coastal Tide Ring carries the spirit of the sea wherever you go.</field>
+            <field name="product_details">Metal: 18K White Gold · Stones: Natural Blue Sapphires (graduated, 0.85 ctw total) · Ring Width: 6 mm · Finish: Mirror Polish · Available Sizes: 4–10 (half sizes included) · Hallmark: 750 · Weight: approx. 5.2 g</field>
+            <field name="care_and_shipping">Store in the velvet pouch provided, away from direct sunlight. Clean with a soft cloth and mild soap. Professional ultrasonic cleaning recommended annually. Ships in Galante's signature navy gift box within 3–5 business days. Complimentary gift wrapping and handwritten note available at checkout.</field>
         </record>
 
-        <!-- Siren's Pearl Necklace -->
+        <record id="product_eternal_shores_ring" model="product.template">
+            <field name="name">Eternal Shores Stackable Ring</field>
+            <field name="default_code">GJ-RG-002</field>
+            <field name="list_price">1850.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_rings"/>
+            <field name="material">gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">5</field>
+            <field name="slug">eternal-shores-stackable-ring</field>
+            <field name="tagline">14K gold band with pavé diamond shore line</field>
+            <field name="storefront_short_description">Designed to be worn alone or stacked, this slender 14K yellow gold band features a continuous line of brilliant-cut pavé diamonds — a horizon that never ends.</field>
+            <field name="storefront_long_description">The Eternal Shores Stackable Ring takes inspiration from the unbroken horizon over the Atlantic. A single row of hand-set brilliant-cut diamonds travels the full circumference of the band, so no matter how you rotate the ring, the sparkle is constant — just like the sea. At just 2 mm wide, it pairs beautifully with engagement rings, other stackable bands, or as a standalone piece. Available in 14K yellow gold; contact us for rose or white gold options.</field>
+            <field name="product_details">Metal: 14K Yellow Gold · Stones: Round Brilliant Diamonds (0.22 ctw, VS2/G) · Band Width: 2 mm · Finish: Satin · Available Sizes: 4–10 · Hallmark: 585 · Weight: approx. 1.8 g</field>
+            <field name="care_and_shipping">Avoid exposure to chlorine and harsh chemicals. Remove before swimming or exercising. Ships within 2–4 business days in Galante's jewelry pouch. Complimentary gift wrapping on request.</field>
+        </record>
+
+        <record id="product_ocean_crest_band" model="product.template">
+            <field name="name">Ocean Crest Diamond Band</field>
+            <field name="default_code">GJ-RG-003</field>
+            <field name="list_price">3200.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_rings"/>
+            <field name="material">platinum</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">6</field>
+            <field name="slug">ocean-crest-diamond-band</field>
+            <field name="tagline">Wave-carved platinum with channel-set diamonds</field>
+            <field name="storefront_short_description">A wave motif carved directly into solid platinum cradles a channel of brilliant diamonds — rugged yet refined, like the reef below calm waters.</field>
+            <field name="storefront_long_description">The Ocean Crest Diamond Band starts as a solid block of platinum and is hand-carved by our master jeweler to reveal the rolling wave profile that defines the design. The channel running through the crest holds seven precisely matched brilliant-cut diamonds, suspended mid-motion. Platinum's density gives the band a satisfying weight and its natural white sheen never fades. A ring built to outlast generations.</field>
+            <field name="product_details">Metal: Platinum 950 · Stones: 7 Round Brilliant Diamonds (0.45 ctw, VVS1/F) · Band Width: 7 mm · Carving: Hand-sculpted wave motif · Available Sizes: 5–13 · Hallmark: 950 Pt · Weight: approx. 9.8 g</field>
+            <field name="care_and_shipping">Platinum develops a natural patina over time that many collectors prize. Polish to restore original shine with a jeweler's cloth. Ships in 5–7 business days in Galante's platinum gift box.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             BRIDAL
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_islamorada_solitaire" model="product.template">
+            <field name="name">The Islamorada Solitaire</field>
+            <field name="default_code">GJ-BR-001</field>
+            <field name="list_price">18500.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bridal"/>
+            <field name="material">platinum</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">islamorada-solitaire</field>
+            <field name="tagline">2ct GIA diamond on platinum with coral-inspired engravings</field>
+            <field name="storefront_short_description">Named for the Village of Islands, The Islamorada Solitaire holds a 2-carat GIA-certified round diamond in a six-prong platinum setting hand-engraved with motifs drawn from Florida Keys coral. A masterpiece of coastal elegance.</field>
+            <field name="storefront_long_description">Every proposal deserves a ring as extraordinary as the moment. The Islamorada Solitaire was designed around the most iconic stretch of the Florida Keys — a place where the sky meets the sea in an infinite palette of blue and gold. The 2-carat center stone is GIA-certified (G color, VS1 clarity) and raised in a classic six-prong platinum head that maximizes light dispersion. The shank is hand-engraved by our master craftsman with delicate coral and sea-fan motifs unique to each ring. A love story cut in stone and platinum.</field>
+            <field name="product_details">Metal: Platinum 950 · Center Stone: 2.00 ct Round Brilliant Diamond, GIA Certified (G / VS1 / Excellent Cut) · Prong Style: 6-prong solitaire · Shank Width: 2.2 mm · Engraving: Coral motif hand-engraved · Available Sizes: 4–8 (custom sizing available) · Hallmark: 950 Pt · Weight: approx. 4.9 g · Includes GIA certificate, Galante's appraisal, and navy velvet box</field>
+            <field name="care_and_shipping">Annual professional inspection included for 5 years with purchase. Store separately to avoid scratching. Insured shipping via FedEx Priority with signature required. Delivery within 7–10 business days; expedited available. Complimentary engraving (up to 25 characters) on request.</field>
+        </record>
+
+        <record id="product_mariners_bond_band" model="product.template">
+            <field name="name">Mariner's Bond Band</field>
+            <field name="default_code">GJ-BR-002</field>
+            <field name="list_price">2400.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bridal"/>
+            <field name="material">rose_gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">3</field>
+            <field name="slug">mariners-bond-band</field>
+            <field name="tagline">18K rose gold nautical knot wedding band</field>
+            <field name="storefront_short_description">A classic nautical knot, sculpted in warm 18K rose gold, symbolizes the bonds that hold fast through every tide. The perfect wedding band for those who love the sea.</field>
+            <field name="storefront_long_description">Sailors have tied the reef knot for centuries to join two ropes as one — a bond that tightens under pressure and never slips. Galante's has translated that tradition into a wedding band worthy of the moment. The Mariner's Bond Band is cast in 18K rose gold, with the three-dimensional knot profile rising 3 mm above the base band. The warm blush tone of rose gold glows against every skin tone. Available as a matching set with the women's version; contact us for couple's pricing.</field>
+            <field name="product_details">Metal: 18K Rose Gold · Profile: 3D nautical reef-knot relief · Band Width: 6 mm at knot, 3 mm at shank · Finish: Satin center, polished edges · Available Sizes: 4–13 · Hallmark: 750 · Weight: approx. 6.1 g</field>
+            <field name="care_and_shipping">Rose gold maintains its color without rhodium plating. Clean with warm water and a soft brush. Ships in 3–5 business days in Galante's gift box with nautical-themed tissue wrap.</field>
+        </record>
+
+        <record id="product_azure_halo_engagement" model="product.template">
+            <field name="name">Azure Halo Engagement Ring</field>
+            <field name="default_code">GJ-BR-003</field>
+            <field name="list_price">9800.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bridal"/>
+            <field name="material">white_gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">2</field>
+            <field name="slug">azure-halo-engagement-ring</field>
+            <field name="tagline">Oval diamond halo crowned with sapphire accents</field>
+            <field name="storefront_short_description">A 1.5-carat oval diamond floats inside a double halo — the inner row set with micro-pavé diamonds, the outer with vivid blue sapphires that echo the Keys' turquoise waters. Set in 14K white gold.</field>
+            <field name="storefront_long_description">The Azure Halo takes the most romantic ring style — the halo — and adds a coastal signature: a ring of blue sapphires that frames the center diamond like the ocean frames an island. The 1.5-carat oval diamond is nestled inside a micro-pavé diamond inner halo, which is itself surrounded by channel-set blue sapphires. The effect is striking, layered, and unmistakably Galante's. A ring that tells a story without saying a word.</field>
+            <field name="product_details">Metal: 14K White Gold · Center Stone: 1.50 ct Oval Diamond (H / SI1 / Very Good Cut) · Inner Halo: Micro-pavé Round Diamonds (0.18 ctw) · Outer Halo: Natural Blue Sapphires (0.30 ctw) · Shank Width: 1.8 mm · Available Sizes: 4–8 · Hallmark: 585 · Weight: approx. 3.7 g</field>
+            <field name="care_and_shipping">Sapphires rate 9 on the Mohs scale — extremely durable. Inspect prongs annually. Ships insured via FedEx Priority in 5–7 business days. Complimentary ring sizing once within the first year.</field>
+        </record>
+
+        <record id="product_ocean_embrace_bridal_set" model="product.template">
+            <field name="name">Ocean Embrace Bridal Set</field>
+            <field name="default_code">GJ-BR-004</field>
+            <field name="list_price">12500.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bridal"/>
+            <field name="material">gold_18k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">4</field>
+            <field name="slug">ocean-embrace-bridal-set</field>
+            <field name="tagline">Matching engagement ring and wedding band — sold as a set</field>
+            <field name="storefront_short_description">Two rings designed as one: a round-brilliant solitaire engagement ring that interlocks with a curved diamond wedding band, both in 18K yellow gold. The set arrives together in Galante's double-ring presentation box.</field>
+            <field name="storefront_long_description">Some things are designed to go together — like the shore and the sea. The Ocean Embrace Bridal Set was engineered so the engagement ring and wedding band nest together without a gap, forming a single continuous silhouette. The engagement ring features a 1.0-carat round brilliant diamond in a four-prong head; the matching curved wedding band holds 0.35 ctw of side-set brilliants. Both are crafted in 18K yellow gold for warmth and longevity. Sold as a matched set; individual pieces not available separately.</field>
+            <field name="product_details">Metal: 18K Yellow Gold (both rings) · Center Stone: 1.00 ct Round Brilliant Diamond (G / VS2 / Excellent Cut) · Band Diamonds: 0.35 ctw Round Brilliants · Engagement Ring Width: 2.5 mm · Wedding Band Width: 3 mm (curved) · Available Sizes: 4–8 · Hallmark: 750 · Combined Weight: approx. 7.2 g</field>
+            <field name="care_and_shipping">Ships as a set in Galante's double-ring presentation box. Insured shipping, signature required. 5-year complimentary inspection included. Custom engravings on both bands available.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             NECKLACES
+        ══════════════════════════════════════════════════════════════ -->
+
         <record id="product_sirens_pearl_necklace" model="product.template">
             <field name="name">Siren's Pearl Necklace</field>
+            <field name="default_code">GJ-NK-001</field>
             <field name="list_price">7200.0</field>
-            <field name="description_sale">South Sea Pearl with White Gold Mermaid Tail set with shimmering diamonds.</field>
-            <field name="default_code">GJ-NT-003</field>
-            <field name="website_published">True</field>
             <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_necklaces"/>
+            <field name="material">white_gold</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">2</field>
+            <field name="slug">sirens-pearl-necklace</field>
+            <field name="tagline">South Sea pearl with white gold mermaid tail set with diamonds</field>
+            <field name="storefront_short_description">A 12 mm South Sea pearl rests in a white gold mermaid-tail pendant encrusted with shimmering pavé diamonds. Suspended on an 18-inch box chain, it is the ultimate coastal statement necklace.</field>
+            <field name="storefront_long_description">Mythology says sirens wore pearls to lure sailors toward paradise. This piece would have done the job. A single 12 mm South Sea pearl — prized for its deep luster and gentle rose overtone — is cradled in a hand-formed mermaid tail cast in 18K white gold and set with 0.28 ctw of brilliant pavé diamonds. The tail's scales are individually detailed by hand. The pendant arrives on Galante's 18-inch signature box chain. A piece that turns heads in every room.</field>
+            <field name="product_details">Metal: 18K White Gold · Pearl: South Sea, 12 mm, AAA Grade, Rose Overtone · Diamonds: 0.28 ctw Pavé Round Brilliants (VS/G) · Chain: 18-inch Box Chain, 1.2 mm · Pendant Height: 28 mm · Hallmark: 750 · Weight: approx. 7.4 g total</field>
+            <field name="care_and_shipping">Pearls are organic gems — avoid perfume, hairspray, and chlorine. Wipe clean with a damp cloth after wearing. Store in the silk pouch provided. Ships in 3–5 business days in Galante's navy gift box.</field>
         </record>
 
-        <!-- Navigator's Chrono Link -->
+        <record id="product_diamond_horizon_pendant" model="product.template">
+            <field name="name">Diamond Horizon Pendant</field>
+            <field name="default_code">GJ-NK-002</field>
+            <field name="list_price">4200.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_necklaces"/>
+            <field name="material">gold_18k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">5</field>
+            <field name="slug">diamond-horizon-pendant</field>
+            <field name="tagline">Floating 0.75ct diamond at the horizon line in 18K gold</field>
+            <field name="storefront_short_description">A 0.75-carat round brilliant diamond appears to float along a delicate 18K gold bar — a minimalist interpretation of the horizon where ocean meets sky. Elegant in its simplicity.</field>
+            <field name="storefront_long_description">The horizon is the most constant line in nature: always there, always beautiful, always just out of reach. The Diamond Horizon Pendant captures that feeling in the simplest possible form. A thin 18K gold bar, 32 mm long, holds a prong-set 0.75-carat diamond off-center — as if the sun is setting on your horizon. It pairs with anything from a sundress to an evening gown. A piece you'll wear every day for the rest of your life.</field>
+            <field name="product_details">Metal: 18K Yellow Gold · Center Stone: 0.75 ct Round Brilliant Diamond (G / VS1 / Excellent Cut) · Bar Dimensions: 32 mm × 1.5 mm · Chain: 16–18 inch adjustable cable chain · Hallmark: 750 · Weight: approx. 3.1 g</field>
+            <field name="care_and_shipping">Store flat to prevent chain tangling. Clean pendant with a soft cloth. Ships in 3–5 business days. Chain length adjustment available at no charge within 30 days of purchase.</field>
+        </record>
+
+        <record id="product_coastal_gold_chain" model="product.template">
+            <field name="name">Keys Gold Figaro Chain</field>
+            <field name="default_code">GJ-NK-003</field>
+            <field name="list_price">1950.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_necklaces"/>
+            <field name="material">gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">8</field>
+            <field name="slug">keys-gold-figaro-chain</field>
+            <field name="tagline">14K gold Figaro chain — the backbone of any jewelry collection</field>
+            <field name="storefront_short_description">A heavy 14K yellow gold Figaro chain — alternating flat oval and circular links — that looks as at home on the dock as in the dining room. The foundation for any pendant in our collection.</field>
+            <field name="storefront_long_description">Every collection needs a great chain. The Keys Gold Figaro is ours: a 5 mm wide 14K yellow gold Figaro pattern crafted with solid (not hollow) links for weight, durability, and the satisfying heft that only real gold delivers. Wear it alone for understated luxury, or pair it with any Galante's pendant. Available in 18, 20, and 24 inch lengths.</field>
+            <field name="product_details">Metal: 14K Yellow Gold (solid links) · Pattern: Figaro (3+1) · Width: 5 mm · Lengths Available: 18", 20", 24" · Clasp: Lobster claw · Hallmark: 585 · Weight: approx. 14 g (20", varies by length)</field>
+            <field name="care_and_shipping">Solid gold chains last a lifetime with basic care. Clean with warm soapy water and a soft brush. Ships in 2–3 business days in Galante's pouch. Gift boxing available.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             BRACELETS
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_anchor_soul_bracelet" model="product.template">
+            <field name="name">Anchor of the Soul Bracelet</field>
+            <field name="default_code">GJ-BK-001</field>
+            <field name="list_price">8900.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bracelets"/>
+            <field name="material">white_gold</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">anchor-of-the-soul-bracelet</field>
+            <field name="tagline">Diamond pavé anchor cuff — coastal luxury at its finest</field>
+            <field name="storefront_short_description">A bold anchor motif set entirely in diamond pavé, mounted on a polished 18K white gold cuff. The statement bracelet for those who navigate by their own stars.</field>
+            <field name="storefront_long_description">An anchor doesn't just hold a ship — it holds a life in place. The Anchor of the Soul Bracelet takes that weight and turns it into wearable art. The three-dimensional anchor form is paved wall-to-wall with 1.2 ctw of brilliant-cut diamonds and mounted on an open-ended 18K white gold cuff that fits most wrists. The brushed interior contrasts with the glittering exterior. You'll feel the quality the moment you put it on.</field>
+            <field name="product_details">Metal: 18K White Gold · Stones: 1.20 ctw Round Brilliant Diamonds, Pavé-set (VS/G) · Cuff Width: 8 mm · Anchor Dimensions: 22 mm × 15 mm · Interior Finish: Brushed · Wrist Sizes: XS–L (adjustable open-end) · Hallmark: 750 · Weight: approx. 19 g</field>
+            <field name="care_and_shipping">Avoid impact to protect pavé settings. Remove before vigorous activity. Professionally inspect settings annually. Ships insured in 5–7 business days in Galante's gift box.</field>
+        </record>
+
         <record id="product_navigators_chrono_link" model="product.template">
-            <field name="name">Navigator's Chrono Link</field>
+            <field name="name">Navigator's Chrono Link Bracelet</field>
+            <field name="default_code">GJ-BK-002</field>
             <field name="list_price">1800.0</field>
-            <field name="description_sale">Solid Heavy Link Bracelet inspired by vintage ship anchor chains.</field>
-            <field name="default_code">GJ-CS-003</field>
-            <field name="website_published">True</field>
             <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bracelets"/>
+            <field name="material">silver_925</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">5</field>
+            <field name="slug">navigators-chrono-link-bracelet</field>
+            <field name="tagline">Heavy sterling silver link bracelet inspired by ship anchor chains</field>
+            <field name="storefront_short_description">Solid sterling silver heavy links — each individually cast and polished — form a bracelet that references the anchor chains of vintage sailing vessels. Masculine, substantial, and built to last.</field>
+            <field name="storefront_long_description">Before GPS, navigators trusted the weight of their anchor chain to know where they stood. The Navigator's Chrono Link Bracelet channels that heritage into a heavy sterling silver link bracelet that feels like an heirloom from the moment you put it on. Each oval link is solid-cast (not hollow) and hand-polished to a high shine. The fold-over clasp with double safety lock keeps it secure at sea or on land.</field>
+            <field name="product_details">Metal: Sterling Silver 925 · Link Style: Oval (solid cast) · Width: 10 mm · Length: 8" (custom lengths available) · Clasp: Fold-over with double safety · Hallmark: 925 · Weight: approx. 52 g</field>
+            <field name="care_and_shipping">Sterling silver may tarnish with air exposure — store in anti-tarnish pouch provided. Polish with a silver cloth. Ships in 2–3 business days.</field>
         </record>
 
-        <!-- Triton's Trident Tie Bar -->
-        <record id="product_tritons_trident_tie_bar" model="product.template">
-            <field name="name">Triton's Trident Tie Bar</field>
-            <field name="list_price">650.0</field>
-            <field name="description_sale">Sterling Silver and Gold Tie Bar for the coastal gentleman.</field>
-            <field name="default_code">GJ-NT-004</field>
-            <field name="website_published">True</field>
+        <record id="product_diamond_tennis_bracelet" model="product.template">
+            <field name="name">Keys Diamond Tennis Bracelet</field>
+            <field name="default_code">GJ-BK-003</field>
+            <field name="list_price">14500.0</field>
             <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_bracelets"/>
+            <field name="material">white_gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">2</field>
+            <field name="slug">keys-diamond-tennis-bracelet</field>
+            <field name="tagline">3ctw diamonds in 14K white gold — timeless elegance</field>
+            <field name="storefront_short_description">Forty round brilliant diamonds — 3 carats total weight — run in an unbroken line along a 14K white gold channel bracelet. The definition of classic luxury, with a Galante's coastal soul.</field>
+            <field name="storefront_long_description">The tennis bracelet is the most refined piece in any jewelry wardrobe. Galante's takes the classic form and executes it with meticulous precision: 40 individually matched round brilliant diamonds, each prong-set in 14K white gold settings that allow maximum light entry. At 3 carats total weight with VS/G quality stones, every diamond earns its place. The safety clasp with box lock means this bracelet travels wherever you do — beach, boardroom, or black tie.</field>
+            <field name="product_details">Metal: 14K White Gold · Stones: 40 Round Brilliant Diamonds (3.00 ctw total, matched VS/G) · Setting: 4-prong per stone · Bracelet Length: 7" · Width: 4 mm · Clasp: Box with safety · Hallmark: 585 · Weight: approx. 11 g</field>
+            <field name="care_and_shipping">Inspect prongs annually for security. Remove before contact sports. Insured shipping via FedEx Priority with signature required. Includes Galante's lifetime prong tightening service.</field>
         </record>
 
-        <!-- Lighthouse Guardian Charm -->
+        <!-- ══════════════════════════════════════════════════════════════
+             EARRINGS
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_keys_azure_earrings" model="product.template">
+            <field name="name">Keys Azure Drop Earrings</field>
+            <field name="default_code">GJ-ER-001</field>
+            <field name="list_price">5800.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_earrings"/>
+            <field name="material">white_gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">keys-azure-drop-earrings</field>
+            <field name="tagline">Aquamarine and diamond drops capturing the Florida Keys palette</field>
+            <field name="storefront_short_description">Elongated teardrops of natural aquamarine, bordered by a frame of brilliant-cut diamonds, capture the exact color of the water between Key Largo and Islamorada. Suspended on 14K white gold shepherd hooks.</field>
+            <field name="storefront_long_description">The Florida Keys are famous for a specific shade of water — that electric turquoise that looks almost synthetic but is entirely, impossibly real. The Keys Azure Drop Earrings were designed to bottle that color. Each earring features a 3.5 ct natural aquamarine (precision-cut in-house to maximize the blue-green saturation) surrounded by a graduated diamond halo. The stones move as you move, catching light with every turn of the head. Handcrafted in 14K white gold. A pair for every occasion from yacht party to gala.</field>
+            <field name="product_details">Metal: 14K White Gold · Center Stones: 2 × Natural Aquamarine, 3.50 ct each (custom-cut oval, Santa Maria color) · Diamond Halo: 0.42 ctw Round Brilliants (VS/F) · Drop Length: 38 mm · Earring Back: Shepherd hook with safety catch · Hallmark: 585 · Weight: approx. 6.2 g per pair</field>
+            <field name="care_and_shipping">Aquamarine is durable (Mohs 7.5–8) but protect from hard impacts. Remove before swimming. Clean with mild soap and a soft brush. Ships in 3–5 business days in Galante's earring presentation box.</field>
+        </record>
+
+        <record id="product_pearl_mist_studs" model="product.template">
+            <field name="name">Pearl Mist Stud Earrings</field>
+            <field name="default_code">GJ-ER-002</field>
+            <field name="list_price">2200.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_earrings"/>
+            <field name="material">white_gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">4</field>
+            <field name="slug">pearl-mist-stud-earrings</field>
+            <field name="tagline">8mm Akoya pearls in 14K white gold — effortless sophistication</field>
+            <field name="storefront_short_description">A pair of perfectly matched 8mm Akoya pearls — prized for their bright luster and silver-rose overtone — set in classic 14K white gold four-prong studs. The earrings every wardrobe needs.</field>
+            <field name="storefront_long_description">There is no more elegant earring than a great pearl stud. The Pearl Mist Studs start with hand-selected Akoya cultured pearls that meet Galante's strict grading: AAA luster, round shape (off-round within 2%), and matched overtone within each pair. The four-prong 14K white gold setting is low-profile so nothing distracts from the pearl. Butterfly-back posts with push-in security. Classic — and classic for a reason.</field>
+            <field name="product_details">Metal: 14K White Gold · Pearls: Japanese Akoya Cultured, 8 mm (AAA Grade, matched pair, silver-rose overtone) · Post: 14K White Gold push-back (butterfly) · Hallmark: 585 · Weight: approx. 2.8 g per pair</field>
+            <field name="care_and_shipping">Last to put on, first to take off — pearls are sensitive to cosmetics and perfume. Store in the silk pouch provided. Ships in 2–3 business days.</field>
+        </record>
+
+        <record id="product_coral_hoop_earrings" model="product.template">
+            <field name="name">Coral Reef Gold Hoop Earrings</field>
+            <field name="default_code">GJ-ER-003</field>
+            <field name="list_price">1650.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_earrings"/>
+            <field name="material">gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">6</field>
+            <field name="slug">coral-reef-gold-hoop-earrings</field>
+            <field name="tagline">Textured 14K gold hoops with hand-carved coral branch motif</field>
+            <field name="storefront_short_description">30mm 14K yellow gold hoops with a hand-engraved coral branch texture on the outer face — a subtle nod to the reef that defines Florida Keys culture. Light, comfortable, all-day wear.</field>
+            <field name="storefront_long_description">The Coral Reef Gold Hoops are the perfect everyday earring for anyone who wants the sophistication of fine gold jewelry with a story embedded in the design. The outer face of each 14K hoop is hand-textured by our craftsman to evoke the branching structure of brain coral. The inner face is polished smooth for comfort. At 30mm diameter and 3mm tube width, they're generous enough to make a statement without being heavy. The click-post closure is secure yet effortless.</field>
+            <field name="product_details">Metal: 14K Yellow Gold · Diameter: 30 mm · Tube Width: 3 mm · Outer Texture: Hand-engraved coral motif · Inner Finish: Polished smooth · Closure: Click-post · Hallmark: 585 · Weight: approx. 4.1 g per pair</field>
+            <field name="care_and_shipping">Polish with a gold cloth to maintain shine. Suitable for daily wear. Ships in 2–3 business days in Galante's earring box.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             NAUTICAL COLLECTION
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_compass_rose_pendant" model="product.template">
+            <field name="name">The Compass Rose Pendant</field>
+            <field name="default_code">GJ-NT-001</field>
+            <field name="list_price">3200.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_nautical"/>
+            <field name="material">gold_18k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">compass-rose-pendant</field>
+            <field name="tagline">18K gold compass rose with sapphire center — never lose your way</field>
+            <field name="storefront_short_description">A fully detailed compass rose rendered in 18K yellow gold, with the cardinal directions marked in engraved script and a vivid blue sapphire at the center. On a 20-inch rope chain.</field>
+            <field name="storefront_long_description">Long before GPS, the compass rose guided sailors through unmarked waters. The Compass Rose Pendant is Galante's tribute to that tradition of navigation by courage and instinct. The 28mm pendant is cast in 18K yellow gold with eight directional points individually detailed in high relief, cardinal directions engraved in a period nautical script, and a natural round blue sapphire at the center representing true north. Worn by those who know exactly where they're going. And those who don't — but go anyway.</field>
+            <field name="product_details">Metal: 18K Yellow Gold · Center Stone: Natural Blue Sapphire, 4 mm round (untreated) · Pendant Diameter: 28 mm · Relief Depth: 3 mm · Chain: 20-inch rope chain, 1.5 mm · Hallmark: 750 · Weight: approx. 9.2 g total</field>
+            <field name="care_and_shipping">Clean with warm soapy water and a soft brush. The relief detail can collect fine debris — a yearly professional ultrasonic cleaning is recommended. Ships in 3–5 business days.</field>
+        </record>
+
         <record id="product_lighthouse_guardian_charm" model="product.template">
             <field name="name">Lighthouse Guardian Charm</field>
+            <field name="default_code">GJ-NT-002</field>
             <field name="list_price">1200.0</field>
-            <field name="description_sale">Detailed 18k gold lighthouse charm with a tiny ruby crystal.</field>
-            <field name="default_code">GJ-CS-004</field>
-            <field name="website_published">True</field>
             <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_nautical"/>
+            <field name="material">gold_18k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">4</field>
+            <field name="slug">lighthouse-guardian-charm</field>
+            <field name="tagline">Detailed 18K gold lighthouse charm with ruby light crystal</field>
+            <field name="storefront_short_description">A miniature lighthouse, every detail intact — spiral staircase, lantern room, access door — cast in 18K gold with a tiny ruby set in the lantern room window. Compatible with most charm bracelets.</field>
+            <field name="storefront_long_description">The lighthouse has guided mariners to safety since ancient times. This charm is our most detailed piece: under magnification you can see the spiral staircase through the lighthouse window, the gallery railing, and the lantern room housing a genuine round ruby crystal that catches the light like a beacon. Cast in 18K yellow gold with hand-engraved horizontal stripes. Compatible with Pandora, Alex and Ani, and most 4.5–5 mm charm bracelets. Also available on a 16-inch necklace chain (contact us).</field>
+            <field name="product_details">Metal: 18K Yellow Gold · Stone: Natural Ruby, 1.8 mm round (lantern room) · Charm Height: 22 mm · Bail Inner Diameter: 5 mm (compatible with standard charm bracelets) · Hallmark: 750 · Weight: approx. 3.6 g</field>
+            <field name="care_and_shipping">Ships in an individual Galante's charm pouch. Ships in 2–3 business days. Pairs beautifully with the Anchor of the Soul Bracelet.</field>
         </record>
+
+        <record id="product_mariners_anchor_cufflinks" model="product.template">
+            <field name="name">Mariner's Anchor Cufflinks</field>
+            <field name="default_code">GJ-NT-003</field>
+            <field name="list_price">980.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_nautical"/>
+            <field name="material">silver_925</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">6</field>
+            <field name="slug">mariners-anchor-cufflinks</field>
+            <field name="tagline">Sterling silver anchor cufflinks — nautical elegance for the gentleman</field>
+            <field name="storefront_short_description">Solid sterling silver cufflinks with a polished anchor face and a navy blue enamel rope-knot reverse. Subtle enough for the boardroom, meaningful enough for the dock.</field>
+            <field name="storefront_long_description">The coastal gentleman needs cufflinks that match his wardrobe and his world. The Mariner's Anchor Cufflinks feature a 16 mm solid sterling silver anchor on the face — polished to a mirror finish with a subtle sandblasted background — and a flip-lock reverse detailed with a navy enamel reef-knot motif. They dress up a white linen shirt for sunset dinner or give a business suit a quiet personality. Comes in a Galante's wooden nautical gift box.</field>
+            <field name="product_details">Metal: Sterling Silver 925 · Face: 16 mm anchor, mirror-polished · Reverse: Flip-lock with navy blue enamel reef-knot · Finish: Mixed (polished face + sandblasted background) · Hallmark: 925 · Weight: approx. 11 g per pair</field>
+            <field name="care_and_shipping">Ships in Galante's wooden nautical gift box — ready to give. Ships in 2–3 business days. Pairs with the Triton's Trident Tie Bar for a complete set.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             GIFTS
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_tritons_trident_tie_bar" model="product.template">
+            <field name="name">Triton's Trident Tie Bar</field>
+            <field name="default_code">GJ-GF-001</field>
+            <field name="list_price">650.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_gifts"/>
+            <field name="material">silver</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">3</field>
+            <field name="slug">tritons-trident-tie-bar</field>
+            <field name="tagline">Sterling silver and gold trident tie bar — for the coastal gentleman</field>
+            <field name="storefront_short_description">A sterling silver tie bar featuring a three-pronged trident inlaid with 18K gold accents. The perfect gift for any man who prefers the ocean to the office — even when he's in the office.</field>
+            <field name="storefront_long_description">Triton ruled the seas with a trident — you can rule the conference room with one. The Triton's Trident Tie Bar is crafted from sterling silver with hand-applied 18K gold inlay on the tines. The spring-clip back holds ties from 2.5 to 4 inches without damaging silk or wool. Slide it to the collar-knot point for a modern look, or lower for tradition. Arrives in Galante's wooden gift box. A gift any man with taste would be proud to receive.</field>
+            <field name="product_details">Metal: Sterling Silver 925 with 18K Gold Inlay · Length: 57 mm · Clip: Spring-loaded, fits 2.5"–4" ties · Finish: Polished silver, matte gold inlay · Hallmark: 925 / 750 · Weight: approx. 14 g</field>
+            <field name="care_and_shipping">Ships in Galante's wooden gift box ready for gifting. Ships in 2–3 business days. Complimentary gift message card included. Pairs beautifully with the Mariner's Anchor Cufflinks.</field>
+        </record>
+
+        <record id="product_coastal_gift_set" model="product.template">
+            <field name="name">Coastal Elegance Gift Set</field>
+            <field name="default_code">GJ-GF-002</field>
+            <field name="list_price">1400.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_gifts"/>
+            <field name="material">mixed</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="True"/>
+            <field name="sequence">1</field>
+            <field name="slug">coastal-elegance-gift-set</field>
+            <field name="tagline">Curated 3-piece nautical jewelry gift set — ready to give</field>
+            <field name="storefront_short_description">Three Galante's signature pieces — Lighthouse Guardian Charm, Triton's Trident Tie Bar, and Eternal Shores Stackable Ring — curated, wrapped, and ready to give in Galante's signature navy gift trunk.</field>
+            <field name="storefront_long_description">The hardest part of buying fine jewelry is knowing where to start. We've solved that. The Coastal Elegance Gift Set brings together three of Galante's most beloved pieces: the Lighthouse Guardian Charm (18K gold), the Triton's Trident Tie Bar (silver &amp; gold), and the Eternal Shores Stackable Ring (14K gold) — one for him, one for her, one for both. Each piece arrives individually wrapped in Galante's tissue, nested in a navy lacquered trunk with a hand-tied rope bow. Includes a personalized handwritten card and a care guide for all three pieces. The complete coastal introduction to Galante's world.</field>
+            <field name="product_details">Contents: Lighthouse Guardian Charm (18K gold, ruby) + Triton's Trident Tie Bar (925 silver, 18K gold inlay) + Eternal Shores Stackable Ring (14K gold, 0.22 ctw diamonds, size 7) · Packaging: Navy lacquered gift trunk with rope bow · Includes: Handwritten card, care guide for each piece, individual pouches · Note: Ring size can be specified at checkout (default 7)</field>
+            <field name="care_and_shipping">Ships pre-assembled and gift-ready in 3–5 business days. Custom note included at no charge. Expedited shipping available. Contact us for corporate gifting orders of 5+ sets.</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             READY TO SHIP
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_silver_wave_pendant" model="product.template">
+            <field name="name">Silver Wave Pendant</field>
+            <field name="default_code">GJ-RS-001</field>
+            <field name="list_price">485.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_ready_to_ship"/>
+            <field name="material">silver_925</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">2</field>
+            <field name="slug">silver-wave-pendant</field>
+            <field name="tagline">Sterling silver wave pendant — in stock, ships tomorrow</field>
+            <field name="storefront_short_description">A fluid wave carved in sterling silver, suspended on an 18-inch chain. Simple, beautiful, and in stock for immediate shipping. Because some waves can't wait.</field>
+            <field name="storefront_long_description">Not every great piece of jewelry needs weeks of waiting. The Silver Wave Pendant is a Galante's staple — always in stock, always ready. The wave form is hand-carved from a wax model unique to Galante's, giving it organic curves no machine can replicate. Cast in sterling silver and finished with an oxidized background that makes the polished wave crest pop. On a 16–18 inch adjustable chain. Order before 2 PM EST and it ships the same business day.</field>
+            <field name="product_details">Metal: Sterling Silver 925 · Pendant Width: 24 mm · Finish: Polished wave crest, oxidized background · Chain: 16–18" adjustable cable chain · Clasp: Lobster claw · Hallmark: 925 · Weight: approx. 5.1 g total</field>
+            <field name="care_and_shipping">In stock — ships same day (orders before 2 PM EST) via USPS Priority Mail. Arrives in 2–3 business days. Ships in Galante's pouch. Free gift wrapping available.</field>
+        </record>
+
+        <record id="product_pearl_studs_classic" model="product.template">
+            <field name="name">Classic Pearl Stud Earrings</field>
+            <field name="default_code">GJ-RS-002</field>
+            <field name="list_price">395.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_ready_to_ship"/>
+            <field name="material">silver_925</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">3</field>
+            <field name="slug">classic-pearl-stud-earrings</field>
+            <field name="tagline">6mm freshwater pearls in sterling silver — a wardrobe staple, in stock</field>
+            <field name="storefront_short_description">6mm white freshwater pearl studs in polished sterling silver four-prong settings. The earring that goes with everything, available immediately. A thoughtful gift at an accessible price point.</field>
+            <field name="storefront_long_description">Great jewelry doesn't have to wait. Galante's Classic Pearl Stud Earrings are our most gifted item and always in stock. Each pair features 6mm round freshwater pearls (AAA luster, white with pink overtone) set in polished sterling silver four-prong studs with butterfly-back posts. Elegant enough for a wedding, casual enough for a Tuesday. If you're looking for the ideal gift for someone special — this is it.</field>
+            <field name="product_details">Metal: Sterling Silver 925 · Pearls: Freshwater Cultured, 6 mm round (AAA Grade, white with pink overtone) · Setting: 4-prong stud · Post: Push-back (butterfly) · Hallmark: 925 · Weight: approx. 1.9 g per pair</field>
+            <field name="care_and_shipping">In stock — ships same day (orders before 2 PM EST). Arrives in 2–3 business days. Comes in a Galante's gift box. A bestseller for a reason.</field>
+        </record>
+
+        <record id="product_gold_anchor_charm_bracelet" model="product.template">
+            <field name="name">Gold Anchor Charm Bracelet</field>
+            <field name="default_code">GJ-RS-003</field>
+            <field name="list_price">875.0</field>
+            <field name="type">consu</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_ready_to_ship"/>
+            <field name="material">gold_14k</field>
+            <field name="available_on_website" eval="True"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">1</field>
+            <field name="slug">gold-anchor-charm-bracelet</field>
+            <field name="tagline">14K gold cable bracelet with anchor charm — in stock and ready to ship</field>
+            <field name="storefront_short_description">A delicate 14K yellow gold cable bracelet with a dangling anchor charm — our most popular ready-to-ship piece. Simple, meaningful, coastal. Perfect for birthdays, anniversaries, or just because.</field>
+            <field name="storefront_long_description">This is the piece that started it all for Galante's. The Gold Anchor Charm Bracelet — a 7-inch 14K yellow gold cable bracelet with a 12mm polished anchor charm — was the first design we sold, and it remains the one piece every Galante's customer owns. Lightweight enough for everyday wear, meaningful enough to be someone's favorite piece for years. In stock in 7-inch length; 6.5 and 7.5 inch available on request. Order before 2 PM EST and it ships today.</field>
+            <field name="product_details">Metal: 14K Yellow Gold · Cable Chain: 1.5 mm, 7 inches · Anchor Charm: 12 mm, polished · Clasp: Lobster claw · Hallmark: 585 · Weight: approx. 2.6 g</field>
+            <field name="care_and_shipping">In stock — ships same day (orders before 2 PM EST) via USPS Priority Mail. Arrives in 2–3 business days. Gift boxing included. Most popular gift item at Galante's.</field>
+        </record>
+
     </data>
 </odoo>
