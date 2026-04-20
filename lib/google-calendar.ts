@@ -251,7 +251,6 @@ export async function createCalendarEvent(input: {
         { method: 'popup', minutes: 30 }
       ],
     },
-    sendUpdates: 'all' as any,
     extendedProperties: {
       private: {
         galantesAppointmentId: record.id,
