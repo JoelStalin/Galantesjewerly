@@ -189,7 +189,7 @@ function assertOdooConfig(config = getOdooConfig()) {
 }
 
 function getOdooHeaders(config = getOdooConfig()) {
-  const headers: Record<string, string> = {
+  const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     Accept: 'application/json',
     'User-Agent': config.userAgent,
