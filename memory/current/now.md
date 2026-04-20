@@ -1,36 +1,25 @@
 # Current State - Galantes Jewelry Mega Prompt Implementation
 
 ## Project Phase
-**Phase 1E - Deployment Stabilization** completed for the Google OAuth runtime fix
+**Phase 2 - Odoo Live Integration** testing stabilized and verified.
 
 ## Current Task
-Production Google OAuth verification on Android Termux + Cloudflare Tunnel
+Ensure the Next.js appointment application handles the Odoo backend accurately.
 
 ## Next Actions
-The production host now serves the corrected OAuth code and environment.
-- Complete the Google consent screen manually once from the admin panel if a fresh owner refresh token is needed
-- Keep Cloudflare Tunnel hostnames mapped to `http://127.0.0.1:3000`
-- Re-run the new Selenium smoke after future deploys:
-  - `python tests/e2e/admin_google_oauth_smoke.py`
-
-## Active Blockers
-- No active technical blocker for Google OAuth routing
-- Final token grant still depends on a human completing Google consent in the browser when reconnecting the owner account
+- Odoo database connection stabilized. `galantes_odoo` and `galantes_web` containers are successfully parsing credentials from `.env.prod`.
+- Verified the `galante.appointment` model exists on the live PostgreSQL instance and accepts XML-RPC payloads from Next.js inside the production network.
+- Ensure the store owner logs in and authenticates Google Calendar to lift the `503 Service Unavailable` API block.
+- Monitor `verify_odoo_e2e.py` once Google Calendar is fully unlocked via OAuth.
 
 ## Active Contracts
 - Appointment API: POST /api/v1/appointments (existing Next.js route)
-- Google Calendar: OAuth2 + event insertion (existing service)
-- Odoo Integration: JSON-2 API for appointment persistence
+- Google Calendar: OAuth2 + event insertion (Awaiting Live Configuration)
+- Odoo Integration: JSON-2 API for appointment persistence (Live and Connected)
 - SendGrid: Email notifications (existing)
 
-## Active Risks
-- Odoo credentials not configured in `.env`
-- The Odoo module must be upgraded on the target database before live JSON-2 sync can succeed
-- Production still needs the updated deployment before users will see the new slot-based booking UX
-- Odoo JSON-2 API keys must be rotated regularly
-- Multi-call JSON-2 flows are separate transactions and can leave partial sync state
-- Google Calendar API quota limits
-- CLI provider availability for orchestration
+## Active Blockers
+- **Google Calendar OAuth Connection needed on production admin panel.** The appointment endpoint correctly refuses to schedule appointments until the store owner logs into the Production Admin Dashboard and verifies the Google Integration, to avoid missing real appointments.
 
 ## Last Updated
-2026-04-15 22:05 UTC
+2026-04-20 03:28 UTC

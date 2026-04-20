@@ -241,9 +241,34 @@
           "dependencies": ["ODOO-PREP-001"]
         }
       ]
+    },
+    {
+      "id": "ODOO_INT",
+      "name": "Phase 2 - Odoo Live Integration",
+      "tasks": [
+        {
+          "id": "ODOO-INT-001",
+          "title": "Promote Odoo addon and trigger live testing",
+          "description": "Trigger GitHub action to upgrade Odoo addon and restart service on GCP.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "system",
+          "created": "2026-04-19T23:05:00Z",
+          "updated": "2026-04-19T23:05:00Z",
+          "evidence": [
+            "Modified .github/workflows/deploy.yml to restart and upgrade Odoo.",
+            "Pushed commit 'ci: add odoo module upgrade and restart to deployment'.",
+            "Identified and resolved production issue where Postgres credentials were disconnected from Odoo.",
+            "Executed localized JSON-RPC script on production to verify Model galante.appointment exists.",
+            "Updated the Odoo admin internal password natively to match Next.js .env.prod config.",
+            "Confirmed Next.js is safely blocked behind Google Calendar configuration without throwing backend crash."
+          ],
+          "dependencies": ["DEPLOY-001"]
+        }
+      ]
     }
   ],
-  "currentPhase": "DEPLOY",
-  "currentTask": "DEPLOY-001",
-  "lastUpdated": "2026-04-15T22:05:00Z"
+  "currentPhase": "ODOO_INT",
+  "currentTask": "ODOO-INT-001",
+  "lastUpdated": "2026-04-19T23:05:00Z"
 }

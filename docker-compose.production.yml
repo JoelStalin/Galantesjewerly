@@ -21,6 +21,7 @@ services:
       - ODOO_BASE_URL=http://odoo:8069
       - ODOO_DB=${ODOO_DB:-galantes_db}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - APPOINTMENT_TEST_MODE=${APPOINTMENT_TEST_MODE:-0}
     networks:
       - galante-net
     healthcheck:

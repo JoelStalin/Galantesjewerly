@@ -189,13 +189,21 @@ function assertOdooConfig(config = getOdooConfig()) {
 }
 
 function getOdooHeaders(config = getOdooConfig()) {
-  return {
-    Authorization: `bearer ${config.authToken}`,
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json; charset=utf-8',
     Accept: 'application/json',
     'User-Agent': config.userAgent,
     'X-Odoo-Database': config.database,
   };
+
+  if (config.authToken) {
+    headers['Authorization'] = `bearer ${config.authToken}`;
+  } else if (process.env.ODOO_PASSWORD) {
+    // Fallback if no token but password is provided
+    headers['X-Odoo-ApiKey'] = process.env.ODOO_PASSWORD;
+  }
+
+  return headers;
 }
 
 function buildOdooJson2Url(model, method, config = getOdooConfig()) {

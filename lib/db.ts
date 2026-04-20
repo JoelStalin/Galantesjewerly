@@ -18,6 +18,7 @@ export interface PageSection {
 export interface SiteSettings {
   favicon_url: string;
   logo_url: string;
+  hero_image_url: string;
   site_title: string;
   site_description: string;
   instagram_url?: string;
@@ -27,6 +28,7 @@ export interface SiteSettings {
   contact_phone?: string;
   contact_address?: string;
   appointment_email?: string;
+  navigation_links: { label: string; href: string }[];
 }
 
 export interface FeaturedItem {
@@ -60,8 +62,16 @@ const INITIAL_DATA: DBData = {
     whatsapp_number: '1234567890',
     contact_email: 'concierge@galantesjewelry.com',
     contact_phone: '(305) 555-0199',
-    contact_address: '123 Overseas Highway, Islamorada, FL 33036',
-    appointment_email: 'appointments@galantesjewelry.com'
+    contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
+    appointment_email: 'ceo@galantesjewelry.com',
+    hero_image_url: '/assets/branding/hero_beach.jpg',
+    navigation_links: [
+      { href: '/about', label: 'Heritage' },
+      { href: '/collections', label: 'Collections' },
+      { href: '/bridal', label: 'Bridal' },
+      { href: '/repairs', label: 'Repairs' },
+      { href: '/contact', label: 'Contact' },
+    ]
   },
   sections: [
     {

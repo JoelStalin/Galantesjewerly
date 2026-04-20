@@ -39,6 +39,10 @@ export async function PUT(request: Request) {
 
     if (type === 'settings' && updates) {
       const updatedSettings = await updateSettings(updates);
+      // Fire and forget CMS sync to Odoo if ready
+      import('@/lib/odoo-cms-sync').then(({ syncSettingsToOdoo }) => {
+        syncSettingsToOdoo(updatedSettings).catch(err => console.error('CMS Odoo Sync failed:', err));
+      });
       return NextResponse.json({ success: true, settings: updatedSettings });
     }
 
