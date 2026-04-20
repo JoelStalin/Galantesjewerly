@@ -72,10 +72,14 @@ jobs:
             } > /tmp/.env.prod.new
             mv /tmp/.env.prod.new ~/galantesjewelry/.env.prod
 
-            # Rebuild solo el contenedor web (Odoo/Postgres no cambian)
+            # Rebuild and restart both web and odoo containers
             echo "Rebuilding web container..."
             sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
             sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
+
+            echo "Upgrading Odoo module and restarting Odoo..."
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || echo "Module upgrade command failed but continuing"
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
 
             # Limpieza y Verificación
             sudo docker image prune -f
