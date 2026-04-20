@@ -1,130 +1,148 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useCart } from '@/context/shop/CartContext';
+import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import { SiteSettings } from '@/lib/db';
 import { GoogleUserSessionPayload } from '@/lib/google-login';
+import { useCart } from '@/context/shop/CartContext';
 
 interface NavbarProps {
   settings: SiteSettings;
   user?: GoogleUserSessionPayload | null;
 }
 
-const NAV_LINKS = [
-  { href: '/about', label: 'Heritage' },
-  { href: '/collections', label: 'Collections' },
-  { href: '/bridal', label: 'Bridal' },
-  { href: '/repairs', label: 'Repairs' },
-  { href: '/contact', label: 'Contact' },
-];
-
 export function Navbar({ settings, user }: NavbarProps) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { totalCount } = useCart();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const logoUrl = settings.logo_url;
+  const navLinks = settings.navigation_links || [];
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-primary/10 bg-background/95 px-6 py-4 backdrop-blur md:px-12">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 text-primary" onClick={() => setOpen(false)}>
-          <span className="sr-only">{settings.site_title}</span>
-          <Image
-            src={logoUrl}
-            alt="Logo"
-            width={160}
-            height={48}
-            className="h-10 w-auto object-contain sm:h-12"
-            unoptimized={logoUrl.startsWith('/api/image?')}
-          />
-          <span className="hidden font-serif text-lg uppercase tracking-[0.2em] md:inline">
-            {settings.site_title}
-          </span>
-        </Link>
-
-        {/* Desktop Nav */}
-        <div className="hidden items-center gap-8 text-[11px] font-semibold uppercase tracking-[0.24em] md:flex">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link key={href} href={href} className="transition-colors hover:text-accent">
-              {label}
-            </Link>
-          ))}
-          {user ? (
-            <Link href="/account" className="transition-colors hover:text-accent flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-              </svg>
-              Account
-            </Link>
-          ) : (
-            <Link href="/api/auth/google/start" className="transition-colors hover:text-accent">
-              Login
-            </Link>
-          )}
-        </div>
-
-        {/* Right side: Cart + Shop CTA + hamburger */}
-        <div className="flex items-center gap-3 md:gap-6">
-          {/* Cart Icon — Only visible if items > 0 */}
-          {totalCount > 0 && (
-            <Link
-              href="/cart"
-              className="relative p-2 text-primary hover:text-accent transition-colors"
-              aria-label={`View shopping cart with ${totalCount} items`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.112 16.826a2.125 2.125 0 0 1-2.122 2.265H5.257a2.125 2.125 0 0 1-2.122-2.265l1.112-16.826a2.125 2.125 0 0 1 2.122-1.993h12.268a2.125 2.125 0 0 1 2.122 1.993Zm-9.286-4.207V10.5A.75.75 0 0 1 9 11.25H6.75a.75.75 0 0 1-.75-.75V6.75a2.25 2.25 0 0 1 4.5 0Zm6.75 0V10.5a.75.75 0 0 1-.75.75H12.75a.75.75 0 0 1-.75-.75V6.75a2.25 2.25 0 0 1 4.5 0Z" />
-              </svg>
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-primary-dark">
-                {totalCount}
+    <nav 
+      className={`fixed w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center">
+          {/* Logo & Title */}
+          <div className="flex items-center space-x-4 flex-1">
+            <Link href="/" className="flex items-center space-x-3 group" onClick={() => setIsOpen(false)}>
+              <Image 
+                src={logoUrl || "/assets/branding/logo-anchor.png"} 
+                alt="Galante's" 
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain transition-transform group-hover:scale-105"
+                unoptimized={logoUrl.startsWith('/api/image?')}
+              />
+              <span className={`text-xl font-serif tracking-widest uppercase transition-colors hidden sm:inline ${
+                scrolled ? 'text-gray-900' : 'text-gray-900'
+              }`}>
+                {settings.site_title || "Galante's"}
               </span>
             </Link>
-          )}
+          </div>
 
-          <Link
-            href="/shop"
-            className="inline-flex items-center justify-center rounded-full border border-accent bg-accent px-5 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary-dark transition hover:bg-accent-light focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
-            aria-label="Visit our shop"
-          >
-            Shop
-          </Link>
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center justify-center space-x-10 flex-[2]">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="text-[11px] font-semibold tracking-[0.24em] uppercase text-gray-800 hover:text-amber-700 transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
-          {/* Hamburger — mobile only */}
-          <button
-            className="flex flex-col items-center justify-center gap-[5px] p-2 md:hidden"
-            onClick={() => setOpen(!open)}
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            aria-expanded={open}
-          >
-            <span className={`block h-[2px] w-6 bg-primary transition-transform duration-200 ${open ? 'translate-y-[7px] rotate-45' : ''}`} />
-            <span className={`block h-[2px] w-6 bg-primary transition-opacity duration-200 ${open ? 'opacity-0' : ''}`} />
-            <span className={`block h-[2px] w-6 bg-primary transition-transform duration-200 ${open ? '-translate-y-[7px] -rotate-45' : ''}`} />
-          </button>
+          {/* Icons & Actions */}
+          <div className="flex items-center justify-end space-x-6 flex-1">
+            <Link
+              href={user ? "/account" : "/api/auth/google/start"}
+              className="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-amber-700 transition-colors"
+              title={user ? "Account" : "Customer Login"}
+            >
+              <User size={20} />
+              <span className="text-[10px] uppercase tracking-widest font-bold">
+                {user ? 'Account' : 'Login'}
+              </span>
+            </Link>
+            
+            <Link href="/cart" className="relative text-gray-900 hover:text-amber-700 transition-colors">
+              <ShoppingBag size={22} strokeWidth={1.5} />
+              {totalCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[9px] font-bold text-white">
+                  {totalCount}
+                </span>
+              )}
+            </Link>
+            
+            <Link 
+              href="/shop" 
+              className="hidden lg:block border border-gray-900 bg-gray-900 text-white px-6 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-transparent hover:text-gray-900 active:scale-95"
+            >
+              Shop
+            </Link>
+
+            <button 
+              className="md:hidden text-gray-900 p-2"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile dropdown */}
-      {open && (
-        <div className="mt-4 flex flex-col gap-4 border-t border-primary/10 pt-4 md:hidden">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-[13px] font-semibold uppercase tracking-[0.24em] text-primary transition-colors hover:text-accent"
-              onClick={() => setOpen(false)}
-            >
-              {label}
-            </Link>
-          ))}
-          <Link
-            href={user ? "/account" : "/api/auth/google/start"}
-            className="text-[13px] font-semibold uppercase tracking-[0.24em] text-primary transition-colors hover:text-accent"
-            onClick={() => setOpen(false)}
-          >
-            {user ? "Account" : "Login"}
-          </Link>
+      {/* Mobile Menu */}
+      {isOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl animate-in slide-in-from-top duration-300">
+          <div className="px-4 pt-2 pb-8 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="block px-3 py-4 text-sm font-semibold text-gray-900 border-b border-gray-50 uppercase tracking-[0.2em]"
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="pt-6 flex flex-col space-y-4">
+              <Link
+                href={user ? "/account" : "/api/auth/google/start"}
+                className="flex items-center space-x-3 px-3 py-2 text-gray-700"
+                onClick={() => setIsOpen(false)}
+              >
+                <User size={20} />
+                <span className="text-sm font-semibold uppercase tracking-widest">
+                  {user ? 'My Account' : 'Customer Login'}
+                </span>
+              </Link>
+              <Link 
+                href="/shop" 
+                className="bg-gray-900 text-white text-center px-6 py-4 rounded-xl text-xs font-bold tracking-widest uppercase shadow-lg active:scale-95 transition-transform"
+                onClick={() => setIsOpen(false)}
+              >
+                Shop Now
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </nav>

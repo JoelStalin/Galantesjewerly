@@ -332,6 +332,69 @@ export default function Dashboard() {
               </div>
 
               <div className="pt-6 border-t border-zinc-100">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 mb-4">Hero & Navigation</h3>
+                <div className="space-y-6">
+                  <ImageUploader
+                    label="Main Hero Background (Homepage)"
+                    currentUrl={settings.hero_image_url}
+                    onUploadSuccess={(url) => setSettings((current) => current ? { ...current, hero_image_url: url } : current)}
+                    onRemove={() => setSettings((current) => current ? { ...current, hero_image_url: '' } : current)}
+                    onUploadStateChange={(isUploading: boolean) => setUploadState('settings-hero', isUploading)}
+                  />
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Navigation Links</label>
+                    <div className="space-y-3">
+                      {(settings.navigation_links || []).map((link, idx) => (
+                        <div key={idx} className="flex gap-2 items-center">
+                          <input 
+                            type="text" 
+                            placeholder="Label" 
+                            value={link.label} 
+                            onChange={e => {
+                              const newLinks = [...(settings.navigation_links || [])];
+                              newLinks[idx].label = e.target.value;
+                              setSettings({ ...settings, navigation_links: newLinks });
+                            }}
+                            className="flex-1 border border-zinc-200 bg-zinc-50 rounded-lg p-2 text-xs focus:bg-white outline-none" 
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Href (e.g. /contact)" 
+                            value={link.href} 
+                            onChange={e => {
+                              const newLinks = [...(settings.navigation_links || [])];
+                              newLinks[idx].href = e.target.value;
+                              setSettings({ ...settings, navigation_links: newLinks });
+                            }}
+                            className="flex-[2] border border-zinc-200 bg-zinc-50 rounded-lg p-2 text-xs focus:bg-white outline-none" 
+                          />
+                          <button 
+                            onClick={() => {
+                              const newLinks = (settings.navigation_links || []).filter((_, i) => i !== idx);
+                              setSettings({ ...settings, navigation_links: newLinks });
+                            }}
+                            className="p-2 text-red-400 hover:text-red-600"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => {
+                          const newLinks = [...(settings.navigation_links || []), { label: 'New Link', href: '/' }];
+                          setSettings({ ...settings, navigation_links: newLinks });
+                        }}
+                        className="text-[10px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700"
+                      >
+                        + Add Link
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-zinc-100">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 mb-4">Contact Information & Appointments</h3>
                 <div className="space-y-4">
                   <div>

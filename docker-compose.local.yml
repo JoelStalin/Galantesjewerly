@@ -1,0 +1,45 @@
+# Docker Compose — Galante's Jewelry (Full Local Development Environment)
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: galantes_web_local
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+      - ODOO_BASE_URL=http://odoo:8069
+      - ODOO_DB=galante_local
+    ports:
+      - "3000:3000"
+    networks:
+      - galante-local-net
+
+  odoo:
+    image: odoo:19
+    container_name: galantes_odoo_local
+    environment:
+      - HOST=postgres
+      - USER=odoo
+      - PASSWORD=odoo
+    ports:
+      - "8069:8069"
+    networks:
+      - galante-local-net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: galantes_db_local
+    environment:
+      - POSTGRES_DB=galante_local
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+    networks:
+      - galante-local-net
+
+networks:
+  galante-local-net:
+    driver: bridge
