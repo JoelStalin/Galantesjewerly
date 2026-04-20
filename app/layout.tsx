@@ -13,14 +13,16 @@ const FALLBACK_SETTINGS: SiteSettings = {
   favicon_url: '/favicon.ico',
   logo_url: '/logo.png',
   hero_image_url: '/hero-bg.jpg',
-  instagram_url: 'https://instagram.com/galantesjewelrybythesea',
-  facebook_url: 'https://facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
+  instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
+  facebook_url: 'https://www.facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
   whatsapp_number: '16464965879',
+  contact_phone: '(646) 496-5879',
+  contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
   navigation_links: [
     { label: 'Home', href: '/' },
     { label: 'Shop', href: '/shop' },
     { label: 'Appointments', href: '/appointments' },
-    { label: 'Contact', href: '/#contact' },
+    { label: 'Contact', href: '/contact' },
   ]
 };
 
