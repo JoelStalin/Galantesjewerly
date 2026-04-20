@@ -90,11 +90,16 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: galantes_tunnel_prod
-    restart: always
+    restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN_PROD}
     networks:
       - galante-net
-    # Eliminada la dependencia estricta de healthcheck para evitar caídas de red si la app tarda en iniciar
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # No depends_on here — the tunnel is the lifeline and starts independently
 
 networks:
   galante-net:
