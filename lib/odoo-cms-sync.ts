@@ -1,4 +1,4 @@
-import { getOdooClient } from '@/lib/odoo/client';
+import { createOdooClient } from '@/src/config/odooClient.js';
 import { SiteSettings } from '@/lib/db';
 
 /**
@@ -7,7 +7,7 @@ import { SiteSettings } from '@/lib/db';
  */
 export async function syncSettingsToOdoo(settings: SiteSettings) {
   try {
-    const odoo = getOdooClient();
+    const odoo = createOdooClient();
     
     // We expect a custom model 'galante.cms.settings' in Odoo.
     // If it doesn't exist yet, this will fail gracefully.

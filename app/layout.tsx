@@ -11,10 +11,17 @@ const FALLBACK_SETTINGS: SiteSettings = {
   site_title: "Galante's Jewelry by the Sea",
   site_description: 'Luxury jewelry boutique in Islamorada',
   favicon_url: '/favicon.ico',
-  logo_url: '/assets/branding/logo.png',
-  instagram_url: '',
-  facebook_url: '',
-  whatsapp_number: '',
+  logo_url: '/logo.png',
+  hero_image_url: '/hero-bg.jpg',
+  instagram_url: 'https://instagram.com/galantesjewelrybythesea',
+  facebook_url: 'https://facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
+  whatsapp_number: '16464965879',
+  navigation_links: [
+    { label: 'Home', href: '/' },
+    { label: 'Shop', href: '/shop' },
+    { label: 'Appointments', href: '/appointments' },
+    { label: 'Contact', href: '/#contact' },
+  ]
 };
 
 async function loadSiteSettings(): Promise<SiteSettings> {
