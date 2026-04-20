@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,17 +50,17 @@ jobs:
 
             # Sincronizar secretos desde GitHub Actions → .env.prod
             # Usar archivo temporal para escritura atómica
-            cat > /tmp/.env.prod.new << 'ENVEOF'
-ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
-POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-POSTGRES_USER=odoo
-ODOO_DB=galantes_db
-ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
-ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
-CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}
-STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-ENVEOF
+            {
+              echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
+              echo "ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}"
+              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+              echo "POSTGRES_USER=odoo"
+              echo "ODOO_DB=galantes_db"
+              echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}"
+              echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}"
+              echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
+              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}"
+            } > /tmp/.env.prod.new
             mv /tmp/.env.prod.new ~/galantesjewelry/.env.prod
 
             # Rebuild solo el contenedor web (Odoo/Postgres no cambian)
