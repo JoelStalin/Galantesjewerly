@@ -22,10 +22,19 @@ jobs:
 
       - name: SSH and Deploy to GCP
         uses: appleboy/ssh-action@master
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_SECRET_KEY: ${{ secrets.ADMIN_SECRET_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+          ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
+          CF_TUNNEL_TOKEN_PROD: ${{ secrets.CF_TUNNEL_TOKEN_PROD }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
             # Ir al directorio raíz
             cd ~
@@ -51,15 +60,15 @@ jobs:
             # Sincronizar secretos desde GitHub Actions → .env.prod
             # Usar archivo temporal para escritura atómica
             {
-              echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
-              echo "ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}"
-              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+              echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
+              echo "ADMIN_SECRET_KEY=$ADMIN_SECRET_KEY"
+              echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
               echo "POSTGRES_USER=odoo"
               echo "ODOO_DB=galantes_db"
-              echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}"
-              echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}"
-              echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
-              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}"
+              echo "ODOO_PASSWORD=$ODOO_PASSWORD"
+              echo "ODOO_API_KEY=$ODOO_API_KEY"
+              echo "CF_TUNNEL_TOKEN_PROD=$CF_TUNNEL_TOKEN_PROD"
+              echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
             } > /tmp/.env.prod.new
             mv /tmp/.env.prod.new ~/galantesjewelry/.env.prod
 
