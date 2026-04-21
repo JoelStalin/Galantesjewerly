@@ -17,25 +17,22 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Setup SSH for Cloudflare Tunnel
+      - name: Execute Remote Deploy via Tunnel
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Configurar SSH para usar cloudflared automáticamente para este host
-          cat <<EOF > ~/.ssh/config
-          Host staging-server
-            HostName ${{ secrets.STAGING_SSH_HOST }}
-            User ${{ secrets.STAGING_SSH_USER }}
-            IdentityFile ~/.ssh/id_rsa
-            ProxyCommand /usr/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-            StrictHostKeyChecking no
-          EOF
-
-      - name: Execute Remote Deploy via Tunnel
-        run: |
-          ssh staging-server <<'REMOTESSH'
+          # Comando SSH explícito con ProxyCommand integrado
+          ssh -v -o StrictHostKeyChecking=no \
+              -o "ProxyCommand=/usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
+              "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
             # Ir al directorio raíz
             mkdir -p ~/galantesjewelry_staging
             cd ~/galantesjewelry_staging || exit 1
@@ -82,5 +79,3 @@ jobs:
             sudo docker image prune -f
             echo "Despliegue de Staging finalizado."
           REMOTESSH
-
-# Trigger final tunnel test v1
