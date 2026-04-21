@@ -17,7 +17,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Execute Remote Deploy via Tunnel
+      - name: Setup SSH Config
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -28,8 +28,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # Un solo comando para evitar problemas con heredocs y tty
-          ssh -o StrictHostKeyChecking=no \
-              -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
-              "$SSH_USER@$SSH_HOST" "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && sudo docker image prune -f && echo 'Despliegue finalizado.'"
+          cat <<EOF > ~/.ssh/config
+          Host staging
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/id_rsa
+            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Execute Remote Deploy
+        run: |
+          ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && sudo docker image prune -f && echo 'Despliegue finalizado.'"
