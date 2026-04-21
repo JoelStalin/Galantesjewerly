@@ -24,18 +24,18 @@ jobs:
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          # El AUD detectado en los logs previos
+          CF_AUD: "9a40cc50983b5167e76468120741abe12a59b7ac0b4e1c4db5f2df6de8ff4c87"
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Intentamos la conexión usando el comando cloudflared access tcp 
-          # que a veces es más fiable que 'access ssh' para runners
-          echo "Iniciando despliegue robusto (v5)..."
+          echo "Iniciando despliegue con AUD explícito..."
           
-          # Usamos ProxyCommand con el path absoluto y los tokens inyectados
-          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
-              -o "ProxyCommand=/usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
+          # Usamos ProxyCommand con el AUD explícito para forzar el reconocimiento de la política
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
+              -o "ProxyCommand=/usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET --aud $CF_AUD" \
               "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
             set -e
             mkdir -p ~/galantesjewelry_staging
