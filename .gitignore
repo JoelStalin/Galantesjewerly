@@ -64,6 +64,10 @@ img_back/
 # vercel
 .vercel
 
+# skills junctions
+/skills/
+/.claude/skills/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
