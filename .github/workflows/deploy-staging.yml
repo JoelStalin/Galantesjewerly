@@ -40,3 +40,5 @@ jobs:
       - name: Execute Remote Deploy
         run: |
           ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && sudo docker image prune -f && echo 'Despliegue finalizado.'"
+
+# Trigger final deployment with Cloudflare Access Policy v1
