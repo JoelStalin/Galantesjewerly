@@ -34,3 +34,5 @@ jobs:
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
               -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
               "$SSH_USER@$SSH_HOST" "echo CONEXION_EXITOSA"
+
+# Retry with ssh:// service config v1
