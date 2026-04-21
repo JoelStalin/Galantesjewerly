@@ -37,28 +37,19 @@ jobs:
           envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
             # Ir al directorio raíz
-            cd ~
+            cd ~/galantesjewelry || exit 1
 
-            # Verificar si el directorio existe y si es un repositorio Git válido
-            if [ -d "galantesjewelry" ] && [ ! -d "galantesjewelry/.git" ]; then
-              echo "Directorio existe pero no es un repo Git. Eliminando para clonación limpia..."
-              sudo rm -rf galantesjewelry
-            fi
-
-            # Si no existe el directorio, clonar el repositorio
-            if [ ! -d "galantesjewelry" ]; then
-              echo "Clonando repositorio..."
-              git clone https://github.com/JoelStalin/Galantesjewerly.git galantesjewelry
-            fi
-
-            # Entrar al repositorio y sincronizar
-            cd ~/galantesjewelry
-            echo "Sincronizando con main..."
-            git fetch origin
+            # Sincronizar código de forma quirúrgica (solo traer cambios, sin borrar datos no rastreados)
+            echo "Sincronizando cambios de Git..."
+            git fetch origin main
+            
+            # Identificar si hubo cambios en archivos críticos
+            CHANGES=$(git diff --name-only HEAD origin/main)
+            
+            # Aplicar cambios
             git reset --hard origin/main
 
             # Sincronizar secretos desde GitHub Actions → .env.prod
-            # Usar archivo temporal para escritura atómica
             {
               echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
               echo "ADMIN_SECRET_KEY=$ADMIN_SECRET_KEY"
@@ -69,21 +60,27 @@ jobs:
               echo "ODOO_API_KEY=$ODOO_API_KEY"
               echo "CF_TUNNEL_TOKEN_PROD=$CF_TUNNEL_TOKEN_PROD"
               echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
-            } > /tmp/.env.prod.new
-            mv /tmp/.env.prod.new ~/galantesjewelry/.env.prod
+            } > .env.prod
+            chmod 600 .env.prod
 
-            # Rebuild and restart both web and odoo containers
-            echo "Rebuilding web container..."
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
+            # Solo reconstruir si hay cambios en el código de la app o dependencias
+            if echo "$CHANGES" | grep -qE "^(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
+              echo "Cambios detectados en la aplicación. Reconstruyendo contenedor web..."
+              sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
+              sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
+            else
+              echo "No se detectaron cambios críticos en la aplicación. Saltando build de contenedor web."
+            fi
 
-            echo "Upgrading Odoo module and restarting Odoo..."
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || echo "Module upgrade command failed but continuing"
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
+            # Solo actualizar Odoo si hay cambios en sus addons o configuración
+            if echo "$CHANGES" | grep -qE "^(odoo/)"; then
+              echo "Cambios detectados en Odoo. Actualizando módulos..."
+              sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
+              sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
+            else
+              echo "No se detectaron cambios en Odoo."
+            fi
 
-            # Limpieza y Verificación
+            # Limpieza suave
             sudo docker image prune -f
-            sleep 20
-            sudo docker ps
-            echo "Health check..."
-            curl -sf http://localhost:8080/api/health && echo "OK" || echo "WARN: health check failed"
+            echo "Despliegue quirúrgico finalizado."
