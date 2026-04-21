@@ -17,16 +17,25 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: SSH and Deploy to Staging
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.STAGING_SSH_HOST }}
-          username: ${{ secrets.STAGING_SSH_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: 22
-          # Comando mágico para pasar por el túnel de Cloudflare
-          proxy_command: cloudflared access ssh --hostname ${{ secrets.STAGING_SSH_HOST }}
-          script: |
+      - name: Setup SSH for Cloudflare Tunnel
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Configurar SSH para usar cloudflared automáticamente para este host
+          cat <<EOF > ~/.ssh/config
+          Host staging-server
+            HostName ${{ secrets.STAGING_SSH_HOST }}
+            User ${{ secrets.STAGING_SSH_USER }}
+            IdentityFile ~/.ssh/id_rsa
+            ProxyCommand /usr/bin/cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Execute Remote Deploy via Tunnel
+        run: |
+          ssh staging-server <<'REMOTESSH'
             # Ir al directorio raíz
             mkdir -p ~/galantesjewelry_staging
             cd ~/galantesjewelry_staging || exit 1
@@ -57,21 +66,19 @@ jobs:
             } > .env.prod
             chmod 600 .env.prod
 
-            # Solo reconstruir si hay cambios en el código de la app o dependencias
+            # Solo reconstruir si hay cambios relevantes
             if [ ! -f "docker-compose.staging.yml" ] || echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
-              echo "Cambios detectados. Reconstruyendo contenedores de Staging..."
+              echo "Cambios detectados. Reconstruyendo Staging..."
               sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml build web
               sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --no-deps web
-            else
-              echo "Sin cambios críticos en la app."
             fi
 
             # Solo actualizar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
-              echo "Cambios en Odoo detectados..."
+              echo "Actualizando Odoo Staging..."
               sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --force-recreate odoo
             fi
 
-            # Limpieza suave
             sudo docker image prune -f
-            echo "Despliegue de Staging finalizado (Paridad con Prod)."
+            echo "Despliegue de Staging finalizado."
+          REMOTESSH
