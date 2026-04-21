@@ -22,28 +22,21 @@ jobs:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
-          # Cloudflared picks these up automatically if named exactly like this
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Configuración SSH optimizada para túneles
-          cat <<EOF > ~/.ssh/config
-          Host staging
-            HostName $SSH_HOST
-            User $SSH_USER
-            IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h
-            StrictHostKeyChecking no
-            ConnectTimeout 30
-          EOF
-
-          echo "Iniciando despliegue via túnel..."
-          # Ejecutamos con -T para evitar problemas de TTY
-          ssh -T staging <<'REMOTESSH'
+          # Intentamos la conexión usando el comando cloudflared access tcp 
+          # que a veces es más fiable que 'access ssh' para runners
+          echo "Iniciando despliegue robusto (v5)..."
+          
+          # Usamos ProxyCommand con el path absoluto y los tokens inyectados
+          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
+              -o "ProxyCommand=/usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
+              "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
             set -e
             mkdir -p ~/galantesjewelry_staging
             cd ~/galantesjewelry_staging
@@ -71,5 +64,5 @@ jobs:
 
             sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
             sudo docker image prune -f
-            echo "Despliegue finalizado."
+            echo "Despliegue Staging completado exitosamente."
           REMOTESSH
