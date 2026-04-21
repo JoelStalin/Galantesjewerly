@@ -17,7 +17,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Execute Deploy via TCP Proxy
+      - name: Execute Staging Deploy (HTTPS Bridge)
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -29,42 +29,17 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Iniciamos el proxy TCP local para saltar Access con el Service Token
-          echo "Iniciando proxy TCP local..."
-          cloudflared access tcp --hostname $SSH_HOST --url localhost:2222 --service-token-id $CF_ID --service-token-secret $CF_SECRET &
-          sleep 5
-          
-          echo "Conectando al servidor staging via proxy local..."
-          # Conectamos a localhost:2222 que cloudflared está redirigiendo al túnel
-          ssh -v -o StrictHostKeyChecking=no -p 2222 "$SSH_USER@localhost" <<'REMOTESSH'
-            set -e
-            echo "CONEXION_ESTABLECIDA"
-            mkdir -p ~/galantesjewelry_staging
-            cd ~/galantesjewelry_staging
-            
-            if [ ! -d .git ]; then 
-              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
-            fi
-            
-            git fetch origin develop
-            git reset --hard origin/develop
-            
-            # Sincronizar secretos
-            cat <<EOF > .env.prod
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_USER=odoo
-            ODOO_DB=galantes_db
-            ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
-            ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
-            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-            EOF
-            
-            sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
-            echo "Despliegue finalizado con éxito."
-          REMOTESSH
-          
-          # Matamos el proxy local al terminar
-          kill %1 || true
+          # La técnica definitiva: SSH a través de túnel configurado en el config local del runner
+          cat <<EOF > ~/.ssh/config
+          Host staging
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/id_rsa
+            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+            StrictHostKeyChecking no
+            ConnectTimeout 60
+            ServerAliveInterval 30
+          EOF
+
+          echo "Iniciando despliegue definitivo..."
+          ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env.prod && echo 'ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}' >> .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && echo 'STAGING_UP'"
