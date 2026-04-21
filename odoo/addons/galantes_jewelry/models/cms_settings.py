@@ -17,6 +17,8 @@ class GalantesCMS(models.Model):
     contact_address = fields.Text(string='Contact Address')
     appointment_email = fields.Char(string='Appointment Email')
     navigation_json = fields.Text(string='Navigation JSON')
+    cms_snapshot_json = fields.Text(string='CMS Snapshot JSON')
+    integrations_snapshot_json = fields.Text(string='Integrations Snapshot JSON')
 
     @api.model
     def create(self, vals):

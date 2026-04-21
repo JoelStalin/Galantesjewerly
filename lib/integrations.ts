@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { getDataRoot } from '@/lib/runtime-paths';
+import { loadIntegrationsSnapshotFromOdoo, syncIntegrationsSnapshotToOdoo } from '@/lib/odoo-cms-sync';
 import {
   appointmentSecretFields,
   googleSecretFields,
@@ -28,6 +29,8 @@ type IntegrationStore = {
   appointments: Record<IntegrationEnvironment, StoredAppointmentIntegration>;
   audit: IntegrationAuditEntry[];
 };
+
+export type IntegrationStoreSnapshot = IntegrationStore;
 
 type UpdateGoogleIntegrationInput = {
   provider?: 'google';
@@ -186,10 +189,10 @@ function toAdminConfig(config: StoredGoogleIntegration): GoogleIntegrationAdminC
     provider: config.provider,
     environment: config.environment,
     enabled: config.enabled,
-    googleClientId: config.googleClientId,
-    javascriptOrigin: config.javascriptOrigin,
-    redirectUri: config.redirectUri,
-    scopes: config.scopes,
+    googleClientId: config.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+    javascriptOrigin: config.javascriptOrigin || process.env.GOOGLE_OAUTH_JAVASCRIPT_ORIGIN || '',
+    redirectUri: config.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || '',
+    scopes: config.scopes.length > 0 ? config.scopes : (process.env.GOOGLE_OAUTH_SCOPES?.split(' ') || []),
     connectedGoogleEmail: config.connectedGoogleEmail || '',
     oauthConnectedAt: config.oauthConnectedAt || null,
     updatedAt: config.updatedAt,
@@ -296,16 +299,16 @@ function validateRedirectUri(value: string) {
 
 async function ensureStoreFile() {
   await fs.mkdir(dataDir, { recursive: true });
-
-  try {
-    await fs.access(integrationsFile);
-  } catch {
-    await writeStore(emptyStore());
-  }
 }
 
 async function readStore(): Promise<IntegrationStore> {
   await ensureStoreFile();
+
+  const odooSnapshot = await loadIntegrationsSnapshotFromOdoo();
+  if (odooSnapshot) {
+    await writeStore(odooSnapshot);
+    return odooSnapshot;
+  }
 
   try {
     const fileContent = await fs.readFile(integrationsFile, 'utf-8');
@@ -511,6 +514,7 @@ export async function updateGoogleIntegrationConfig(input: UpdateGoogleIntegrati
       buildAuditEntry(next, context, current.updatedAt ? 'update' : 'create', [...changedFields]),
       ...store.audit,
     ].slice(0, 100);
+    await syncIntegrationsSnapshotToOdoo(store);
     await writeStore(store);
   }
 
@@ -568,6 +572,7 @@ export async function storeGoogleOAuthTokens(input: StoreGoogleOAuthTokensInput,
     buildAuditEntry(next, context, current.updatedAt ? 'update' : 'create', [...changedFields]),
     ...store.audit,
   ].slice(0, 100);
+  await syncIntegrationsSnapshotToOdoo(store);
   await writeStore(store);
 
   return {
@@ -796,6 +801,7 @@ export async function updateAppointmentIntegrationConfig(input: UpdateAppointmen
       buildAuditEntry(next, context, current.updatedAt ? 'update' : 'create', [...changedFields]),
       ...store.audit,
     ].slice(0, 100);
+    await syncIntegrationsSnapshotToOdoo(store);
     await writeStore(store);
   }
 
@@ -815,6 +821,7 @@ export async function recordGoogleIntegrationTest(environment: IntegrationEnviro
   const config = store.google[environment];
   const auditEntry = buildAuditEntry(config, context, 'test', ['connectionTest']);
   store.audit = [auditEntry, ...store.audit].slice(0, 100);
+  await syncIntegrationsSnapshotToOdoo(store);
   await writeStore(store);
   return auditEntry;
 }
@@ -828,6 +835,7 @@ export async function recordAppointmentIntegrationTest(environment: IntegrationE
   const config = store.appointments[environment];
   const auditEntry = buildAuditEntry(config, context, 'test', ['appointmentIntegrationTest']);
   store.audit = [auditEntry, ...store.audit].slice(0, 100);
+  await syncIntegrationsSnapshotToOdoo(store);
   await writeStore(store);
   return auditEntry;
 }

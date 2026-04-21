@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 
 interface AccountLayoutProps {
   children: React.ReactNode;
@@ -9,16 +9,9 @@ interface AccountLayoutProps {
 
 export default async function AccountLayout({ children }: AccountLayoutProps) {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
-
-  if (!sessionToken) {
-    redirect('/?auth=required');
-  }
-
-  const user = await verifyGoogleUserSession(sessionToken);
-
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) {
-    redirect('/?auth=invalid');
+    redirect('/auth/login?returnTo=/account/orders');
   }
 
   return (

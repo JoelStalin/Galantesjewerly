@@ -1,56 +1,115 @@
-import { createOdooClient } from '@/src/config/odooClient.js';
-import { SiteSettings } from '@/lib/db';
+import { createOdooClient, getOdooConfig } from '@/src/config/odooClient.js';
+import type { FeaturedItem, PageSection, SiteSettings } from '@/lib/db';
+import type { IntegrationStoreSnapshot } from '@/lib/integrations';
 
 /**
- * Synchronizes SiteSettings from Next.js (SQLite) to Odoo (PostgreSQL)
- * This ensures branding and contact info are persisted in the ERP.
+ * Synchronizes the public CMS and admin integration snapshots to Odoo (PostgreSQL).
+ * Odoo acts as the durable source of truth and the local files act as cache.
  */
-export async function syncSettingsToOdoo(settings: SiteSettings) {
-  try {
-    const odoo = createOdooClient();
-    
-    // We expect a custom model 'galante.cms.settings' in Odoo.
-    // If it doesn't exist yet, this will fail gracefully.
-    
-    const payload = {
-      site_title: settings.site_title,
-      site_description: settings.site_description,
-      logo_url: settings.logo_url,
-      favicon_url: settings.favicon_url,
-      hero_image_url: settings.hero_image_url,
-      instagram_url: settings.instagram_url || '',
-      facebook_url: settings.facebook_url || '',
-      whatsapp_number: settings.whatsapp_number || '',
-      contact_email: settings.contact_email || '',
-      contact_phone: settings.contact_phone || '',
-      contact_address: settings.contact_address || '',
-      appointment_email: settings.appointment_email || '',
-      navigation_json: JSON.stringify(settings.navigation_links),
-    };
+type OdooCmsRecord = {
+  id: number;
+  cms_snapshot_json?: string | null;
+  integrations_snapshot_json?: string | null;
+};
 
-    console.log('[Odoo Sync] Syncing CMS settings...', payload);
+type CmsSnapshot = {
+  settings: SiteSettings;
+  sections: PageSection[];
+  featured_items: FeaturedItem[];
+};
 
-    // Using search_read to find existing settings record (usually there's only one)
-    const existing = await odoo.searchRead('galante.cms.settings', {
-      domain: [],
-      fields: ['id'],
-      limit: 1,
-    }) as any[];
-
-    if (existing && existing.length > 0) {
-      await odoo.call('galante.cms.settings', 'write', {
-        ids: [existing[0].id],
-        values: payload
-      });
-      console.log('[Odoo Sync] CMS settings updated in Odoo.');
-    } else {
-      await odoo.call('galante.cms.settings', 'create', payload);
-      console.log('[Odoo Sync] CMS settings created in Odoo.');
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('[Odoo Sync] Failed to sync CMS settings:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+function getOdooClient() {
+  const config = getOdooConfig();
+  if (!config.isReady) {
+    return null;
   }
+
+  return createOdooClient(config);
+}
+
+async function readSingletonRecord() {
+  const odoo = getOdooClient();
+  if (!odoo) {
+    return null;
+  }
+
+  const records = await odoo.searchRead('galante.cms.settings', {
+    domain: [],
+    fields: ['id', 'cms_snapshot_json', 'integrations_snapshot_json'],
+    limit: 1,
+  }) as OdooCmsRecord[];
+
+  return records[0] || null;
+}
+
+async function upsertSingletonRecord(values: Partial<OdooCmsRecord>) {
+  const odoo = getOdooClient();
+  if (!odoo) {
+    return;
+  }
+
+  const existing = await readSingletonRecord();
+
+  if (existing) {
+    await odoo.call('galante.cms.settings', 'write', {
+      ids: [existing.id],
+      values,
+    });
+    return;
+  }
+
+  await odoo.call('galante.cms.settings', 'create', values);
+}
+
+export async function syncCmsSnapshotToOdoo(snapshot: CmsSnapshot) {
+  const cms_snapshot_json = JSON.stringify(snapshot);
+  await upsertSingletonRecord({ cms_snapshot_json });
+  return { success: true };
+}
+
+export async function loadCmsSnapshotFromOdoo(): Promise<CmsSnapshot | null> {
+  const record = await readSingletonRecord();
+  if (!record?.cms_snapshot_json) {
+    return null;
+  }
+
+  const parsed = JSON.parse(record.cms_snapshot_json) as Partial<CmsSnapshot>;
+  if (!parsed.settings || !Array.isArray(parsed.sections) || !Array.isArray(parsed.featured_items)) {
+    return null;
+  }
+
+  return {
+    settings: parsed.settings,
+    sections: parsed.sections,
+    featured_items: parsed.featured_items,
+  };
+}
+
+export async function syncIntegrationsSnapshotToOdoo(snapshot: IntegrationStoreSnapshot) {
+  const integrations_snapshot_json = JSON.stringify(snapshot);
+  await upsertSingletonRecord({ integrations_snapshot_json });
+  return { success: true };
+}
+
+export async function loadIntegrationsSnapshotFromOdoo(): Promise<IntegrationStoreSnapshot | null> {
+  const record = await readSingletonRecord();
+  if (!record?.integrations_snapshot_json) {
+    return null;
+  }
+
+  const parsed = JSON.parse(record.integrations_snapshot_json) as IntegrationStoreSnapshot;
+  if (!parsed?.google || !parsed?.appointments || !Array.isArray(parsed.audit)) {
+    return null;
+  }
+
+  return parsed;
+}
+
+export async function syncSettingsToOdoo(settings: SiteSettings) {
+  const existing = await loadCmsSnapshotFromOdoo();
+  return syncCmsSnapshotToOdoo({
+    settings,
+    sections: existing?.sections || [],
+    featured_items: existing?.featured_items || [],
+  });
 }

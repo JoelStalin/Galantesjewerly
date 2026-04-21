@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { deleteManagedImage } from '@/lib/storage';
 import { getDataRoot } from '@/lib/runtime-paths';
+import { loadCmsSnapshotFromOdoo, syncCmsSnapshotToOdoo } from '@/lib/odoo-cms-sync';
 
 export interface PageSection {
   id: string;
@@ -64,7 +65,7 @@ const INITIAL_DATA: DBData = {
     contact_phone: '(305) 555-0199',
     contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
     appointment_email: 'ceo@galantesjewelry.com',
-    hero_image_url: '/assets/branding/hero_beach.jpg',
+    hero_image_url: '/assets/images/hero.webp',
     navigation_links: [
       { href: '/about', label: 'Heritage' },
       { href: '/collections', label: 'Collections' },
@@ -154,6 +155,20 @@ async function performInit() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
   } catch {}
+
+  const odooSnapshot = await loadCmsSnapshotFromOdoo();
+  if (odooSnapshot) {
+    const hydratedData: DBData = {
+      settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
+      sections: odooSnapshot.sections,
+      featured_items: odooSnapshot.featured_items,
+    };
+
+    await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
+    memCache = hydratedData;
+    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
+    return;
+  }
 
   try {
     const fileContent = await fs.readFile(dbFile, 'utf-8');
@@ -260,6 +275,7 @@ export async function updateSettings(updates: Partial<SiteSettings>): Promise<Si
   const data = await readDB();
   const previousUrls = [data.settings?.favicon_url, data.settings?.logo_url].filter((value): value is string => Boolean(value));
   data.settings = { ...data.settings, ...updates };
+  await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   await cleanupRemovedManagedImages(previousUrls, data);
   return data.settings;
@@ -281,6 +297,7 @@ export async function updateSection(id: string, updates: Partial<PageSection>): 
 
   const previousUrls = [data.sections[index].image_url].filter((value): value is string => Boolean(value));
   data.sections[index] = { ...data.sections[index], ...updates };
+  await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   await cleanupRemovedManagedImages(previousUrls, data);
   return data.sections[index];
@@ -300,6 +317,7 @@ export async function addFeaturedItem(item: Omit<FeaturedItem, 'id'>): Promise<F
   const data = await readDB();
   const newItem = { ...item, id: 'f_' + Date.now().toString() };
   data.featured_items.push(newItem);
+  await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   return newItem;
 }
@@ -311,6 +329,7 @@ export async function updateFeaturedItem(id: string, updates: Partial<FeaturedIt
 
   const previousUrls = [data.featured_items[index].image_url].filter((value): value is string => Boolean(value));
   data.featured_items[index] = { ...data.featured_items[index], ...updates };
+  await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   await cleanupRemovedManagedImages(previousUrls, data);
   return data.featured_items[index];
@@ -325,6 +344,7 @@ export async function deleteFeaturedItem(id: string): Promise<boolean> {
     .filter((value): value is string => Boolean(value));
   data.featured_items = data.featured_items.filter(s => s.id !== id);
   if (data.featured_items.length !== initialLength) {
+    await syncCmsSnapshotToOdoo(data);
     await writeDB(data);
     await cleanupRemovedManagedImages(previousUrls, data);
     return true;

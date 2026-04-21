@@ -39,10 +39,10 @@
     "production": {
       "provider": "google",
       "environment": "production",
-      "enabled": true,
-      "googleClientId": "",
+      "enabled": false,
+      "googleClientId": "634248716519-icble710qg9r8ju4hjqr60o5rnl7n6rs.apps.googleusercontent.com",
       "javascriptOrigin": "https://galantesjewelry.com",
-      "redirectUri": "https://galantesjewelry.com/auth/google/callback",
+      "redirectUri": "https://galantesjewelry.com/api/admin/google/oauth/callback",
       "scopes": [
         "openid",
         "email",
@@ -50,9 +50,12 @@
       ],
       "connectedGoogleEmail": "",
       "oauthConnectedAt": null,
-      "encryptedSecrets": {},
+      "encryptedSecrets": {
+        "googleClientSecret": "v1:7LVtsriw4pgqZe7g:19RiUaWsfBY6z4OA8UKWfQ:s5BHrmC-36Jg88Ls-XbdhJMDjmolMblxliOWsyZM16lf3kg"
+      },
       "updatedAt": null,
-      "updatedBy": null
+      "updatedBy": null,
+      "secrets": {}
     }
   },
   "appointments": {

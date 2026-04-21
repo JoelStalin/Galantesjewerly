@@ -33,6 +33,11 @@ export async function GET(request: Request) {
     const clientSecret = config.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '';
 
     if (!clientId || !clientSecret) {
+      console.error('[Admin Google OAuth] start: missing clientId or clientSecret', {
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret,
+        environment,
+      });
       return NextResponse.redirect(
         getRequestUrl('/admin/dashboard?tab=integrations&google_owner_oauth=missing_client', request),
       );
@@ -51,19 +56,32 @@ export async function GET(request: Request) {
     authUrl.searchParams.set('include_granted_scopes', 'true');
     authUrl.searchParams.set('prompt', 'consent select_account');
 
+    console.log('[Admin Google OAuth] start: initiating OAuth flow', {
+      environment,
+      redirectUri,
+      clientIdPrefix: clientId.substring(0, 12) + '...',
+      statePrefix: state.substring(0, 8) + '...',
+      host: request.headers.get('host'),
+      forwardedHost: request.headers.get('x-forwarded-host'),
+      forwardedProto: request.headers.get('x-forwarded-proto'),
+    });
+
+    // Use a longer maxAge (15 minutes) to survive slow consent screens + Cloudflare latency
+    const cookieOptions = getGoogleOAuthCookieOptions(request, 900);
+
     const response = NextResponse.redirect(authUrl);
     response.cookies.set({
-      ...getGoogleOAuthCookieOptions(request),
+      ...cookieOptions,
       name: ADMIN_GOOGLE_CONNECT_STATE_COOKIE,
       value: state,
     });
     response.cookies.set({
-      ...getGoogleOAuthCookieOptions(request),
+      ...cookieOptions,
       name: ADMIN_GOOGLE_CONNECT_ENV_COOKIE,
       value: environment,
     });
     response.cookies.set({
-      ...getGoogleOAuthCookieOptions(request),
+      ...cookieOptions,
       name: ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE,
       value: redirectUri,
     });

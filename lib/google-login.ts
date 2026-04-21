@@ -148,11 +148,13 @@ export function getPublicBaseUrl(request: RequestLike) {
   const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
 
   if (host) {
-    const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : forwardedProto;
+    const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const protocol = isLocal ? 'http' : 'https';
     return `${protocol}://${host}`;
   }
 
-  return 'https://galantesjewelry.com';
+  const isProd = process.env.NODE_ENV === 'production';
+  return isProd ? 'https://galantesjewelry.com' : 'http://localhost:3000';
 }
 
 export function getRequestBaseUrl(request: RequestLike) {
@@ -176,8 +178,14 @@ export function getRequestBaseUrl(request: RequestLike) {
     }
   }
 
+  const siteUrl = getConfiguredSiteUrl();
+  if (siteUrl) {
+    return siteUrl;
+  }
+
   return getPublicBaseUrl(request);
 }
+
 
 export function getPublicUrl(pathname: string, request: RequestLike) {
   const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
@@ -203,12 +211,15 @@ export function getGoogleRedirectBaseUrl(redirectUri: string | undefined, reques
   return getPublicBaseUrl(request);
 }
 export function getGoogleOAuthCookieOptions(request: RequestLike, maxAge = 600) {
+  const isProd = process.env.NODE_ENV === 'production' || !request.headers.get('host')?.includes('localhost');
+  
   return {
     httpOnly: true,
     maxAge,
     path: '/',
-    sameSite: 'lax' as const,
-    secure: shouldUseSecureCookies(request),
+    // Use none for OAuth to survive redirects from Google, but requires Secure
+    sameSite: isProd ? 'none' as const : 'lax' as const,
+    secure: isProd ? true : shouldUseSecureCookies(request),
   };
 }
 
