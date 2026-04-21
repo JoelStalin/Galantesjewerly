@@ -17,7 +17,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Setup SSH and Deploy
+      - name: Test Connection
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -25,61 +25,12 @@ jobs:
           CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          # 1. Preparar la llave SSH
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # 2. Configurar SSH para que use el túnel automáticamente con los tokens
-          cat <<EOF > ~/.ssh/config
-          Host staging
-            HostName $SSH_HOST
-            User $SSH_USER
-            IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
-            StrictHostKeyChecking no
-            ConnectTimeout 60
-          EOF
-
-          # 3. Ejecutar el despliegue en un solo bloque robusto
-          ssh staging <<'REMOTESSH'
-            set -e # Abortar si algo falla
-            
-            # Navegar al directorio de staging
-            mkdir -p ~/galantesjewelry_staging
-            cd ~/galantesjewelry_staging
-            
-            # Sincronizar código
-            if [ ! -d ".git" ]; then
-              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
-            else
-              git fetch origin develop
-              git reset --hard origin/develop
-            fi
-
-            # Recrear .env.prod para paridad total con los secretos del workflow
-            cat <<EOF > .env.prod
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_USER=odoo
-            ODOO_DB=galantes_db
-            ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
-            ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
-            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-            EOF
-            chmod 600 .env.prod
-
-            # Levantar servicios
-            echo "Levantando contenedores en Getupsoft..."
-            sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
-            
-            # Limpieza
-            sudo docker image prune -f
-            
-            # Validación de salud rápida
-            echo "Verificando salud de los servicios..."
-            sleep 15
-            sudo docker ps | grep galantes_web_staging
-          REMOTESSH
+          # Intentamos solo un comando simple para validar conectividad
+          echo "Intentando conectar a $SSH_HOST via cloudflared..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+              -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
+              "$SSH_USER@$SSH_HOST" "echo CONEXION_EXITOSA"
