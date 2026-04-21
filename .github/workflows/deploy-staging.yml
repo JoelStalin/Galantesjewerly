@@ -7,6 +7,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Usar el mismo entorno 'Production' si quieres los mismos secretos exactos, 
+    # o 'Staging' si los tienes duplicados allí. 
+    # Por seguridad, GitHub permite heredar secretos.
     environment: Staging
     steps:
       - name: Checkout code
@@ -20,43 +23,50 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_SSH_PORT || 22 }}
           script: |
-            # Ir al directorio raíz de staging
-            mkdir -p ~/staging-galantes
-            cd ~/staging-galantes || exit 1
+            # Ir al directorio raíz
+            cd ~/galantesjewelry_staging || exit 1
 
-            # Inicializar repo si no existe
-            if [ ! -d ".git" ]; then
-              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
-            fi
-
-            # Sincronizar código
-            echo "Sincronizando cambios de Git (develop)..."
+            # Sincronizar código de forma quirúrgica
+            echo "Sincronizando cambios de Git (Staging)..."
             git fetch origin develop
+            
+            # Identificar cambios
             CHANGES=$(git diff --name-only HEAD origin/develop)
+            
+            # Aplicar cambios
             git reset --hard origin/develop
 
-            # Secretos de Staging (Usar variables separadas de Prod)
+            # Sincronizar secretos (PARIDAD TOTAL CON PROD)
             {
-              echo "ADMIN_PASSWORD=${{ secrets.STAGING_ADMIN_PASSWORD }}"
-              echo "ADMIN_SECRET_KEY=${{ secrets.STAGING_ADMIN_SECRET_KEY }}"
-              echo "POSTGRES_PASSWORD=${{ secrets.STAGING_POSTGRES_PASSWORD }}"
+              echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
+              echo "ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}"
+              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
               echo "POSTGRES_USER=odoo"
-              echo "ODOO_DB=galantes_db_staging"
-              echo "ODOO_PASSWORD=${{ secrets.STAGING_ODOO_PASSWORD }}"
-              echo "ODOO_API_KEY=${{ secrets.STAGING_ODOO_API_KEY }}"
-              echo "CF_TUNNEL_TOKEN_STAGING=${{ secrets.STAGING_CF_TUNNEL_TOKEN }}"
-              echo "STRIPE_SECRET_KEY=${{ secrets.STAGING_STRIPE_SECRET_KEY }}"
-            } > .env.staging
-            chmod 600 .env.staging
+              echo "ODOO_DB=galantes_db"
+              echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}"
+              echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}"
+              echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
+              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}"
+              echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
+            } > .env.prod
+            chmod 600 .env.prod
 
-            # Solo reconstruir si hay cambios relevantes
+            # Solo reconstruir si hay cambios en el código de la app o dependencias
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
-              echo "Actualizando contenedores de Staging..."
-              # Nota: Usamos un prefijo de proyecto para no chocar con Prod si están en la misma máquina
-              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.production.yml up -d --build
+              echo "Cambios detectados. Reconstruyendo contenedores de Staging..."
+              # Usamos -p staging para no chocar con otros proyectos
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml build web
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
             else
-              echo "Sin cambios críticos. Staging actualizado."
+              echo "Sin cambios críticos en la app."
             fi
 
+            # Solo actualizar Odoo si hay cambios
+            if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
+              echo "Cambios en Odoo detectados..."
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --force-recreate odoo
+            fi
+
+            # Limpieza suave
             sudo docker image prune -f
-            echo "Despliegue a Staging finalizado."
+            echo "Despliegue de Staging finalizado (Paridad con Prod)."
