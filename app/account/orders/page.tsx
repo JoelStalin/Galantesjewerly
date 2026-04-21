@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -31,13 +31,14 @@ const INVOICE_DOT: Record<string, string> = {
 
 export default async function OrdersPage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
-  if (!token) return null;
-
-  const user = await verifyGoogleUserSession(token);
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) return null;
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email);
+  const partnerId = await OdooService.getPartnerByEmail(user.email)
+    || await OdooService.findOrCreateCustomer({
+      name: user.name || user.username || user.email,
+      email: user.email,
+    });
   const orders = partnerId ? await OdooService.getOrdersWithInvoices(partnerId) : [];
 
   return (

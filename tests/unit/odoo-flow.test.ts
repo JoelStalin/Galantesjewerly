@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OdooService } from '@/lib/odoo/services';
 
 // Mock Odoo Client
+const mockClient = vi.hoisted(() => ({
+  call: vi.fn(),
+  create: vi.fn(),
+}));
+
 vi.mock('@/src/config/odooClient', () => ({
-  createOdooClient: () => ({
-    call: vi.fn(),
-    create: vi.fn(),
-  }),
+  createOdooClient: () => mockClient,
 }));
 
 import { createOdooClient } from '@/src/config/odooClient';
-const mockClient = createOdooClient();
+createOdooClient();
 
 describe('OdooService - Billing Automation Flow', () => {
   beforeEach(() => {

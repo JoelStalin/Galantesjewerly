@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
 export async function PATCH(req: NextRequest) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const user = await verifyGoogleUserSession(token);
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
@@ -36,7 +30,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
   }
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email);
+  const partnerId = await OdooService.getPartnerByEmail(user.email)
+    || await OdooService.findOrCreateCustomer({
+      name: user.name || user.username || user.email,
+      email: user.email,
+    });
   if (!partnerId) {
     return NextResponse.json({ error: 'Partner not found in Odoo' }, { status: 404 });
   }

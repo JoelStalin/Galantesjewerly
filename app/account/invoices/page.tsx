@@ -1,17 +1,17 @@
 import { cookies } from 'next/headers';
-import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
 export default async function InvoicesPage() {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
-
-  if (!sessionToken) return null; // Handled by layout
-
-  const user = await verifyGoogleUserSession(sessionToken);
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) return null;
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email);
+  const partnerId = await OdooService.getPartnerByEmail(user.email)
+    || await OdooService.findOrCreateCustomer({
+      name: user.name || user.username || user.email,
+      email: user.email,
+    });
   const invoices = partnerId ? await OdooService.getPartnerInvoices(partnerId) : [];
 
   return (

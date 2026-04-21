@@ -41,11 +41,12 @@ function normalizePrivateKey(value: string) {
 export async function getCalendarRuntimeConfig(environment: IntegrationEnvironment): Promise<CalendarRuntimeConfig> {
   const stored = await getDecryptedAppointmentIntegration(environment);
   const googleOAuth = await getGoogleOAuthRuntimeConfig(environment);
+  const isTestMode = getAppointmentTestMode() === 'true';
 
   return {
     environment,
-    enabled: stored.googleCalendarEnabled,
-    calendarId: stored.googleCalendarId || process.env.GOOGLE_CALENDAR_ID || '',
+    enabled: isTestMode || stored.googleCalendarEnabled,
+    calendarId: stored.googleCalendarId || process.env.GOOGLE_CALENDAR_ID || 'primary',
     serviceAccountEmail: stored.googleServiceAccountEmail || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
     privateKey: normalizePrivateKey(stored.secrets.googlePrivateKey || process.env.GOOGLE_PRIVATE_KEY || ''),
     oauthClientId: googleOAuth.clientId,
@@ -72,6 +73,10 @@ function hasGoogleOAuthConfig(config: CalendarRuntimeConfig) {
 }
 
 function assertCalendarConfig(config: CalendarRuntimeConfig) {
+  if (getAppointmentTestMode()) {
+    return true;
+  }
+
   const missing = [
     !config.enabled ? 'Google Calendar integration is disabled' : '',
     !config.calendarId ? 'Google Calendar ID' : '',

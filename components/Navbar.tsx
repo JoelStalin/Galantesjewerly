@@ -5,12 +5,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import { SiteSettings } from '@/lib/db';
-import { GoogleUserSessionPayload } from '@/lib/google-login';
+import type { AuthenticatedCustomer } from '@/lib/customer-auth';
 import { useCart } from '@/context/shop/CartContext';
+
+const FALLBACK_NAV = [
+  { label: 'Heritage', href: '/about' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'Bridal', href: '/bridal' },
+  { label: 'Repairs', href: '/repairs' },
+  { label: 'Contact', href: '/contact' },
+];
 
 interface NavbarProps {
   settings: SiteSettings;
-  user?: GoogleUserSessionPayload | null;
+  user?: AuthenticatedCustomer | null;
 }
 
 export function Navbar({ settings, user }: NavbarProps) {
@@ -39,30 +47,30 @@ export function Navbar({ settings, user }: NavbarProps) {
         <div className="flex justify-between items-center">
           {/* Logo & Title */}
           <div className="flex items-center space-x-4 flex-1">
-            <Link href="/" className="flex items-center space-x-3 group" onClick={() => setIsOpen(false)}>
+            <Link href="/" className="flex items-center space-x-4 group" onClick={() => setIsOpen(false)}>
               <Image 
-                src={logoUrl || "/assets/branding/logo-anchor.png"} 
+                src={logoUrl || "/assets/branding/logo.png"} 
                 alt="Galante's" 
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain transition-transform group-hover:scale-105"
-                unoptimized={logoUrl.startsWith('/api/image?')}
+                width={80}
+                height={80}
+                className="h-14 w-14 md:h-20 md:w-20 object-contain transition-transform group-hover:scale-105"
+                unoptimized={!!(logoUrl && (logoUrl.startsWith('/api/image?') || logoUrl.startsWith('http')))}
               />
-              <span className={`text-xl font-serif tracking-widest uppercase transition-colors hidden sm:inline ${
-                scrolled ? 'text-gray-900' : 'text-gray-900'
-              }`}>
-                {settings.site_title || "Galante's"}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xl sm:text-2xl md:text-3xl font-serif tracking-[0.15em] uppercase text-gray-900 leading-tight">
+                  {settings.site_title || "Galante's Jewelry"}
+                </span>
+              </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center justify-center space-x-10 flex-[2]">
-            {navLinks.map((link) => (
+          <div className="hidden md:flex items-center justify-center space-x-6 lg:space-x-8 flex-[2]">
+            {(navLinks.length > 0 ? navLinks : FALLBACK_NAV).map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-[11px] font-semibold tracking-[0.24em] uppercase text-gray-800 hover:text-amber-700 transition-colors"
+                className="text-[10px] lg:text-[11px] font-semibold tracking-[0.24em] uppercase text-gray-800 hover:text-amber-700 transition-colors whitespace-nowrap"
               >
                 {link.label}
               </Link>
@@ -70,22 +78,22 @@ export function Navbar({ settings, user }: NavbarProps) {
           </div>
 
           {/* Icons & Actions */}
-          <div className="flex items-center justify-end space-x-6 flex-1">
+          <div className="flex items-center justify-end space-x-4 lg:space-x-6 flex-1">
             <Link
-              href={user ? "/account" : "/api/auth/google/start"}
+              href={user ? "/account" : "/auth/login"}
               className="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-amber-700 transition-colors"
               title={user ? "Account" : "Customer Login"}
             >
-              <User size={20} />
-              <span className="text-[10px] uppercase tracking-widest font-bold">
+              <User size={18} className="lg:w-5 lg:h-5" />
+              <span className="text-[9px] lg:text-[10px] uppercase tracking-widest font-bold">
                 {user ? 'Account' : 'Login'}
               </span>
             </Link>
             
             <Link href="/cart" className="relative text-gray-900 hover:text-amber-700 transition-colors">
-              <ShoppingBag size={22} strokeWidth={1.5} />
+              <ShoppingBag size={20} className="lg:w-5.5 lg:h-5.5" strokeWidth={1.5} />
               {totalCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[9px] font-bold text-white">
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 lg:h-4 lg:w-4 items-center justify-center rounded-full bg-amber-600 text-[8px] lg:text-[9px] font-bold text-white shadow-sm">
                   {totalCount}
                 </span>
               )}
@@ -93,17 +101,17 @@ export function Navbar({ settings, user }: NavbarProps) {
             
             <Link 
               href="/shop" 
-              className="hidden lg:block border border-gray-900 bg-gray-900 text-white px-6 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-transparent hover:text-gray-900 active:scale-95"
+              className="hidden lg:block border border-gray-900 bg-gray-900 text-white px-5 py-2 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all hover:bg-transparent hover:text-gray-900 active:scale-95 shadow-sm"
             >
               Shop
             </Link>
 
             <button 
-              className="md:hidden text-gray-900 p-2"
+              className="md:hidden text-gray-900 p-2 hover:bg-gray-100 rounded-full transition-colors"
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle menu"
             >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              {isOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
@@ -125,7 +133,7 @@ export function Navbar({ settings, user }: NavbarProps) {
             ))}
             <div className="pt-6 flex flex-col space-y-4">
               <Link
-                href={user ? "/account" : "/api/auth/google/start"}
+                href={user ? "/account" : "/auth/login"}
                 className="flex items-center space-x-3 px-3 py-2 text-gray-700"
                 onClick={() => setIsOpen(false)}
               >

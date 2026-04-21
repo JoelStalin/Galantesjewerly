@@ -16,6 +16,7 @@ export interface CustomerData {
 export interface SiteSettings {
   favicon_url: string;
   logo_url: string;
+  hero_image_url?: string;
   site_title: string;
   site_description: string;
   instagram_url?: string;
@@ -25,6 +26,7 @@ export interface SiteSettings {
   contact_phone?: string;
   contact_address?: string;
   appointment_email?: string;
+  navigation_links?: any[];
 }
 
 export interface OrderLine {
@@ -38,10 +40,60 @@ export interface OrderLine {
  */
 export const OdooService = {
   /**
-   * Fetches company settings from Odoo res.company
+   * Fetches company settings from Odoo (custom galante.cms.settings model preferred)
    */
   async getCompanySettings(): Promise<Partial<SiteSettings>> {
+    const config = client.getConfig();
+    if (!config.enabled || !config.isReady) {
+      console.log('[OdooService] Odoo is disabled, skipping getCompanySettings');
+      return {};
+    }
+
     try {
+      // 1. Try custom CMS model
+      const cmsSettings = await client.searchRead('galante.cms.settings', {
+        domain: [],
+        fields: [
+          'site_title',
+          'site_description',
+          'logo_url',
+          'favicon_url',
+          'hero_image_url',
+          'instagram_url',
+          'facebook_url',
+          'whatsapp_number',
+          'contact_email',
+          'contact_phone',
+          'contact_address',
+          'appointment_email',
+          'navigation_json'
+        ],
+        limit: 1
+      }) as any[];
+
+      if (cmsSettings && cmsSettings.length > 0) {
+        const s = cmsSettings[0];
+        let navLinks = [];
+        try { navLinks = JSON.parse(s.navigation_json || '[]'); } catch (e) { console.error('Failed to parse nav links from Odoo', e); }
+        
+        return {
+          site_title: s.site_title,
+          site_description: s.site_description,
+          logo_url: s.logo_url,
+          favicon_url: s.favicon_url,
+          hero_image_url: s.hero_image_url,
+          instagram_url: s.instagram_url,
+          facebook_url: s.facebook_url,
+          whatsapp_number: s.whatsapp_number,
+          contact_email: s.contact_email,
+          contact_phone: s.contact_phone,
+          contact_address: s.contact_address,
+          appointment_email: s.appointment_email,
+          navigation_links: navLinks,
+        };
+      }
+
+      // 2. Fallback to res.company
       const companyId = process.env.ODOO_COMPANY_ID ? parseInt(process.env.ODOO_COMPANY_ID, 10) : 1;
       const companies = await client.call('res.company', 'search_read', {
         domain: [['id', '=', companyId]],
@@ -55,8 +107,6 @@ export const OdooService = {
           'social_instagram', 
           'social_facebook', 
           'social_whatsapp',
-          'x_site_title', // Custom field if exists
-          'x_site_description', // Custom field if exists
         ],
         limit: 1
       });
@@ -65,8 +115,7 @@ export const OdooService = {
 
       const c = companies[0];
       return {
-        site_title: c.x_site_title || c.name,
-        site_description: c.x_site_description,
+        site_title: c.name,
         contact_email: c.email,
         contact_phone: c.phone,
         contact_address: `${c.street || ''}, ${c.city || ''} ${c.zip || ''}`.trim(),

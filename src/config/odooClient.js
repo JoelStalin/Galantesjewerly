@@ -300,7 +300,8 @@ function createOdooClient(overrides = {}) {
         lastError = error;
 
         // Don't retry if it's a configuration error or access denied
-        if (error.status === 401 || error.status === 403 || error.name === 'OdooConfigError') {
+        const errorStatus = error?.status || error?.details?.status;
+        if (errorStatus === 401 || errorStatus === 403 || error.name === 'OdooConfigError') {
           throw error;
         }
 

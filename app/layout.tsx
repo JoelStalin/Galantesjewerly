@@ -3,6 +3,15 @@ import Link from 'next/link';
 import './globals.css';
 import { getSettings, type SiteSettings } from '@/lib/db';
 import { Navbar } from '@/components/Navbar';
+import { Outfit } from 'next/font/google';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
+
+const outfit = Outfit({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-outfit',
+});
+
 import { OdooService } from '@/lib/odoo/services';
 
 export const dynamic = 'force-dynamic';
@@ -62,20 +71,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 import { CartProvider } from '@/context/shop/CartContext';
 import { cookies } from 'next/headers';
-import { verifyGoogleUserSession, GOOGLE_USER_COOKIE } from '@/lib/google-login';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const finalSettings = await loadSiteSettings();
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(GOOGLE_USER_COOKIE)?.value;
-  const user = sessionToken ? await verifyGoogleUserSession(sessionToken) : null;
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
 
   return (
-    <html lang="en">
+    <html lang="en" className={outfit.variable}>
       <head>
         <link rel="icon" href={finalSettings.favicon_url} sizes="any" />
       </head>
-      <body className="bg-background text-foreground flex min-h-screen flex-col">
+      <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
         <CartProvider>
           <Navbar settings={finalSettings} user={user} />
           <main className="flex-grow">{children}</main>
