@@ -22,6 +22,9 @@ jobs:
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          proxy_host: ${{ secrets.STAGING_SSH_HOST }} # Cloudflare domain
+          proxy_port: 443
+          # Usando comando para el tunel si es necesario
           script: |
             # Ir al directorio raíz
             cd ~/galantesjewelry_staging || exit 1
