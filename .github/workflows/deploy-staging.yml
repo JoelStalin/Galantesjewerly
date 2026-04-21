@@ -17,6 +17,16 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
+      - name: Debug Tunnel Connection
+        env:
+          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+        run: |
+          echo "Verificando acceso al túnel..."
+          # Este comando debería devolver información si el token es válido y la política existe
+          cloudflared access curl --service-token-id $CF_ID --service-token-secret $CF_SECRET https://$SSH_HOST || echo "Fallo en verificación de política"
+
       - name: Setup SSH and Deploy
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
@@ -24,45 +34,20 @@ jobs:
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          # El AUD detectado en los logs previos
           CF_AUD: "9a40cc50983b5167e76468120741abe12a59b7ac0b4e1c4db5f2df6de8ff4c87"
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          echo "Iniciando despliegue con AUD explícito..."
-          
-          # Usamos ProxyCommand con el AUD explícito para forzar el reconocimiento de la política
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
-              -o "ProxyCommand=/usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET --aud $CF_AUD" \
+          # Usamos PreferredAuthentications para forzar la llave
+          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
+              -o PreferredAuthentications=publickey \
+              -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET --aud $CF_AUD" \
               "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
-            set -e
-            mkdir -p ~/galantesjewelry_staging
-            cd ~/galantesjewelry_staging
-            
-            if [ ! -d .git ]; then 
-              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
-            fi
-            
+            echo "CONEXION_EXITOSA"
+            cd ~/galantesjewelry_staging || exit 1
             git fetch origin develop
             git reset --hard origin/develop
-            
-            # Sincronizar secretos
-            cat <<EOF > .env.prod
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_USER=odoo
-            ODOO_DB=galantes_db
-            ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
-            ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
-            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-            EOF
-            chmod 600 .env.prod
-
             sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
-            sudo docker image prune -f
-            echo "Despliegue Staging completado exitosamente."
           REMOTESSH
