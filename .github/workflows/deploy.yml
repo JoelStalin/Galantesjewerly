@@ -64,7 +64,7 @@ jobs:
             chmod 600 .env.prod
 
             # Solo reconstruir si hay cambios en el código de la app o dependencias
-            if echo "$CHANGES" | grep -qE "^(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
+            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
               echo "Cambios detectados en la aplicación. Reconstruyendo contenedor web..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
@@ -73,7 +73,7 @@ jobs:
             fi
 
             # Solo actualizar Odoo si hay cambios en sus addons o configuración
-            if echo "$CHANGES" | grep -qE "^(odoo/|docker-compose)"; then
+            if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
               echo "Cambios detectados en Odoo. Actualizando módulos..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
