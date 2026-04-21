@@ -52,3 +52,5 @@ jobs:
       - name: Cleanup
         run: |
           ssh staging "sudo docker image prune -f"
+
+# Final validation with confirmed policy v1
