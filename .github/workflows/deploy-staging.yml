@@ -54,9 +54,9 @@ jobs:
             # Solo reconstruir si hay cambios en el código de la app o dependencias
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
               echo "Cambios detectados. Reconstruyendo contenedores de Staging..."
-              # Usamos -p staging para no chocar con otros proyectos
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml build web
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
+              # Usamos el archivo de staging dedicado
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml build web
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --no-deps web
             else
               echo "Sin cambios críticos en la app."
             fi
@@ -64,7 +64,7 @@ jobs:
             # Solo actualizar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
               echo "Cambios en Odoo detectados..."
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --force-recreate odoo
+              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --force-recreate odoo
             fi
 
             # Limpieza suave

@@ -1,0 +1,73 @@
+# Docker Compose – Galante's Jewelry (Staging - Getupsoft)
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: galantes_web_staging
+    restart: always
+    ports:
+      - "3030:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - ODOO_API_KEY=${ODOO_API_KEY}
+      - ODOO_BASE_URL=http://odoo:8069
+      - ODOO_DB=${ODOO_DB:-galantes_db_staging}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    networks:
+      - galante-staging-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  odoo:
+    build:
+      context: ./odoo
+      dockerfile: Dockerfile
+    container_name: galantes_odoo_staging
+    restart: always
+    ports:
+      - "8070:8069"
+    environment:
+      - DB_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - ODOO_PASSWORD=${POSTGRES_PASSWORD}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ODOO_DB=${ODOO_DB:-galantes_db_staging}
+    networks:
+      - galante-staging-net
+    volumes:
+      - odoo-staging-data:/var/lib/odoo
+      - ./odoo/addons:/mnt/extra-addons
+      - ./odoo/config:/etc/odoo
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: galantes_db_staging
+    restart: always
+    environment:
+      - POSTGRES_DB=${ODOO_DB:-galantes_db_staging}
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - db-staging-data:/var/lib/postgresql/data
+    networks:
+      - galante-staging-net
+
+networks:
+  galante-staging-net:
+    driver: bridge
+
+volumes:
+  odoo-staging-data:
+  db-staging-data:
