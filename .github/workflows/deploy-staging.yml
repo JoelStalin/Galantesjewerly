@@ -37,8 +37,18 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
-      - name: Execute Remote Deploy
+      - name: Pull and Sync Code
         run: |
-          ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && sudo docker image prune -f && echo 'Despliegue finalizado.'"
+          ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop"
 
-# Trigger final deployment with Cloudflare Access Policy v1
+      - name: Setup Environment File
+        run: |
+          ssh staging "cd ~/galantesjewelry_staging && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env.prod && echo 'ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}' >> .env.prod"
+
+      - name: Docker Compose Up
+        run: |
+          ssh staging "cd ~/galantesjewelry_staging && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build"
+
+      - name: Cleanup
+        run: |
+          ssh staging "sudo docker image prune -f"
