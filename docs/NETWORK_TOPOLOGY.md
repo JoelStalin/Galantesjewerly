@@ -15,6 +15,7 @@ Este documento detalla la infraestructura unificada y la separación de entornos
 *   **Servidor:** ssg Getupsoft (`192.168.1.233` - Local)
 *   **Dueño Cloudflare:** `joelstalin2105@gmail.com`
 *   **Dominios de Prueba:**
+    *   **SSH/Entry:** [stg.getupsoft.com.do](https://stg.getupsoft.com.do)
     *   **Web:** [galantes.getupsoft.com.do](https://galantes.getupsoft.com.do) (Puerto local: `3030`)
     *   **Odoo:** [galantes-odoo.getupsoft.com.do](https://galantes-odoo.getupsoft.com.do) (Puerto local: `8070`)
 *   **Proyecto Docker:** `galantes-staging` (Aislado de otros proyectos)
