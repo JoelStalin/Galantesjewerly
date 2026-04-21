@@ -22,23 +22,36 @@ jobs:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
-          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          # Cloudflared picks these up automatically if named exactly like this
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Intentar conectar con SSH puro primero, inyectando los headers de Cloudflare directamente
-          echo "Iniciando despliegue robusto..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
-              -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
-              "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
+          # Configuración SSH optimizada para túneles
+          cat <<EOF > ~/.ssh/config
+          Host staging
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/id_rsa
+            ProxyCommand cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+          EOF
+
+          echo "Iniciando despliegue via túnel..."
+          # Ejecutamos con -T para evitar problemas de TTY
+          ssh -T staging <<'REMOTESSH'
             set -e
             mkdir -p ~/galantesjewelry_staging
             cd ~/galantesjewelry_staging
             
-            if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi
+            if [ ! -d .git ]; then 
+              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
+            fi
+            
             git fetch origin develop
             git reset --hard origin/develop
             
@@ -58,5 +71,5 @@ jobs:
 
             sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
             sudo docker image prune -f
-            echo "Despliegue Staging completado exitosamente."
+            echo "Despliegue finalizado."
           REMOTESSH
