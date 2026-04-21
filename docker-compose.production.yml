@@ -113,3 +113,5 @@ networks:
 volumes:
   odoo-data:
   postgres-data:
+
+# Force restart Odoo v1
