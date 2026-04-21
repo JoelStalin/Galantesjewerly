@@ -17,7 +17,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Test Connection
+      - name: Setup SSH and Deploy
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -29,10 +29,34 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Intentamos solo un comando simple para validar conectividad
-          echo "Intentando conectar a $SSH_HOST via cloudflared..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+          # Intentar conectar con SSH puro primero, inyectando los headers de Cloudflare directamente
+          echo "Iniciando despliegue robusto..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
               -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
-              "$SSH_USER@$SSH_HOST" "echo CONEXION_EXITOSA"
+              "$SSH_USER@$SSH_HOST" <<'REMOTESSH'
+            set -e
+            mkdir -p ~/galantesjewelry_staging
+            cd ~/galantesjewelry_staging
+            
+            if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi
+            git fetch origin develop
+            git reset --hard origin/develop
+            
+            # Sincronizar secretos
+            cat <<EOF > .env.prod
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_USER=odoo
+            ODOO_DB=galantes_db
+            ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
+            ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            EOF
+            chmod 600 .env.prod
 
-# Retry with ssh:// service config v1
+            sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
+            sudo docker image prune -f
+            echo "Despliegue Staging completado exitosamente."
+          REMOTESSH
