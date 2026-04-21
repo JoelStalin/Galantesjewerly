@@ -17,7 +17,7 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Execute Staging Deploy (HTTPS Bridge)
+      - name: Execute Staging Deploy
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -29,17 +29,17 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # La técnica definitiva: SSH a través de túnel configurado en el config local del runner
+          # Uso de headers explícitos para forzar el Service Token en Cloudflare Access
           cat <<EOF > ~/.ssh/config
           Host staging
             HostName $SSH_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+            ProxyCommand cloudflared access ssh --hostname %h --header "CF-Access-Client-Id: $CF_ID" --header "CF-Access-Client-Secret: $CF_SECRET"
             StrictHostKeyChecking no
             ConnectTimeout 60
             ServerAliveInterval 30
           EOF
 
-          echo "Iniciando despliegue definitivo..."
+          echo "Iniciando despliegue definitivo (Header Auth)..."
           ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env.prod && echo 'ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}' >> .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && echo 'STAGING_UP'"
