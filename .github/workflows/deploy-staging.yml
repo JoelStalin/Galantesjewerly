@@ -1,0 +1,62 @@
+name: Deploy to Staging (Getupsoft)
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH and Deploy to Staging
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          script: |
+            # Ir al directorio raíz de staging
+            mkdir -p ~/staging-galantes
+            cd ~/staging-galantes || exit 1
+
+            # Inicializar repo si no existe
+            if [ ! -d ".git" ]; then
+              git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .
+            fi
+
+            # Sincronizar código
+            echo "Sincronizando cambios de Git (develop)..."
+            git fetch origin develop
+            CHANGES=$(git diff --name-only HEAD origin/develop)
+            git reset --hard origin/develop
+
+            # Secretos de Staging (Usar variables separadas de Prod)
+            {
+              echo "ADMIN_PASSWORD=${{ secrets.STAGING_ADMIN_PASSWORD }}"
+              echo "ADMIN_SECRET_KEY=${{ secrets.STAGING_ADMIN_SECRET_KEY }}"
+              echo "POSTGRES_PASSWORD=${{ secrets.STAGING_POSTGRES_PASSWORD }}"
+              echo "POSTGRES_USER=odoo"
+              echo "ODOO_DB=galantes_db_staging"
+              echo "ODOO_PASSWORD=${{ secrets.STAGING_ODOO_PASSWORD }}"
+              echo "ODOO_API_KEY=${{ secrets.STAGING_ODOO_API_KEY }}"
+              echo "CF_TUNNEL_TOKEN_STAGING=${{ secrets.STAGING_CF_TUNNEL_TOKEN }}"
+              echo "STRIPE_SECRET_KEY=${{ secrets.STAGING_STRIPE_SECRET_KEY }}"
+            } > .env.staging
+            chmod 600 .env.staging
+
+            # Solo reconstruir si hay cambios relevantes
+            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
+              echo "Actualizando contenedores de Staging..."
+              # Nota: Usamos un prefijo de proyecto para no chocar con Prod si están en la misma máquina
+              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.production.yml up -d --build
+            else
+              echo "Sin cambios críticos. Staging actualizado."
+            fi
+
+            sudo docker image prune -f
+            echo "Despliegue a Staging finalizado."
