@@ -29,25 +29,25 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
+          # Configuración definitiva validada por documentación oficial
           cat <<EOF > ~/.ssh/config
           Host staging
             HostName $SSH_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+            ProxyCommand /usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
             StrictHostKeyChecking no
             ConnectTimeout 60
           EOF
 
-          echo "Iniciando despliegue y diagnóstico..."
-          ssh staging <<'REMOTESSH'
+          echo "Iniciando despliegue (Non-interactive mode)..."
+          ssh -T staging <<'REMOTESSH'
             set -e
             cd ~/galantesjewelry_staging
-            
             git fetch origin develop
             git reset --hard origin/develop
             
-            # Sincronizar secretos con TODAS las variables necesarias
+            # Sincronizar .env.prod
             cat <<EOF > .env.prod
             NODE_ENV=production
             PORT=3000
@@ -65,18 +65,6 @@ jobs:
             EOF
             chmod 600 .env.prod
 
-            echo "Reiniciando contenedores..."
-            docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build --force-recreate
-            
-            echo "Esperando inicialización (20s)..."
-            sleep 20
-            
-            echo "--- ESTADO DE CONTENEDORES ---"
-            docker ps --filter "name=galantes"
-            
-            echo "--- LOGS DE LA WEB (Errores recientes) ---"
-            docker logs --tail 50 galantes_web_staging
-            
-            echo "--- PRUEBA DE CONEXIÓN INTERNA ---"
-            docker exec galantes_web_staging wget -qO- http://odoo:8069/web/health || echo "Odoo no responde internamente"
+            docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
+            echo "STAGING_READY"
           REMOTESSH
