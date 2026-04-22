@@ -29,17 +29,54 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Uso de headers explícitos para forzar el Service Token en Cloudflare Access
           cat <<EOF > ~/.ssh/config
           Host staging
             HostName $SSH_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h --header "CF-Access-Client-Id: $CF_ID" --header "CF-Access-Client-Secret: $CF_SECRET"
+            ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
             StrictHostKeyChecking no
             ConnectTimeout 60
-            ServerAliveInterval 30
           EOF
 
-          echo "Iniciando despliegue definitivo (Header Auth)..."
-          ssh staging "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && echo 'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}' > .env.prod && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env.prod && echo 'ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}' >> .env.prod && sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build && echo 'STAGING_UP'"
+          echo "Iniciando despliegue y diagnóstico..."
+          ssh staging <<'REMOTESSH'
+            set -e
+            cd ~/galantesjewelry_staging
+            
+            git fetch origin develop
+            git reset --hard origin/develop
+            
+            # Sincronizar secretos con TODAS las variables necesarias
+            cat <<EOF > .env.prod
+            NODE_ENV=production
+            PORT=3000
+            HOSTNAME=0.0.0.0
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_USER=odoo
+            ODOO_DB=galantes_db
+            ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
+            ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}
+            ODOO_BASE_URL=http://odoo:8069
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            EOF
+            chmod 600 .env.prod
+
+            echo "Reiniciando contenedores..."
+            docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build --force-recreate
+            
+            echo "Esperando inicialización (20s)..."
+            sleep 20
+            
+            echo "--- ESTADO DE CONTENEDORES ---"
+            docker ps --filter "name=galantes"
+            
+            echo "--- LOGS DE LA WEB (Errores recientes) ---"
+            docker logs --tail 50 galantes_web_staging
+            
+            echo "--- PRUEBA DE CONEXIÓN INTERNA ---"
+            docker exec galantes_web_staging wget -qO- http://odoo:8069/web/health || echo "Odoo no responde internamente"
+          REMOTESSH
