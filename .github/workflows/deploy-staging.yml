@@ -29,7 +29,8 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Conexión directa minimalista
-          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-              -o "ProxyCommand=cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET" \
+          echo "Conectando via tunel Cloudflare (Header Auth)..."
+          # Inyectamos los headers directamente en el proxycommand
+          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=60 \
+              -o "ProxyCommand=cloudflared access ssh --hostname %h --header 'CF-Access-Client-Id: $CF_ID' --header 'CF-Access-Client-Secret: $CF_SECRET'" \
               "$SSH_USER@$SSH_HOST" "mkdir -p ~/galantesjewelry_staging && cd ~/galantesjewelry_staging && if [ ! -d .git ]; then git clone -b develop https://github.com/JoelStalin/Galantesjewerly.git .; fi && git fetch origin develop && git reset --hard origin/develop && docker compose -p galantes-staging -f docker-compose.staging.yml up -d --build"
