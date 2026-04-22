@@ -51,13 +51,13 @@ export function Navbar({ settings, user }: NavbarProps) {
               <Image 
                 src={logoUrl || "/assets/branding/logo.png"} 
                 alt="Galante's" 
-                width={120}
-                height={120}
-                className="h-20 w-20 md:h-28 md:w-28 object-contain transition-transform group-hover:scale-105"
+                width={200}
+                height={200}
+                className="h-32 w-32 md:h-48 md:w-48 object-contain transition-transform group-hover:scale-105"
                 unoptimized={!!(logoUrl && (logoUrl.startsWith('/api/image?') || logoUrl.startsWith('http')))}
               />
               <div className="flex flex-col">
-                <span className="text-lg sm:text-xl md:text-2xl font-serif tracking-[0.15em] uppercase text-gray-900 leading-tight">
+                <span className="text-[10px] md:text-xs font-serif tracking-[0.3em] uppercase text-gray-900 leading-relaxed max-w-[150px] md:max-w-none">
                   {settings.site_title || "Galante's Jewelry"}
                 </span>
               </div>
