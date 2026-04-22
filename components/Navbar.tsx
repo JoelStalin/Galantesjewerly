@@ -51,13 +51,13 @@ export function Navbar({ settings, user }: NavbarProps) {
               <Image 
                 src={logoUrl || "/assets/branding/logo.png"} 
                 alt="Galante's" 
-                width={80}
-                height={80}
-                className="h-14 w-14 md:h-20 md:w-20 object-contain transition-transform group-hover:scale-105"
+                width={120}
+                height={120}
+                className="h-20 w-20 md:h-28 md:w-28 object-contain transition-transform group-hover:scale-105"
                 unoptimized={!!(logoUrl && (logoUrl.startsWith('/api/image?') || logoUrl.startsWith('http')))}
               />
               <div className="flex flex-col">
-                <span className="text-xl sm:text-2xl md:text-3xl font-serif tracking-[0.15em] uppercase text-gray-900 leading-tight">
+                <span className="text-lg sm:text-xl md:text-2xl font-serif tracking-[0.15em] uppercase text-gray-900 leading-tight">
                   {settings.site_title || "Galante's Jewelry"}
                 </span>
               </div>
@@ -71,6 +71,7 @@ export function Navbar({ settings, user }: NavbarProps) {
                 key={link.label}
                 href={link.href}
                 className="text-[10px] lg:text-[11px] font-semibold tracking-[0.24em] uppercase text-gray-800 hover:text-amber-700 transition-colors whitespace-nowrap"
+                style={{ textShadow: scrolled ? 'none' : '0 0 12px rgba(255,255,255,0.8), 0 0 4px rgba(255,255,255,0.5)' }}
               >
                 {link.label}
               </Link>
