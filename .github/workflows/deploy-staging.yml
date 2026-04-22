@@ -29,8 +29,7 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # La técnica definitiva: Usar los tokens como HEADERS HTTP en el proxycommand
-          # Esto es lo más compatible con Cloudflare Access Service Auth
+          # La tecnica definitiva: Usar headers explicitos para el tunel
           cat <<EOF > ~/.ssh/config
           Host staging
             HostName $SSH_HOST
@@ -41,14 +40,14 @@ jobs:
             ConnectTimeout 60
           EOF
 
-          echo "Iniciando despliegue remoto via Header Auth..."
+          echo "Iniciando despliegue robusto en Staging..."
           ssh -T staging <<'REMOTESSH'
             set -e
             cd ~/galantesjewelry_staging
             git fetch origin develop
             git reset --hard origin/develop
             
-            # Sincronizar secretos
+            # Sincronizar secretos reales
             cat <<EOF > .env.prod
             NODE_ENV=production
             PORT=3000
@@ -66,6 +65,7 @@ jobs:
             EOF
             chmod 600 .env.prod
 
+            # Levantar stack
             docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
             echo "STAGING_READY"
           REMOTESSH
