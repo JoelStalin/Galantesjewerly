@@ -17,37 +17,40 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Execute Staging Deploy
+      - name: Setup SSH via Direct Tunnel
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
-          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          TUNNEL_TOKEN: ${{ secrets.CF_TUNNEL_TOKEN_STAGING }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Configuración definitiva validada por documentación oficial
+          # Iniciamos el tunel directo para esta sesion
+          cloudflared tunnel --no-autoupdate run --token "$TUNNEL_TOKEN" &
+          sleep 15
+          
+          # Configuración SSH para conectar a través del túnel local
           cat <<EOF > ~/.ssh/config
           Host staging
             HostName $SSH_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/id_rsa
-            ProxyCommand /usr/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+            ProxyCommand cloudflared access ssh --hostname %h
             StrictHostKeyChecking no
             ConnectTimeout 60
           EOF
 
-          echo "Iniciando despliegue (Non-interactive mode)..."
+          echo "Ejecutando despliegue remoto..."
           ssh -T staging <<'REMOTESSH'
             set -e
             cd ~/galantesjewelry_staging
             git fetch origin develop
             git reset --hard origin/develop
             
-            # Sincronizar .env.prod
+            # Sincronizar .env con todos los secretos
             cat <<EOF > .env.prod
             NODE_ENV=production
             PORT=3000
@@ -66,5 +69,5 @@ jobs:
             chmod 600 .env.prod
 
             docker compose -p galantes-staging --env-file .env.prod -f docker-compose.staging.yml up -d --build
-            echo "STAGING_READY"
+            echo "STAGING_SUCCESSFUL"
           REMOTESSH
