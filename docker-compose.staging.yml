@@ -19,6 +19,8 @@ services:
       - ODOO_BASE_URL=http://odoo:8069
       - ODOO_DB=${ODOO_DB:-galantes_db_staging}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    volumes:
+      - ./data:/app/data
     networks:
       - galante-staging-net
     healthcheck:
