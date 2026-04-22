@@ -56,11 +56,11 @@ const INITIAL_DATA: DBData = {
   settings: {
     favicon_url: '/favicon.ico',
     logo_url: '/assets/branding/logo.png',
-    site_title: "Galante's Jewelry by the Sea | Coastal Fine Jewelry",
+    site_title: "Galante's Jewelry by the Sea ",
     site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
     instagram_url: 'https://instagram.com/galantesjewelry',
     facebook_url: 'https://facebook.com/galantesjewelry',
-    whatsapp_number: '1234567890',
+    whatsapp_number: '16464965879',
     contact_email: 'concierge@galantesjewelry.com',
     contact_phone: '(305) 555-0199',
     contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',

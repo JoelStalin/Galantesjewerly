@@ -292,7 +292,7 @@ terraform plan  # Should show no changes
 
 ```bash
 # Import a single resource
-terraform import aws_instance.web i-1234567890abcdef0
+terraform import aws_instance.web i-16464965879abcdef0
 
 # Import with for_each key
 terraform import 'aws_subnet.public["us-east-1a"]' subnet-0123456789abcdef0
@@ -300,7 +300,7 @@ terraform import 'aws_subnet.public["us-east-1a"]' subnet-0123456789abcdef0
 # Bulk import (Terraform 1.5+ import blocks)
 import {
   to = aws_instance.web
-  id = "i-1234567890abcdef0"
+  id = "i-16464965879abcdef0"
 }
 ```
 
@@ -344,7 +344,7 @@ terraform force-unlock LOCK_ID
 # The LOCK_ID is shown in the error message when lock fails:
 # Error: Error locking state: Error acquiring the state lock
 # Lock Info:
-#   ID:        12345678-abcd-1234-abcd-1234567890ab
+#   ID:        12345678-abcd-1234-abcd-16464965879ab
 ```
 
 ---

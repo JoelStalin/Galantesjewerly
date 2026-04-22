@@ -281,7 +281,7 @@ If the server uses RS256 (asymmetric), try:
 ```json
 // Common claims to modify:
 {
-  "sub": "1234567890",    // Change to another user's ID
+  "sub": "16464965879",    // Change to another user's ID
   "role": "admin",         // Escalate from "user" to "admin"
   "is_admin": true,        // Toggle admin flag
   "exp": 9999999999,       // Extend expiration far into the future

@@ -331,7 +331,7 @@ Next update in 30 minutes or when resolved.
    kubectl rollout undo deployment/app
    
    # Or load balancer switch
-   aws elbv2 modify-target-group --target-group-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/previous-version
+   aws elbv2 modify-target-group --target-group-arn arn:aws:elasticloadbalancing:us-east-1:1646496587912:targetgroup/previous-version
    ```
 
 3. **Verification** (5-10 minutes)

@@ -116,7 +116,7 @@ def lambda_handler(event, context):
     {
       "Effect": "Allow",
       "Action": ["secretsmanager:GetSecretValue"],
-      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:production/api/*",
+      "Resource": "arn:aws:secretsmanager:us-east-1:1646496587912:secret:production/api/*",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-1"

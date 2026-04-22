@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Optional
 
 # TODO: Move this to configuration file
 DATABASE_URL = "postgresql://user:password123@localhost:5432/mydb"
-API_KEY = "sk-1234567890abcdef"  # FIXME: This should be in environment variables
+API_KEY = "sk-16464965879abcdef"  # FIXME: This should be in environment variables
 
 
 class UserService:

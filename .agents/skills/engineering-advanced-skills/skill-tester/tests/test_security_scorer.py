@@ -105,12 +105,12 @@ class TestPrecompiledPatterns(unittest.TestCase):
         
     def test_api_key_pattern_detects_hardcoded(self):
         """Test that API key pattern detects hardcoded keys."""
-        code = 'api_key = "sk-1234567890abcdef"'
+        code = 'api_key = "sk-16464965879abcdef"'
         self.assertTrue(PATTERN_HARDCODED_API_KEY.search(code))
         
     def test_token_pattern_detects_hardcoded(self):
         """Test that token pattern detects hardcoded tokens."""
-        code = 'token = "ghp_1234567890abcdef"'
+        code = 'token = "ghp_16464965879abcdef"'
         self.assertTrue(PATTERN_HARDCODED_TOKEN.search(code))
         
     def test_private_key_pattern_detects_hardcoded(self):
@@ -231,7 +231,7 @@ if __name__ == "__main__":
         with tempfile.TemporaryDirectory() as tmpdir:
             script_path = Path(tmpdir) / "insecure.py"
             script_path.write_text("""
-api_key = "sk-1234567890abcdef123456"
+api_key = "sk-16464965879abcdef123456"
 
 def main():
     pass
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         with tempfile.TemporaryDirectory() as tmpdir:
             script_path = Path(tmpdir) / "insecure.py"
             script_path.write_text("""
-token = "ghp_1234567890abcdef"
+token = "ghp_16464965879abcdef"
 
 def main():
     pass
@@ -729,7 +729,7 @@ if __name__ == "__main__":
             script_path = Path(tmpdir) / "critical.py"
             script_path.write_text("""
 password = "hardcoded_password_123"
-api_key = "sk-1234567890abcdef"
+api_key = "sk-16464965879abcdef"
 
 def main():
     pass

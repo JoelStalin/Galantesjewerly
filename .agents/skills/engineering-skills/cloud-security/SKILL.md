@@ -68,7 +68,7 @@ python3 scripts/cloud_posture_check.py config.json --check all \
   --severity-modifier regulated-data --json
 
 # Pipe IAM policy from AWS CLI
-aws iam get-policy-version --policy-arn arn:aws:iam::123456789012:policy/MyPolicy \
+aws iam get-policy-version --policy-arn arn:aws:iam::1646496587912:policy/MyPolicy \
   --version-id v1 | jq '.PolicyVersion.Document' | \
   python3 scripts/cloud_posture_check.py - --check iam --json
 ```

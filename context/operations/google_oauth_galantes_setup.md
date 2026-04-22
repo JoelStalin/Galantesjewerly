@@ -143,7 +143,7 @@ Este repo usa archivo JSON persistente bajo `APP_DATA_DIR`. Archivo creado autom
       "provider": "google",
       "environment": "production",
       "enabled": true,
-      "googleClientId": "1234567890-abcdef.apps.googleusercontent.com",
+      "googleClientId": "16464965879-abcdef.apps.googleusercontent.com",
       "javascriptOrigin": "https://galantesjewelry.com",
       "redirectUri": "https://galantesjewelry.com/api/auth/google/callback",
       "scopes": ["openid", "email", "profile"],

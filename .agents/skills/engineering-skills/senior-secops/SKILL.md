@@ -346,7 +346,7 @@ See `references/compliance_requirements.md` for full control mappings. Run `comp
 
 ```python
 # BAD: Hardcoded secret
-API_KEY = "sk-1234567890abcdef"
+API_KEY = "sk-16464965879abcdef"
 
 # GOOD: Environment variable
 import os

@@ -432,7 +432,7 @@ export default function Dashboard() {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">WhatsApp (Number with Country Code)</label>
-                    <input type="text" value={settings.whatsapp_number || ''} onChange={e => setSettings({ ...settings, whatsapp_number: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-2.5 text-xs focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none" placeholder="e.g.: 1234567890" />
+                    <input type="text" value={settings.whatsapp_number || ''} onChange={e => setSettings({ ...settings, whatsapp_number: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-2.5 text-xs focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none" placeholder="e.g.: 16464965879" />
                     <p className="text-[9px] text-zinc-400 mt-1 italic">This number will be used for the direct chat button.</p>
                   </div>
                 </div>

@@ -137,7 +137,7 @@ Functions:
 aws cloudwatch get-metric-statistics \
   --namespace AWS/EC2 \
   --metric-name CPUUtilization \
-  --dimensions Name=InstanceId,Value=i-1234567890abcdef0 \
+  --dimensions Name=InstanceId,Value=i-16464965879abcdef0 \
   --start-time $(date -d '7 days ago' -u +"%Y-%m-%dT%H:%M:%SZ") \
   --end-time $(date -u +"%Y-%m-%dT%H:%M:%SZ") \
   --period 3600 \
