@@ -147,55 +147,58 @@ export async function processAppointmentSubmission(input: ProcessAppointmentInpu
 
     console.log(`[${input.logPrefix || 'APPOINTMENTS'}] Odoo sync: ${odooSync.status}${odooSync.errorMessage ? ` — ${odooSync.errorMessage}` : ''}`);
 
-    try {
-      await sendAppointmentNotification({
-        config: mailConfig,
-        record: {
-          ...record,
-          status: 'calendar_created',
+    if (mailConfig.enabled) {
+      try {
+        await sendAppointmentNotification({
+          config: mailConfig,
+          record: {
+            ...record,
+            status: 'calendar_created',
+            googleEventId: event.id,
+            googleEventLink: event.htmlLink,
+            odooSyncStatus: odooSync.status,
+            odooPartnerId: odooSync.partnerId,
+            odooAppointmentId: odooSync.appointmentId,
+            odooErrorMessage: odooSync.errorMessage,
+          },
+          submission: input.submission,
+          event,
+          start,
+          end,
+        });
+      } catch (emailError) {
+        const message = sanitizeErrorMessage(emailError);
+        console.error(`[${input.logPrefix || 'APPOINTMENTS'}] Appointment email delivery failed:`, message);
+        await updateAppointmentRecord(record.id, {
+          status: 'email_failed',
           googleEventId: event.id,
           googleEventLink: event.htmlLink,
           odooSyncStatus: odooSync.status,
           odooPartnerId: odooSync.partnerId,
           odooAppointmentId: odooSync.appointmentId,
           odooErrorMessage: odooSync.errorMessage,
-        },
-        submission: input.submission,
-        event,
-        start,
-        end,
-      });
-    } catch (emailError) {
-      const message = sanitizeErrorMessage(emailError);
-      console.error(`[${input.logPrefix || 'APPOINTMENTS'}] Appointment email delivery failed:`, message);
-      await updateAppointmentRecord(record.id, {
-        status: 'email_failed',
-        googleEventId: event.id,
-        googleEventLink: event.htmlLink,
-        odooSyncStatus: odooSync.status,
-        odooPartnerId: odooSync.partnerId,
-        odooAppointmentId: odooSync.appointmentId,
-        odooErrorMessage: odooSync.errorMessage,
-        emailDeliveryStatus: 'failed',
-        errorMessage: message,
-      });
+          emailDeliveryStatus: 'failed',
+          errorMessage: message,
+        });
 
-      return {
-        statusCode: 502,
-        body: {
-          error: 'The appointment was created, but the email notification failed. Our team has the request recorded.',
-          appointmentId: record.id,
-          googleEventLink: event.htmlLink,
-          ...(odooSync.appointmentId && { odooAppointmentId: odooSync.appointmentId }),
-        },
-      };
+        return {
+          statusCode: input.successStatusCode || 200,
+          body: {
+            success: true,
+            message: 'Appointment created successfully, but the confirmation email could not be sent. Our team has the request recorded.',
+            appointmentId: record.id,
+            googleEventLink: event.htmlLink,
+            ...(odooSync.appointmentId && { odooAppointmentId: odooSync.appointmentId }),
+          },
+        };
+      }
     }
 
     await updateAppointmentRecord(record.id, {
-      status: 'email_sent',
+      status: mailConfig.enabled ? 'email_sent' : 'calendar_created',
       googleEventId: event.id,
       googleEventLink: event.htmlLink,
-      emailDeliveryStatus: 'sent',
+      emailDeliveryStatus: mailConfig.enabled ? 'sent' : 'not_sent',
       odooSyncStatus: odooSync.status,
       odooPartnerId: odooSync.partnerId,
       odooAppointmentId: odooSync.appointmentId,

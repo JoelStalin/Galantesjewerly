@@ -20,6 +20,8 @@ export interface SiteSettings {
   favicon_url: string;
   logo_url: string;
   hero_image_url: string;
+  brand_name: string;
+  brand_tagline: string;
   site_title: string;
   site_description: string;
   instagram_url?: string;
@@ -56,6 +58,8 @@ const INITIAL_DATA: DBData = {
   settings: {
     favicon_url: '/favicon.ico',
     logo_url: '/assets/branding/logo.png',
+    brand_name: "Galante's Jewelry",
+    brand_tagline: 'By The Sea',
     site_title: "Galante's Jewelry by the Sea ",
     site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
     instagram_url: 'https://instagram.com/galantesjewelry',

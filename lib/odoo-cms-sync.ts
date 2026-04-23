@@ -33,13 +33,18 @@ async function readSingletonRecord() {
     return null;
   }
 
-  const records = await odoo.searchRead('galante.cms.settings', {
-    domain: [],
-    fields: ['id', 'cms_snapshot_json', 'integrations_snapshot_json'],
-    limit: 1,
-  }) as OdooCmsRecord[];
+  try {
+    const records = await odoo.searchRead('galante.cms.settings', {
+      domain: [],
+      fields: ['id', 'cms_snapshot_json', 'integrations_snapshot_json'],
+      limit: 1,
+    }) as OdooCmsRecord[];
 
-  return records[0] || null;
+    return records[0] || null;
+  } catch (error) {
+    console.error('Odoo snapshot read failed:', error);
+    return null;
+  }
 }
 
 async function upsertSingletonRecord(values: Partial<OdooCmsRecord>) {
@@ -53,18 +58,25 @@ async function upsertSingletonRecord(values: Partial<OdooCmsRecord>) {
   if (existing) {
     await odoo.call('galante.cms.settings', 'write', {
       ids: [existing.id],
-      values,
+      vals: values,
     });
     return;
   }
 
-  await odoo.call('galante.cms.settings', 'create', values);
+  await odoo.call('galante.cms.settings', 'create', {
+    vals: values,
+  });
 }
 
 export async function syncCmsSnapshotToOdoo(snapshot: CmsSnapshot) {
-  const cms_snapshot_json = JSON.stringify(snapshot);
-  await upsertSingletonRecord({ cms_snapshot_json });
-  return { success: true };
+  try {
+    const cms_snapshot_json = JSON.stringify(snapshot);
+    await upsertSingletonRecord({ cms_snapshot_json });
+    return { success: true };
+  } catch (error) {
+    console.error('Odoo CMS snapshot sync failed (non-blocking):', error);
+    return { success: false };
+  }
 }
 
 export async function loadCmsSnapshotFromOdoo(): Promise<CmsSnapshot | null> {
@@ -73,22 +85,32 @@ export async function loadCmsSnapshotFromOdoo(): Promise<CmsSnapshot | null> {
     return null;
   }
 
-  const parsed = JSON.parse(record.cms_snapshot_json) as Partial<CmsSnapshot>;
-  if (!parsed.settings || !Array.isArray(parsed.sections) || !Array.isArray(parsed.featured_items)) {
+  try {
+    const parsed = JSON.parse(record.cms_snapshot_json) as Partial<CmsSnapshot>;
+    if (!parsed.settings || !Array.isArray(parsed.sections) || !Array.isArray(parsed.featured_items)) {
+      return null;
+    }
+
+    return {
+      settings: parsed.settings,
+      sections: parsed.sections,
+      featured_items: parsed.featured_items,
+    };
+  } catch (error) {
+    console.error('Invalid CMS snapshot JSON from Odoo:', error);
     return null;
   }
-
-  return {
-    settings: parsed.settings,
-    sections: parsed.sections,
-    featured_items: parsed.featured_items,
-  };
 }
 
 export async function syncIntegrationsSnapshotToOdoo(snapshot: IntegrationStoreSnapshot) {
-  const integrations_snapshot_json = JSON.stringify(snapshot);
-  await upsertSingletonRecord({ integrations_snapshot_json });
-  return { success: true };
+  try {
+    const integrations_snapshot_json = JSON.stringify(snapshot);
+    await upsertSingletonRecord({ integrations_snapshot_json });
+    return { success: true };
+  } catch (error) {
+    console.error('Odoo integrations snapshot sync failed (non-blocking):', error);
+    return { success: false };
+  }
 }
 
 export async function loadIntegrationsSnapshotFromOdoo(): Promise<IntegrationStoreSnapshot | null> {
@@ -97,12 +119,17 @@ export async function loadIntegrationsSnapshotFromOdoo(): Promise<IntegrationSto
     return null;
   }
 
-  const parsed = JSON.parse(record.integrations_snapshot_json) as IntegrationStoreSnapshot;
-  if (!parsed?.google || !parsed?.appointments || !Array.isArray(parsed.audit)) {
+  try {
+    const parsed = JSON.parse(record.integrations_snapshot_json) as IntegrationStoreSnapshot;
+    if (!parsed?.google || !parsed?.appointments || !Array.isArray(parsed.audit)) {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('Invalid integrations snapshot JSON from Odoo:', error);
     return null;
   }
-
-  return parsed;
 }
 
 export async function syncSettingsToOdoo(settings: SiteSettings) {

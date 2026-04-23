@@ -1,6 +1,7 @@
 import { createOdooClient } from '@/src/config/odooClient';
 
 const client = createOdooClient();
+let supportsCompanySocialWhatsapp: boolean | null = null;
 
 export interface CustomerData {
   name: string;
@@ -11,6 +12,14 @@ export interface CustomerData {
   zip?: string;
   state_id?: number;
   country_id?: number;
+}
+
+export interface CustomerProfileSyncData extends CustomerData {
+  username?: string;
+  authMethod?: 'google' | 'password';
+  google_id?: string;
+  registeredAt?: string;
+  lastAuthAt?: string;
 }
 
 export interface SiteSettings {
@@ -33,6 +42,23 @@ export interface OrderLine {
   product_id: number;
   product_uom_qty: number;
   price_unit: number;
+}
+
+function buildPortalUrl(baseUrl: string, accessUrl?: string | null) {
+  return accessUrl ? `${baseUrl}${accessUrl}` : null;
+}
+
+function buildInvoicePdfUrl(baseUrl: string, accessUrl?: string | null, accessToken?: string | null) {
+  if (!accessUrl) {
+    return null;
+  }
+
+  const separator = accessUrl.includes('?') ? '&' : '?';
+  const normalizedToken = accessToken && !accessUrl.includes('access_token=')
+    ? `&access_token=${encodeURIComponent(accessToken)}`
+    : '';
+
+  return `${baseUrl}${accessUrl}${separator}report_type=pdf&download=true${normalizedToken}`;
 }
 
 /**
@@ -95,21 +121,47 @@ export const OdooService = {
 
       // 2. Fallback to res.company
       const companyId = process.env.ODOO_COMPANY_ID ? parseInt(process.env.ODOO_COMPANY_ID, 10) : 1;
-      const companies = await client.call('res.company', 'search_read', {
-        domain: [['id', '=', companyId]],
-        fields: [
-          'name', 
-          'email', 
-          'phone', 
-          'street', 
-          'city', 
-          'zip', 
-          'social_instagram', 
-          'social_facebook', 
-          'social_whatsapp',
-        ],
-        limit: 1
-      });
+      const companyDomain = [['id', '=', companyId]];
+      const baseCompanyFields = [
+        'name',
+        'email',
+        'phone',
+        'street',
+        'city',
+        'zip',
+        'social_instagram',
+        'social_facebook',
+      ];
+      const companyFields = supportsCompanySocialWhatsapp === false
+        ? baseCompanyFields
+        : [...baseCompanyFields, 'social_whatsapp'];
+
+      let companies: any[] = [];
+      try {
+        companies = await client.call('res.company', 'search_read', {
+          domain: companyDomain,
+          fields: companyFields,
+          limit: 1
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('Invalid field')) {
+          throw error;
+        }
+        if (message.includes('social_whatsapp')) {
+          supportsCompanySocialWhatsapp = false;
+        }
+
+        companies = await client.call('res.company', 'search_read', {
+          domain: companyDomain,
+          fields: baseCompanyFields,
+          limit: 1
+        });
+      }
+
+      if (supportsCompanySocialWhatsapp === null) {
+        supportsCompanySocialWhatsapp = true;
+      }
 
       if (!companies || companies.length === 0) return {};
 
@@ -159,11 +211,29 @@ export const OdooService = {
       // 1. Search by email
       const existing = await client.call('res.partner', 'search_read', {
         domain: [['email', '=', data.email]],
-        fields: ['id', 'name', 'email'],
+        fields: ['id', 'name', 'email', 'phone', 'street', 'city', 'zip'],
         limit: 1
       });
 
       if (existing && existing.length > 0) {
+        const current = existing[0];
+        const vals: Record<string, unknown> = {};
+
+        if (data.name && data.name !== current.name) vals.name = data.name;
+        if (data.phone && data.phone !== current.phone) vals.phone = data.phone;
+        if (data.street && data.street !== current.street) vals.street = data.street;
+        if (data.city && data.city !== current.city) vals.city = data.city;
+        if (data.zip && data.zip !== current.zip) vals.zip = data.zip;
+        if (data.state_id) vals.state_id = data.state_id;
+        if (data.country_id) vals.country_id = data.country_id;
+
+        if (Object.keys(vals).length > 0) {
+          await client.call('res.partner', 'write', {
+            ids: [current.id],
+            vals,
+          });
+        }
+
         return existing[0].id;
       }
 
@@ -192,19 +262,49 @@ export const OdooService = {
    * Ensures that guest history is preserved when the user eventually registers.
    */
   async syncAuthenticatedUser(data: { name: string; email: string; google_id?: string }) {
+    return this.syncCustomerProfile({
+      name: data.name,
+      email: data.email,
+      google_id: data.google_id,
+      authMethod: 'google',
+    });
+  },
+
+  /**
+   * Persists customer account metadata into Odoo's res.partner record.
+   */
+  async syncCustomerProfile(data: CustomerProfileSyncData) {
     try {
       const partnerId = await this.findOrCreateCustomer({
         name: data.name,
         email: data.email,
+        phone: data.phone,
+        street: data.street,
+        city: data.city,
+        zip: data.zip,
+        state_id: data.state_id,
+        country_id: data.country_id,
       });
 
-      // Update partner with Google ID or mark as registered
+      const vals: Record<string, unknown> = {
+        customer_rank: 1,
+        galantes_customer_source: data.authMethod || 'unknown',
+        galantes_customer_last_auth_at: data.lastAuthAt || new Date().toISOString(),
+      };
+
+      if (data.username) {
+        vals.galantes_customer_username = data.username;
+      }
+      if (data.google_id) {
+        vals.galantes_google_subject = data.google_id;
+      }
+      if (data.registeredAt) {
+        vals.galantes_customer_registered_at = data.registeredAt;
+      }
+
       await client.call('res.partner', 'write', {
         ids: [partnerId],
-        vals: {
-          comment: `Authenticated via Google. ID: ${data.google_id || 'N/A'}`,
-          // is_registered: true, // If custom field exists
-        }
+        vals,
       });
 
       return partnerId;
@@ -287,11 +387,8 @@ export const OdooService = {
    */
   async sendInvoiceEmail(invoiceId: number) {
     try {
-      // This usually requires a mail.template. 
-      // Odoo's account.move has a method 'action_invoice_sent' but it's often for the wizard.
-      // We can use message_post_with_template if we know the template ID, 
-      // or try to trigger the standard send action.
-      return await client.call('account.move', 'action_invoice_sent', {
+      // Custom server-side method: renders the official Odoo invoice PDF and emails it to the customer.
+      return await client.call('account.move', 'action_send_invoice_pdf_email', {
         ids: [invoiceId]
       });
     } catch (error) {
@@ -308,6 +405,19 @@ export const OdooService = {
     const steps: string[] = [];
     try {
       console.log(`[Billing] Starting automation for Order ${orderId}...`);
+
+      const existingOrder = await client.call('sale.order', 'search_read', {
+        domain: [['id', '=', orderId]],
+        fields: ['invoice_status', 'invoice_ids'],
+        limit: 1,
+      });
+      const existingInvoiceIds: number[] = existingOrder?.[0]?.invoice_ids || [];
+      if (existingInvoiceIds.length > 0) {
+        const invoiceId = existingInvoiceIds[0];
+        steps.push('existing_invoice');
+        console.log(`[Billing] Order ${orderId} already has invoice ${invoiceId}. Skipping duplicate creation.`);
+        return { orderId, invoiceId, steps };
+      }
       
       // 1. Confirm Order
       await this.confirmOrder(orderId);
@@ -444,7 +554,7 @@ export const OdooService = {
 
       const invoices = await client.call('account.move', 'search_read', {
         domain,
-        fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url'],
+        fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'access_token'],
         order: 'invoice_date desc'
       });
 
@@ -453,7 +563,8 @@ export const OdooService = {
       return invoices.map((inv: any) => ({
         ...inv,
         display_status: this.mapInvoiceState(inv.state, inv.payment_state),
-        portal_url: inv.access_url ? `${baseUrl}${inv.access_url}` : null,
+        portal_url: buildPortalUrl(baseUrl, inv.access_url),
+        pdf_url: buildInvoicePdfUrl(baseUrl, inv.access_url, inv.access_token),
       }));
     } catch (error) {
       console.error('Odoo Partner Invoices Fetch Error:', error);
@@ -509,12 +620,17 @@ export const OdooService = {
   /**
    * Get orders with their linked invoices for the portal orders page
    */
-  async getOrdersWithInvoices(partnerId: number) {
+  async getOrdersWithInvoices(partnerId: number, authenticatedEmail?: string) {
     try {
       const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
+      const domain: Array<[string, string, unknown]> = [['partner_id', '=', partnerId]];
+
+      if (authenticatedEmail) {
+        domain.push(['partner_id.email', '=', authenticatedEmail]);
+      }
 
       const orders = await client.call('sale.order', 'search_read', {
-        domain: [['partner_id', '=', partnerId]],
+        domain,
         fields: ['name', 'date_order', 'state', 'amount_total', 'invoice_status', 'access_url', 'invoice_ids'],
         order: 'date_order desc',
       });
@@ -528,7 +644,7 @@ export const OdooService = {
       if (allInvoiceIds.length > 0) {
         const invoices = await client.call('account.move', 'search_read', {
           domain: [['id', 'in', allInvoiceIds], ['move_type', '=', 'out_invoice']],
-          fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'sale_order_ids'],
+          fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'access_token', 'sale_order_ids'],
         });
 
         // Build a map: orderId -> invoices[]
@@ -536,7 +652,8 @@ export const OdooService = {
           const enriched = {
             ...inv,
             display_status: this.mapInvoiceState(inv.state, inv.payment_state),
-            portal_url: inv.access_url ? `${baseUrl}${inv.access_url}` : null,
+            portal_url: buildPortalUrl(baseUrl, inv.access_url),
+            pdf_url: buildInvoicePdfUrl(baseUrl, inv.access_url, inv.access_token),
           };
           // Link invoice back to orders via sale_order_ids or invoice_ids on order
           for (const order of orders) {
@@ -551,7 +668,7 @@ export const OdooService = {
       return orders.map((o: any) => ({
         ...o,
         display_status: this.mapOrderState(o.state, o.invoice_status),
-        portal_url: o.access_url ? `${baseUrl}${o.access_url}` : null,
+        portal_url: buildPortalUrl(baseUrl, o.access_url),
         invoices: invoiceMap[o.id] || [],
       }));
     } catch (error) {

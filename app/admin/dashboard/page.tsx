@@ -306,6 +306,14 @@ export default function Dashboard() {
             <h2 className="font-semibold text-lg uppercase tracking-wider text-zinc-800 mb-6">Brand Identity</h2>
             <div className="space-y-5">
               <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Navbar Brand Name</label>
+                <input data-testid="admin-brand-name" type="text" value={settings.brand_name} onChange={e => setSettings({ ...settings, brand_name: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-3 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Navbar Tagline</label>
+                <input data-testid="admin-brand-tagline" type="text" value={settings.brand_tagline} onChange={e => setSettings({ ...settings, brand_tagline: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-3 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all" />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Tab Title (SEO)</label>
                 <input type="text" value={settings.site_title} onChange={e => setSettings({ ...settings, site_title: e.target.value })} className="w-full border border-zinc-200 bg-zinc-50 rounded-lg p-3 text-sm focus:bg-white focus:ring-2 focus:ring-amber-300 outline-none transition-all" />
               </div>
@@ -439,7 +447,7 @@ export default function Dashboard() {
               </div>
 
               <div className="pt-6 border-t border-zinc-100 flex justify-end">
-                <button onClick={handleSaveSettings} disabled={saving === 'settings' || isSettingsUploading} className={`text-white text-sm font-medium px-6 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 shadow-sm ${savedKeys['settings'] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
+                <button data-testid="admin-save-settings" onClick={handleSaveSettings} disabled={saving === 'settings' || isSettingsUploading} className={`text-white text-sm font-medium px-6 py-2.5 rounded-lg disabled:opacity-50 transition-all duration-300 shadow-sm ${savedKeys['settings'] ? 'bg-emerald-600 scale-105' : 'bg-zinc-900 hover:bg-amber-600'}`}>
                   {saving === 'settings' ? 'Syncing...' : isSettingsUploading ? 'Uploading image...' : savedKeys['settings'] ? '✓ Saved!' : 'Save Global Settings'}
                 </button>
               </div>

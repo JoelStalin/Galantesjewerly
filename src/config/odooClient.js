@@ -98,6 +98,15 @@ function getOdooAuthToken(overrides = {}) {
   );
 }
 
+function getOdooPasswordFallback(overrides = {}) {
+  return normalizeOptionalString(
+    firstDefinedValue(
+      overrides.password,
+      process.env.ODOO_PASSWORD,
+    ),
+  );
+}
+
 function getOdooConfig(overrides = {}) {
   const enabled = parseBooleanEnv(
     firstDefinedValue(overrides.enabled, process.env.ODOO_ENABLED),
@@ -111,6 +120,7 @@ function getOdooConfig(overrides = {}) {
     firstDefinedValue(overrides.database, process.env.ODOO_DATABASE, process.env.ODOO_DB),
   );
   const authToken = getOdooAuthToken(overrides);
+  const password = getOdooPasswordFallback(overrides);
   const timeoutMs = parseIntegerEnv(
     firstDefinedValue(overrides.timeoutMs, process.env.ODOO_TIMEOUT_MS),
     DEFAULT_TIMEOUT_MS,
@@ -122,6 +132,7 @@ function getOdooConfig(overrides = {}) {
     baseUrl,
     database,
     authToken,
+    password,
     timeoutMs,
     syncOnAppointmentValidated: parseBooleanEnv(
       firstDefinedValue(
@@ -156,8 +167,8 @@ function getOdooConfig(overrides = {}) {
     missing.push('ODOO_BASE_URL');
   }
 
-  if (config.enabled && !config.authToken) {
-    missing.push('ODOO_BEARER_TOKEN or ODOO_API_KEY');
+  if (config.enabled && !config.authToken && !config.password) {
+    missing.push('ODOO_BEARER_TOKEN or ODOO_API_KEY or ODOO_PASSWORD');
   }
 
   if (config.enabled && !config.database) {
@@ -198,9 +209,9 @@ function getOdooHeaders(config = getOdooConfig()) {
 
   if (config.authToken) {
     headers['Authorization'] = `bearer ${config.authToken}`;
-  } else if (process.env.ODOO_PASSWORD) {
-    // Fallback if no token but password is provided
-    headers['X-Odoo-ApiKey'] = process.env.ODOO_PASSWORD;
+  } else if (config.password) {
+    // Some Odoo JSON-2 deployments accept the shared admin secret only via bearer auth.
+    headers['Authorization'] = `bearer ${config.password}`;
   }
 
   return headers;
@@ -334,7 +345,15 @@ function createOdooClient(overrides = {}) {
       return call(model, 'search_read', payload, options);
     },
     async create(model, values, options = {}) {
-      return call(model, 'create', values, options);
+      const result = await call(model, 'create', {
+        vals_list: values,
+      }, options);
+
+      if (Array.isArray(result) && result.length === 1) {
+        return result[0];
+      }
+
+      return result;
     },
   };
 }

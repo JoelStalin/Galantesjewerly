@@ -16,15 +16,48 @@ const FALLBACK_NAV = [
   { label: 'Contact', href: '/contact' },
 ];
 
+function normalizeHref(rawHref: string | undefined, fallbackHref: string): string {
+  const href = (rawHref || '').trim();
+  if (!href) return fallbackHref;
+  if (href.startsWith('#')) return `/${href}`;
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(href)) return href;
+  if (href.startsWith('/')) return href;
+  return `/${href}`;
+}
+
+function resolveNavigationLinks(
+  links: Array<{ label?: string; href?: string }> | undefined,
+): Array<{ label: string; href: string }> {
+  if (!Array.isArray(links) || links.length === 0) {
+    return FALLBACK_NAV;
+  }
+
+  const normalized = links
+    .map((link, index) => {
+      const fallback = FALLBACK_NAV[index] ?? FALLBACK_NAV[FALLBACK_NAV.length - 1];
+      const label = (link?.label || fallback.label).trim() || fallback.label;
+      const href = normalizeHref(link?.href, fallback.href);
+      return { label, href };
+    })
+    .filter((link) => Boolean(link.label) && Boolean(link.href));
+
+  return normalized.length > 0 ? normalized : FALLBACK_NAV;
+}
+
 interface NavbarProps {
   settings: SiteSettings;
   user?: AuthenticatedCustomer | null;
+  forceSolid?: boolean;
+  isFixed?: boolean;
 }
 
-export function Navbar({ settings, user }: NavbarProps) {
+export function Navbar({ settings, user, forceSolid = false, isFixed = true }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { totalCount } = useCart();
+  const useSolidNav = forceSolid || scrolled;
+  const brandName = settings.brand_name?.trim() || settings.site_title?.trim() || "Galante's Jewelry";
+  const brandTagline = settings.brand_tagline?.trim() || 'By The Sea';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,43 +68,52 @@ export function Navbar({ settings, user }: NavbarProps) {
   }, []);
 
   const logoUrl = settings.logo_url;
-  const navLinks = settings.navigation_links || [];
+  const resolvedNavLinks = resolveNavigationLinks(settings.navigation_links as Array<{ label?: string; href?: string }> | undefined);
 
   return (
     <nav 
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'
+      className={`${isFixed ? 'fixed' : 'absolute'} top-0 left-0 w-full z-50 transition-all duration-300 ${
+        useSolidNav ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           {/* Logo & Title */}
-          <div className="flex items-center space-x-4 flex-1">
-            <Link href="/" className="flex items-center space-x-4 group" onClick={() => setIsOpen(false)}>
+          <div className="flex items-center flex-1 min-w-0">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group min-w-0" onClick={() => setIsOpen(false)}>
               <Image 
                 src={logoUrl || "/assets/branding/logo.png"} 
                 alt="Galante's" 
                 width={200}
                 height={200}
-                className="h-32 w-32 md:h-48 md:w-48 object-contain transition-transform group-hover:scale-105"
+                className="h-16 w-16 sm:h-18 sm:w-18 md:h-20 md:w-20 object-contain transition-transform group-hover:scale-105 shrink-0"
                 unoptimized={!!(logoUrl && (logoUrl.startsWith('/api/image?') || logoUrl.startsWith('http')))}
               />
-              <div className="flex flex-col">
-                <span className="text-[10px] md:text-xs font-serif tracking-[0.3em] uppercase text-gray-900 leading-relaxed max-w-[150px] md:max-w-none">
-                  {settings.site_title || "Galante's Jewelry"}
+              <div className="min-w-0">
+                <span data-testid="navbar-brand-name-mobile" className="block sm:hidden text-[10px] font-serif tracking-[0.22em] uppercase text-gray-900 leading-snug max-w-[110px]">
+                  {brandName}
                 </span>
+                <div className="hidden sm:flex flex-col leading-none">
+                  <span data-testid="navbar-brand-name" className="text-[11px] md:text-xs font-serif tracking-[0.24em] uppercase text-gray-900 whitespace-nowrap">
+                    {brandName}
+                  </span>
+                  <span data-testid="navbar-brand-tagline" className="mt-1 text-[9px] md:text-[10px] tracking-[0.34em] uppercase text-zinc-500 whitespace-nowrap">
+                    {brandTagline}
+                  </span>
+                </div>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center justify-center space-x-6 lg:space-x-8 flex-[2]">
-            {(navLinks.length > 0 ? navLinks : FALLBACK_NAV).map((link) => (
+            {resolvedNavLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
+                prefetch={false}
                 className="text-[10px] lg:text-[11px] font-semibold tracking-[0.24em] uppercase text-gray-800 hover:text-amber-700 transition-colors whitespace-nowrap"
-                style={{ textShadow: scrolled ? 'none' : '0 0 12px rgba(255,255,255,0.8), 0 0 4px rgba(255,255,255,0.5)' }}
+                style={{ textShadow: useSolidNav ? 'none' : '0 0 12px rgba(255,255,255,0.8), 0 0 4px rgba(255,255,255,0.5)' }}
               >
                 {link.label}
               </Link>
@@ -122,10 +164,11 @@ export function Navbar({ settings, user }: NavbarProps) {
       {isOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl animate-in slide-in-from-top duration-300">
           <div className="px-4 pt-2 pb-8 space-y-1">
-            {navLinks.map((link) => (
+            {resolvedNavLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
+                prefetch={false}
                 className="block px-3 py-4 text-sm font-semibold text-gray-900 border-b border-gray-50 uppercase tracking-[0.2em]"
                 onClick={() => setIsOpen(false)}
               >

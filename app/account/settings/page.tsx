@@ -8,12 +8,17 @@ export default async function SettingsPage() {
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) return null;
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email)
-    || await OdooService.findOrCreateCustomer({
-      name: user.name || user.username || user.email,
-      email: user.email,
-    });
-  const profile = partnerId ? await OdooService.getPartnerProfile(partnerId) : null;
+  let profile = null;
+  try {
+    const partnerId = await OdooService.getPartnerByEmail(user.email)
+      || await OdooService.findOrCreateCustomer({
+        name: user.name || user.username || user.email,
+        email: user.email,
+      });
+    profile = partnerId ? await OdooService.getPartnerProfile(partnerId) : null;
+  } catch (error) {
+    console.error('Account settings Odoo sync failed:', error);
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">

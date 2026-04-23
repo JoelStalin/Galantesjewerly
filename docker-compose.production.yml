@@ -18,6 +18,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - ODOO_PASSWORD=${ODOO_PASSWORD}
       - ODOO_API_KEY=${ODOO_API_KEY}
       - ODOO_BASE_URL=http://odoo:8069
       - ODOO_DB=${ODOO_DB:-galantes_db}
@@ -25,7 +26,14 @@ services:
       - APPOINTMENT_TEST_MODE=${APPOINTMENT_TEST_MODE:-}
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
       - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_OAUTH_REFRESH_TOKEN=${GOOGLE_OAUTH_REFRESH_TOKEN}
       - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI}
+      - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID}
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
+      - GMAIL_NOTIFICATION_TO=${GMAIL_NOTIFICATION_TO}
+      - GMAIL_SMTP_USER=${GMAIL_SMTP_USER}
+      - GMAIL_SMTP_PASS=${GMAIL_SMTP_PASS}
     volumes:
       - ./data:/app/data
     networks:
@@ -42,6 +50,7 @@ services:
       dockerfile: Dockerfile
     container_name: galantes_odoo
     restart: always
+    command: -i base,galantes_jewelry
     deploy:
       resources:
         limits:
@@ -59,6 +68,12 @@ services:
       - galante-net
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8069/web/login', timeout=5)\" >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   db:
     image: postgres:15-alpine
@@ -82,7 +97,7 @@ services:
     container_name: galantes_nginx
     restart: always
     ports:
-      - "80:80"
+      - "8081:80"
       - "8080:80"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -91,14 +106,15 @@ services:
     depends_on:
       web:
         condition: service_healthy
+      odoo:
+        condition: service_healthy
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: galantes_tunnel_prod
     restart: unless-stopped
-    network_mode: host
-    extra_hosts:
-      - "nginx:127.0.0.1"
+    networks:
+      - galante-net
     command: tunnel --no-autoupdate run --protocol http2 --token ${CF_TUNNEL_TOKEN_PROD}
     logging:
       driver: "json-file"

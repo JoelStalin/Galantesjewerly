@@ -19,6 +19,8 @@ const outfit = Outfit({
 export const dynamic = 'force-dynamic';
 
 const FALLBACK_SETTINGS: SiteSettings = {
+  brand_name: "Galante's Jewelry",
+  brand_tagline: 'By The Sea',
   site_title: "Galante's Jewelry by the Sea",
   site_description: 'Luxury jewelry boutique in Islamorada',
   favicon_url: '/favicon.ico',
@@ -41,10 +43,18 @@ async function loadSiteSettings(): Promise<SiteSettings> {
   try {
     const localSettings = await getSettings();
     const odooSettings = await OdooService.getCompanySettings();
-    return { 
+    const merged = {
       ...FALLBACK_SETTINGS, 
       ...(localSettings ?? {}),
       ...(odooSettings ?? {})
+    };
+
+    // Keep social buttons visible even if upstream systems return empty strings.
+    return {
+      ...merged,
+      instagram_url: merged.instagram_url || FALLBACK_SETTINGS.instagram_url,
+      facebook_url: merged.facebook_url || FALLBACK_SETTINGS.facebook_url,
+      whatsapp_number: merged.whatsapp_number || FALLBACK_SETTINGS.whatsapp_number,
     };
   } catch {
     return FALLBACK_SETTINGS;
@@ -92,6 +102,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               href={finalSettings.facebook_url}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Facebook"
               className="fixed bottom-[9.5rem] right-6 z-50 flex items-center justify-center rounded-full bg-[#1877F2] p-4 text-white shadow-lg transition-transform hover:scale-110"
               title="Follow us on Facebook"
             >
@@ -105,6 +116,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               href={finalSettings.instagram_url}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Instagram"
               className="fixed bottom-[5.5rem] right-6 z-50 flex items-center justify-center rounded-full p-4 text-white shadow-lg transition-transform hover:scale-110"
               style={{ background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)' }}
               title="Follow us on Instagram"
@@ -119,6 +131,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               href={`https://wa.me/${finalSettings.whatsapp_number}`}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="WhatsApp"
               className="fixed bottom-6 right-6 z-50 flex items-center justify-center rounded-full bg-[#25D366] p-4 text-white shadow-lg transition-transform hover:scale-110"
               title="Chat with us on WhatsApp"
             >
