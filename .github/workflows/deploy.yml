@@ -35,11 +35,70 @@ jobs:
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
+            set -Eeuo pipefail
+
             # Ir al directorio raíz
             cd ~/galantesjewelry || exit 1
 
+            BACKUP_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+            export BACKUP_TIMESTAMP
+            BACKUP_DIR="backups/predeploy/${BACKUP_TIMESTAMP}"
+            ROLLBACK_REQUIRED=0
+
+            rollback() {
+              if [ "$ROLLBACK_REQUIRED" -ne 1 ]; then
+                return 0
+              fi
+
+              echo "Fallo detectado. Restaurando desde $BACKUP_DIR ..."
+              if [ -f scripts/backup/predeploy-restore.sh ]; then
+                bash scripts/backup/predeploy-restore.sh "$(pwd)" "$BACKUP_DIR"
+              else
+                echo "Restore script no encontrado; rollback automático no disponible." >&2
+                return 1
+              fi
+            }
+
+            wait_http() {
+              url="$1"
+              label="$2"
+              retries="${3:-24}"
+              delay="${4:-5}"
+              for attempt in $(seq 1 "$retries"); do
+                if curl -fsS --max-time 10 "$url" >/dev/null 2>&1; then
+                  echo "Health OK: $label"
+                  return 0
+                fi
+                echo "Esperando health de $label ($attempt/$retries)"
+                sleep "$delay"
+              done
+              echo "Health FAIL: $label" >&2
+              return 1
+            }
+
+            trap 'status=$?; if [ $status -ne 0 ]; then rollback; fi; exit $status' EXIT
+
+            # Backup obligatorio antes de cualquier cambio
+            echo "Creando backup predeploy..."
+            if [ -f scripts/backup/predeploy-backup.sh ]; then
+              bash scripts/backup/predeploy-backup.sh "$(pwd)"
+            else
+              TS=$(date +%Y%m%d_%H%M%S)
+              BK="backups/predeploy/${TS}"
+              mkdir -p "$BK"
+              cp -f .env.prod "$BK/.env.prod" 2>/dev/null || true
+              cp -f docker-compose.production.yml "$BK/docker-compose.production.yml" 2>/dev/null || true
+              sudo docker exec galantes_db sh -lc "PGPASSWORD=\"\${POSTGRES_PASSWORD:-}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK/galantes_db.sql" 2>/dev/null || true
+              tar -czf "$BK/app-data.tgz" data odoo infra/nginx .env.prod docker-compose.production.yml 2>/dev/null || true
+            fi
+            ROLLBACK_REQUIRED=1
+
             # Sincronizar código de forma quirúrgica (solo traer cambios, sin borrar datos no rastreados)
             echo "Sincronizando cambios de Git..."
+            # Preservar el .env.prod real del servidor antes de resetear el repo
+            if [ -f .env.prod ]; then
+              cp -f .env.prod /tmp/galantes_env_prod_before_reset
+            fi
             git fetch origin main
             
             # Identificar si hubo cambios en archivos críticos
@@ -47,19 +106,39 @@ jobs:
             
             # Aplicar cambios
             git reset --hard origin/main
+            if [ -f /tmp/galantes_env_prod_before_reset ]; then
+              cp -f /tmp/galantes_env_prod_before_reset .env.prod
+              rm -f /tmp/galantes_env_prod_before_reset
+            fi
 
-            # Sincronizar secretos desde GitHub Actions → .env.prod
-            {
-              echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
-              echo "ADMIN_SECRET_KEY=$ADMIN_SECRET_KEY"
-              echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
-              echo "POSTGRES_USER=odoo"
-              echo "ODOO_DB=galantes_db"
-              echo "ODOO_PASSWORD=$ODOO_PASSWORD"
-              echo "ODOO_API_KEY=$ODOO_API_KEY"
-              echo "CF_TUNNEL_TOKEN_PROD=$CF_TUNNEL_TOKEN_PROD"
-              echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
-            } > .env.prod
+            # Actualizar variables críticas sin sobrescribir todo el .env.prod
+            touch .env.prod
+            update_env() {
+              key="$1"
+              value="$2"
+              [ -z "$value" ] && return 0
+              if grep -q "^${key}=" .env.prod; then
+                sed -i "s|^${key}=.*|${key}=${value}|" .env.prod
+              else
+                echo "${key}=${value}" >> .env.prod
+              fi
+            }
+
+            update_env "ADMIN_PASSWORD" "$ADMIN_PASSWORD"
+            update_env "ADMIN_SECRET_KEY" "$ADMIN_SECRET_KEY"
+            update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+            update_env "POSTGRES_USER" "odoo"
+            update_env "ODOO_DB" "galantes_db"
+            update_env "ODOO_PASSWORD" "$ODOO_PASSWORD"
+            update_env "ODOO_API_KEY" "$ODOO_API_KEY"
+            update_env "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
+
+            # No sobreescribir el token activo del túnel si ya existe en el servidor.
+            if ! grep -q "^CF_TUNNEL_TOKEN_PROD=" .env.prod; then
+              update_env "CF_TUNNEL_TOKEN_PROD" "$CF_TUNNEL_TOKEN_PROD"
+            else
+              echo "Manteniendo CF_TUNNEL_TOKEN_PROD existente en servidor."
+            fi
             chmod 600 .env.prod
 
             # Solo reconstruir si hay cambios en el código de la app o dependencias
@@ -82,4 +161,15 @@ jobs:
 
             # Limpieza suave
             sudo docker image prune -f
+
+            # Verificación post-deploy. Si falla cualquiera, entra el rollback automático.
+            wait_http "http://127.0.0.1:3000/api/health" "web interno"
+            wait_http "http://127.0.0.1:8080/healthz" "nginx interno"
+            wait_http "http://127.0.0.1:8069/web/login" "odoo interno"
+            wait_http "https://galantesjewelry.com/api/health" "sitio público"
+            wait_http "https://admin.galantesjewelry.com/api/health" "admin público"
+            wait_http "https://odoo.galantesjewelry.com/healthz" "odoo público"
+
+            ROLLBACK_REQUIRED=0
+            trap - EXIT
             echo "Despliegue quirúrgico finalizado."
