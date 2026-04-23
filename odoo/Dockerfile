@@ -22,11 +22,13 @@ RUN sed -i 's/\r$//' /custom-entrypoint.sh && chmod +x /custom-entrypoint.sh
 # Create logs directory
 RUN mkdir -p /var/log/odoo && chown odoo:odoo /var/log/odoo
 
-# Embedded credentials for production stability
+# Copy custom addons
+COPY --chown=odoo:odoo addons /mnt/extra-addons
+
+# Non-secret runtime defaults. Real credentials must come from the container
+# environment (docker compose / VM env files), never from the image itself.
 ENV HOST=postgres
 ENV USER=odoo
-ENV PASSWORD=REDACTED_ROTATE_IMMEDIATELY
-ENV ODOO_PASSWORD=REDACTED_ROTATE_IMMEDIATELY
 ENV ODOO_DB=galantes_db
 
 USER odoo

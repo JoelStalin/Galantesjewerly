@@ -1,40 +1,36 @@
 import os
 import time
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import sys
+from pathlib import Path
 
-def get_driver(profile_cmd="Profile 9"):
-    options = webdriver.ChromeOptions()
-    user_data_dir = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data")
+BASE_URL = os.getenv("E2E_BASE_URL", "https://galantesjewelry.com").rstrip("/")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+CURRENT_DIR = Path(__file__).resolve().parent.parent
+E2E_DIR = CURRENT_DIR / "tests" / "e2e"
+if str(E2E_DIR) not in sys.path:
+    sys.path.insert(0, str(E2E_DIR))
+from profile_runtime import get_driver as get_profile_runtime_driver
 
-    options.add_argument(f"user-data-dir={user_data_dir}")
-    options.add_argument(f"profile-directory={profile_cmd}")
-    options.add_argument("--start-maximized")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
 
-    try:
-        driver = webdriver.Chrome(options=options)
-        return driver
-    except Exception as e:
-        err_str = str(e)
-        if "already in use" in err_str or "locked" in err_str or "Chrome instance exited" in err_str:
-            print("ERROR: Chrome is open or the profile is locked. PLEASE CLOSE ALL CHROME WINDOWS manually and try again to use Profile 9.")
-        else:
-            print(f"Error launching Chrome: {err_str}")
-        return None
+def get_driver(profile_cmd=None):
+    selected_profile = profile_cmd or os.getenv("SELENIUM_PROFILE", "Profile 9")
+    headless = os.getenv("SELENIUM_HEADLESS", "0") == "1"
+    driver, _ = get_profile_runtime_driver(selected_profile, headless=headless)
+    return driver
 
 
 def verify_production():
-    driver = get_driver("Profile 9")
+    driver = get_driver()
     if not driver:
         return
 
     try:
         print("--- Verifying Home ---")
-        driver.get("https://galantesjewelry.com/")
+        driver.get(f"{BASE_URL}/")
         time.sleep(3)
         
         # Check Logo
@@ -64,31 +60,35 @@ def verify_production():
 
         # 3. Verify Admin & OAuth
         print("\n--- Verifying Admin & Google OAuth Redirect URI ---")
-        driver.get("https://galantesjewelry.com/admin/dashboard?tab=integrations")
+        driver.get(f"{BASE_URL}/admin/dashboard?tab=integrations")
         time.sleep(3)
 
         # Check if login is required
         if "/admin/login" in driver.current_url:
             print("Logging in to Admin...")
-            driver.find_element(By.ID, "username").send_keys("admin")
-            driver.find_element(By.ID, "password").send_keys("REDACTED_ROTATE_IMMEDIATELY")
+            if not ADMIN_PASSWORD:
+                print("[WARNING] ADMIN_PASSWORD no esta configurado; se omite el login admin.")
+                return
+            driver.find_element(By.ID, "username").send_keys(ADMIN_USERNAME)
+            driver.find_element(By.ID, "password").send_keys(ADMIN_PASSWORD)
             driver.find_element(By.XPATH, "//button[@type='submit']").click()
             time.sleep(3)
-            driver.get("https://galantesjewelry.com/admin/dashboard?tab=integrations")
+            driver.get(f"{BASE_URL}/admin/dashboard?tab=integrations")
             time.sleep(2)
 
-        # Click Connect Google Owner
+        # Trigger OAuth start directly (more robust than UI button text changes)
         try:
-            connect_btn = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Connect Google Owner')]"))
-            )
-            connect_btn.click()
+            driver.get(f"{BASE_URL}/api/admin/google/oauth/start?environment=production")
             time.sleep(3)
             
             auth_url = driver.current_url
             print(f"[OK] Google Auth URL: {auth_url}")
             
-            if "redirect_uri=https%3A%2F%2Fgalantesjewelry.com%2Fapi%2Fadmin%2Fgoogle%2Foauth%2Fcallback" in auth_url:
+            expected_redirect = (
+                f"redirect_uri={BASE_URL.replace(':', '%3A').replace('/', '%2F')}"
+                "%2Fapi%2Fadmin%2Fgoogle%2Foauth%2Fcallback"
+            )
+            if expected_redirect in auth_url:
                 print("[SUCCESS] Redirect URI is CORRECT.")
             else:
                 print("[ERROR] Redirect URI is INCORRECT in Google URL.")
