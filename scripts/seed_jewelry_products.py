@@ -5,7 +5,7 @@ import os
 URL = os.environ.get('ODOO_BASE_URL', 'http://localhost:8069')
 DB = os.environ.get('ODOO_DATABASE', 'galantes_db')
 USER = os.environ.get('ODOO_USER', 'admin')
-PASSWORD = os.environ.get('ODOO_PASSWORD', 'admin')
+PASSWORD = os.environ.get('ODOO_PASSWORD', '')
 
 def get_odoo_common():
     return xmlrpc.client.ServerProxy(f'{URL}/xmlrpc/2/common')
@@ -15,6 +15,9 @@ def get_odoo_object():
 
 def seed_products():
     print(f"Connecting to Odoo at {URL}...")
+    if not PASSWORD:
+        print("Missing ODOO_PASSWORD. Export it before running this script.")
+        return
     try:
         common = get_odoo_common()
         uid = common.authenticate(DB, USER, PASSWORD, {})

@@ -177,7 +177,7 @@ See `odoo/.env`:
 ```env
 POSTGRES_DB=galantes_db
 POSTGRES_USER=odoo
-POSTGRES_PASSWORD=odoo
+POSTGRES_PASSWORD=CHANGE_ME_local_postgres_password
 PGDATA=/var/lib/postgresql/data
 ODOO_RC=/etc/odoo/odoo.conf
 ODOO_ADDONS_PATH=/mnt/extra-addons

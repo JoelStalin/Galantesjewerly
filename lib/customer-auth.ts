@@ -49,7 +49,7 @@ type CustomerAuthStore = {
 };
 
 const customerAuthFile = path.join(getDataRoot(), 'customer-auth.json');
-const CUSTOMER_SESSION_FALLBACK_SECRET = 'local_customer_session_secret_for_development_only';
+const CUSTOMER_SESSION_FALLBACK_SECRET = crypto.randomBytes(32).toString('hex');
 
 function normalizeValue(value: string) {
   return value.trim().toLowerCase();

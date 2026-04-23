@@ -9,10 +9,10 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-CHANGE_ME_LOCAL_ADMIN_PASSWORD}
       - ODOO_BASE_URL=http://odoo:8069
-      - ODOO_DB=galante_local
+      - ODOO_DB=${ODOO_DB:-galante_local}
     ports:
       - "3000:3000"
     networks:
@@ -23,8 +23,8 @@ services:
     container_name: galantes_odoo_local
     environment:
       - HOST=postgres
-      - USER=odoo
-      - PASSWORD=odoo
+      - USER=${POSTGRES_USER:-odoo}
+      - PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_LOCAL_POSTGRES_PASSWORD}
     ports:
       - "8069:8069"
     networks:
@@ -34,9 +34,9 @@ services:
     image: postgres:15-alpine
     container_name: galantes_db_local
     environment:
-      - POSTGRES_DB=galante_local
-      - POSTGRES_USER=odoo
-      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_DB=${POSTGRES_DB:-galante_local}
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-CHANGE_ME_LOCAL_POSTGRES_PASSWORD}
     networks:
       - galante-local-net
 

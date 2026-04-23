@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { getDecryptedGoogleIntegration } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
@@ -31,6 +32,8 @@ type RequestLike = {
   headers: Headers;
   url?: string;
 };
+
+const localGoogleSessionSecret = crypto.randomBytes(32).toString('hex');
 
 function normalizeBaseUrl(value: string) {
   const normalizedValue = value.trim().replace(/\/+$/, '');
@@ -109,7 +112,7 @@ function getGoogleSessionKey() {
   const secret =
     process.env.GOOGLE_SESSION_SECRET ||
     process.env.ADMIN_SECRET_KEY ||
-    'local_only_google_login_secret_for_development';
+    localGoogleSessionSecret;
 
   return new TextEncoder().encode(secret);
 }
@@ -244,14 +247,16 @@ export function getGoogleUserCookieOptions(request: RequestLike) {
 export async function getGoogleLoginConfig(request: RequestLike): Promise<GoogleLoginConfig> {
   const environment = resolveGoogleEnvironmentFromHost(request.headers.get('host') || '');
   const stored = await getDecryptedGoogleIntegration(environment);
+  const publicBaseUrl = getPublicBaseUrl(request);
+  const requestRedirectUri = getRequestUrl('/auth/google/callback', request);
 
   return {
     environment,
     enabled: stored.enabled,
     clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '',
     clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
-    redirectUri: stored.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || '',
-    javascriptOrigin: stored.javascriptOrigin || process.env.GOOGLE_OAUTH_JAVASCRIPT_ORIGIN || '',
+    redirectUri: stored.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || requestRedirectUri,
+    javascriptOrigin: stored.javascriptOrigin || process.env.GOOGLE_OAUTH_JAVASCRIPT_ORIGIN || publicBaseUrl,
     scopes: stored.scopes.length > 0
       ? stored.scopes
       : (process.env.GOOGLE_OAUTH_SCOPES || 'openid email profile').split(/[\s,]+/).filter(Boolean),
