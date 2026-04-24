@@ -12,10 +12,10 @@
 |---|-------|--------|-------|
 | S-1 | Crear rama `develop` en GitHub | PENDIENTE | Base del workflow de staging |
 | S-2 | Configurar secrets GitHub environment `Staging` | PENDIENTE | Ver tabla de secrets abajo |
-| S-3 | Crear Cloudflare Tunnel para staging | PENDIENTE | Obtener `CF_TUNNEL_TOKEN_STAGING` |
+| S-3 | Confirmar CF_TUNNEL_TOKEN_STAGING en servidor getupsoft | PENDIENTE | El tunnel `getupsoft.com.do` ya existe — obtener token |
 | S-4 | Primer deploy manual en getupsoft | PENDIENTE | `ssh getupsoft` + clone + `.env.staging` manual |
 | S-5 | Verificar health checks staging | PENDIENTE | `http://127.0.0.1:3001/api/health` y `8082/healthz` |
-| S-6 | Configurar dominio staging (ej. `staging.galantesjewelry.com`) | PENDIENTE | Via Cloudflare DNS |
+| S-6 | Mapear rutas en Cloudflare tunnel staging | PENDIENTE | `galantes.getupsoft.com.do` → nginx:80, `admin.getupsoft.com.do` → nginx:80, `odoo.getupsoft.com.do` → odoo:8069 |
 
 ### Secrets requeridos en GitHub → Staging environment
 
@@ -28,7 +28,7 @@
 | `CF_TUNNEL_TOKEN_STAGING` | Token del nuevo tunnel Cloudflare staging |
 | `STRIPE_SECRET_KEY_STAGING` | Stripe test key (`sk_test_...`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_STAGING` | Stripe test publishable key |
-| `GOOGLE_OAUTH_REDIRECT_URI_STAGING` | `https://staging.galantesjewelry.com/auth/google/callback` |
+| `GOOGLE_OAUTH_REDIRECT_URI_STAGING` | `https://galantes.getupsoft.com.do/auth/google/callback` |
 | + todos los secrets de Production | Heredados o duplicados |
 
 ---
