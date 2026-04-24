@@ -51,6 +51,8 @@ services:
     container_name: galantes_stg_odoo
     restart: always
     command: -i base,galantes_jewelry
+    ports:
+      - "8069:8069"
     deploy:
       resources:
         limits:

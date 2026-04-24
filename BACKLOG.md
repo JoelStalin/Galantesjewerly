@@ -15,7 +15,7 @@
 | S-3 | Confirmar CF_TUNNEL_TOKEN_STAGING en servidor getupsoft | PENDIENTE | El tunnel `getupsoft.com.do` ya existe — obtener token |
 | S-4 | Primer deploy manual en getupsoft | PENDIENTE | `ssh getupsoft` + clone + `.env.staging` manual |
 | S-5 | Verificar health checks staging | PENDIENTE | `http://127.0.0.1:3001/api/health` y `8082/healthz` |
-| S-6 | Mapear rutas en Cloudflare tunnel staging | PENDIENTE | `galantes.getupsoft.com.do` → nginx:80, `admin.getupsoft.com.do` → nginx:80, `odoo.getupsoft.com.do` → odoo:8069 |
+| S-6 | Mapear rutas en Cloudflare tunnel staging | PENDIENTE | `galantes.getupsoft.com.do` → `localhost:8082`, `galantes_admin.getupsoft.com.do` → `localhost:8082`, `galantes_odoo.getupsoft.com.do` → `localhost:8069` |
 
 ### Secrets requeridos en GitHub → Staging environment
 
@@ -28,7 +28,7 @@
 | `CF_TUNNEL_TOKEN_STAGING` | Token del nuevo tunnel Cloudflare staging |
 | `STRIPE_SECRET_KEY_STAGING` | Stripe test key (`sk_test_...`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_STAGING` | Stripe test publishable key |
-| `GOOGLE_OAUTH_REDIRECT_URI_STAGING` | `https://galantes.getupsoft.com.do/auth/google/callback` |
+| `GOOGLE_OAUTH_REDIRECT_URI_STAGING` | `https://galantes_admin.getupsoft.com.do/auth/google/callback` |
 | + todos los secrets de Production | Heredados o duplicados |
 
 ---
