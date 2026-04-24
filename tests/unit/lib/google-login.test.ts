@@ -2,7 +2,20 @@
  * @vitest-environment node
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getGoogleRedirectBaseUrl, getPublicUrl, getRequestUrl } from '@/lib/google-login';
+ import { getGoogleLoginConfig, getGoogleRedirectBaseUrl, getPublicUrl, getRequestUrl } from '@/lib/google-login';
+
+vi.mock('@/lib/integrations', () => ({
+  getDecryptedGoogleIntegration: vi.fn(async () => ({
+    enabled: true,
+    googleClientId: '',
+    redirectUri: '',
+    javascriptOrigin: '',
+    scopes: [],
+    secrets: {
+      googleClientSecret: '',
+    },
+  })),
+}));
 import { getAdminGoogleOAuthRedirectUri } from '@/lib/google-oauth';
 
 describe('google-login canonical public URLs', () => {
@@ -102,4 +115,28 @@ describe('google-login canonical public URLs', () => {
     };
 
     expect(getRequestUrl('/admin/login', request)).toBe('http://localhost:3000/admin/login');
-  }); });
+  });
+
+  it('derives the customer Google callback URL from the current request when no env override exists', async () => {
+    vi.stubEnv('GOOGLE_OAUTH_REDIRECT_URI', '');
+    vi.stubEnv('REDIRECT_URI', '');
+    vi.stubEnv('GOOGLE_OAUTH_JAVASCRIPT_ORIGIN', '');
+    vi.stubEnv('GOOGLE_PUBLIC_BASE_URL', '');
+    vi.stubEnv('SITE_URL', 'https://galantesjewelry.com');
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
+
+    const request = {
+      headers: new Headers({
+        host: 'galantesjewelry.com',
+        'x-forwarded-host': 'galantesjewelry.com',
+        'x-forwarded-proto': 'https',
+      }),
+      url: 'https://galantesjewelry.com/api/auth/google/start?returnTo=%2Faccount%2Forders',
+    };
+
+    const config = await getGoogleLoginConfig(request);
+
+    expect(config.redirectUri).toBe('https://galantesjewelry.com/auth/google/callback');
+    expect(config.javascriptOrigin).toBe('https://galantesjewelry.com');
+  });
+});

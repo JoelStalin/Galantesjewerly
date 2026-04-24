@@ -7,9 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Usar el mismo entorno 'Production' si quieres los mismos secretos exactos, 
-    # o 'Staging' si los tienes duplicados allí. 
-    # Por seguridad, GitHub permite heredar secretos.
     environment: Staging
     steps:
       - name: Checkout code
@@ -23,50 +20,94 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_SSH_PORT || 22 }}
           script: |
-            # Ir al directorio raíz
-            cd ~/galantesjewelry_staging || exit 1
+            set -Eeuo pipefail
 
-            # Sincronizar código de forma quirúrgica
-            echo "Sincronizando cambios de Git (Staging)..."
+            # Primer deploy: clonar repo
+            if [ ! -d ~/galantesjewelry_staging ]; then
+              git clone https://github.com/JoelStalin/Galantesjewerly.git ~/galantesjewelry_staging
+            fi
+            cd ~/galantesjewelry_staging
+
+            # Backup predeploy (solo staging — nunca toca DB producción)
+            TS=$(date +%Y%m%d_%H%M%S)
+            BK="backups/predeploy/stg_${TS}"
+            mkdir -p "$BK"
+            cp -f .env.staging "$BK/.env.staging" 2>/dev/null || true
+            sudo docker exec galantes_stg_db sh -lc \
+              "PGPASSWORD=\"\${POSTGRES_PASSWORD:-}\" pg_dump -U odoo -d galantes_staging_db --no-owner --no-privileges --clean --if-exists" \
+              > "$BK/galantes_staging_db.sql" 2>/dev/null || true
+            tar -czf "$BK/stg-data.tgz" data 2>/dev/null || true
+
+            # Preservar .env.staging durante el reset
+            [ -f .env.staging ] && cp -f .env.staging /tmp/stg_env_before_reset
             git fetch origin develop
-            
-            # Identificar cambios
-            CHANGES=$(git diff --name-only HEAD origin/develop)
-            
-            # Aplicar cambios
+            CHANGES=$(git diff --name-only HEAD origin/develop 2>/dev/null || echo "all")
             git reset --hard origin/develop
+            [ -f /tmp/stg_env_before_reset ] && cp -f /tmp/stg_env_before_reset .env.staging && rm -f /tmp/stg_env_before_reset
 
-            # Sincronizar secretos (PARIDAD TOTAL CON PROD)
-            {
-              echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
-              echo "ADMIN_SECRET_KEY=${{ secrets.ADMIN_SECRET_KEY }}"
-              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
-              echo "POSTGRES_USER=odoo"
-              echo "ODOO_DB=galantes_db"
-              echo "ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}"
-              echo "ODOO_API_KEY=${{ secrets.ODOO_API_KEY }}"
-              echo "CF_TUNNEL_TOKEN_PROD=${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
-              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}"
-              echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
-            } > .env.prod
-            chmod 600 .env.prod
+            # Escribir/actualizar variables staging
+            touch .env.staging
+            update_env() {
+              key="$1"; value="$2"
+              [ -z "$value" ] && return 0
+              if grep -q "^${key}=" .env.staging; then
+                sed -i "s|^${key}=.*|${key}=${value}|" .env.staging
+              else
+                echo "${key}=${value}" >> .env.staging
+              fi
+            }
 
-            # Solo reconstruir si hay cambios en el código de la app o dependencias
+            update_env "ADMIN_PASSWORD"                       "${{ secrets.ADMIN_PASSWORD }}"
+            update_env "ADMIN_SECRET_KEY"                     "${{ secrets.ADMIN_SECRET_KEY }}"
+            update_env "POSTGRES_PASSWORD"                    "${{ secrets.POSTGRES_PASSWORD }}"
+            update_env "POSTGRES_USER"                        "odoo"
+            update_env "ODOO_DB"                              "galantes_staging_db"
+            update_env "ODOO_PASSWORD"                        "${{ secrets.ODOO_PASSWORD }}"
+            update_env "ODOO_API_KEY"                         "${{ secrets.ODOO_API_KEY }}"
+            update_env "STRIPE_SECRET_KEY"                    "${{ secrets.STRIPE_SECRET_KEY_STAGING }}"
+            update_env "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"   "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_STAGING }}"
+            update_env "GOOGLE_OAUTH_CLIENT_ID"               "${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
+            update_env "GOOGLE_OAUTH_CLIENT_SECRET"           "${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
+            update_env "GOOGLE_OAUTH_REFRESH_TOKEN"           "${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}"
+            update_env "GOOGLE_OAUTH_REDIRECT_URI"            "${{ secrets.GOOGLE_OAUTH_REDIRECT_URI_STAGING }}"
+            update_env "GOOGLE_CALENDAR_ID"                   "${{ secrets.GOOGLE_CALENDAR_ID }}"
+            update_env "GOOGLE_SERVICE_ACCOUNT_EMAIL"         "${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}"
+            update_env "GOOGLE_PRIVATE_KEY"                   "${{ secrets.GOOGLE_PRIVATE_KEY }}"
+            update_env "GMAIL_NOTIFICATION_TO"                "${{ secrets.GMAIL_NOTIFICATION_TO }}"
+            update_env "GMAIL_SMTP_USER"                      "${{ secrets.GMAIL_SMTP_USER }}"
+            update_env "GMAIL_SMTP_PASS"                      "${{ secrets.GMAIL_SMTP_PASS }}"
+            # Tunnel staging — nunca sobreescribir si ya existe activo
+            if ! grep -q "^CF_TUNNEL_TOKEN_STAGING=" .env.staging; then
+              update_env "CF_TUNNEL_TOKEN_STAGING" "${{ secrets.CF_TUNNEL_TOKEN_STAGING }}"
+            fi
+            update_env "APPOINTMENT_TEST_MODE" "true"
+            chmod 600 .env.staging
+
+            # Rebuild solo si cambios relevantes
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
-              echo "Cambios detectados. Reconstruyendo contenedores de Staging..."
-              # Usamos -p staging para no chocar con otros proyectos
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml build web
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
+              echo "Reconstruyendo web staging..."
+              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml build web
+              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps web
             else
-              echo "Sin cambios críticos en la app."
+              echo "Sin cambios en app."
             fi
 
-            # Solo actualizar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
-              echo "Cambios en Odoo detectados..."
-              sudo docker compose -p galantes-staging --env-file .env.prod -f docker-compose.production.yml up -d --force-recreate odoo
+              echo "Actualizando Odoo staging..."
+              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --force-recreate odoo
             fi
 
-            # Limpieza suave
+            # Health checks staging
+            wait_http() {
+              url="$1"; label="$2"; retries="${3:-18}"; delay="${4:-5}"
+              for i in $(seq 1 "$retries"); do
+                if curl -fsS --max-time 10 "$url" >/dev/null 2>&1; then echo "OK: $label"; return 0; fi
+                echo "Esperando $label ($i/$retries)..."; sleep "$delay"
+              done
+              echo "FAIL: $label" >&2; return 1
+            }
+            wait_http "http://127.0.0.1:3001/api/health" "web staging"
+            wait_http "http://127.0.0.1:8082/healthz"    "nginx staging"
+
             sudo docker image prune -f
-            echo "Despliegue de Staging finalizado (Paridad con Prod)."
+            echo "Deploy staging OK."

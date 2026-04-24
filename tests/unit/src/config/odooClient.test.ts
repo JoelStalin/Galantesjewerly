@@ -19,6 +19,7 @@ describe('odooClient config', () => {
     delete process.env.ODOO_DATABASE;
     delete process.env.ODOO_DB;
     delete process.env.ODOO_BASE_URL;
+    delete process.env.ODOO_PASSWORD;
     delete process.env.ODOO_TIMEOUT_MS;
     delete process.env.ODOO_ENABLED;
     delete process.env.ODOO_SYNC_ON_APPOINTMENT_VALIDATED;
@@ -53,8 +54,21 @@ describe('odooClient config', () => {
 
     expect(config.isReady).toBe(false);
     expect(config.missing).toContain('ODOO_BASE_URL');
-    expect(config.missing).toContain('ODOO_BEARER_TOKEN or ODOO_API_KEY');
+    expect(config.missing).toContain('ODOO_BEARER_TOKEN or ODOO_API_KEY or ODOO_PASSWORD');
     expect(config.missing).toContain('ODOO_DATABASE or ODOO_DB');
+  });
+
+  it('treats the admin password as a valid fallback when no API key exists', () => {
+    process.env.ODOO_ENABLED = 'true';
+    process.env.ODOO_BASE_URL = 'https://odoo.example.com';
+    process.env.ODOO_PASSWORD = 'admin-password';
+    process.env.ODOO_DB = 'galantes_prod';
+
+    const config = getOdooConfig();
+
+    expect(config.password).toBe('admin-password');
+    expect(config.missing).not.toContain('ODOO_BEARER_TOKEN or ODOO_API_KEY');
+    expect(config.isReady).toBe(true);
   });
 
   it('builds JSON-2 headers with bearer auth and database selection', () => {
@@ -72,6 +86,22 @@ describe('odooClient config', () => {
     expect(headers.Authorization).toBe('bearer odoo-token');
     expect(headers['X-Odoo-Database']).toBe('galantes_prod');
     expect(headers['Content-Type']).toContain('application/json');
+  });
+
+  it('builds JSON-2 headers with bearer auth when only the password fallback exists', () => {
+    const headers = getOdooHeaders({
+      ...getOdooConfig({
+        enabled: true,
+        baseUrl: 'https://odoo.example.com',
+        password: 'admin-password',
+        database: 'galantes_prod',
+      }),
+      missing: [],
+      isReady: true,
+    });
+
+    expect(headers.Authorization).toBe('bearer admin-password');
+    expect(headers['X-Odoo-Database']).toBe('galantes_prod');
   });
 
   it('builds the correct JSON-2 endpoint URL', () => {
@@ -102,6 +132,7 @@ describe('odooClient requests', () => {
     delete process.env.ODOO_DATABASE;
     delete process.env.ODOO_DB;
     delete process.env.ODOO_BASE_URL;
+    delete process.env.ODOO_PASSWORD;
     delete process.env.ODOO_TIMEOUT_MS;
     delete process.env.ODOO_ENABLED;
   });
