@@ -52,7 +52,7 @@ services:
     restart: always
     command: -i base,galantes_jewelry
     ports:
-      - "8069:8069"
+      - "8079:8069"
     deploy:
       resources:
         limits:
