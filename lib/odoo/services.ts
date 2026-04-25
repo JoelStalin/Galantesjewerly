@@ -645,6 +645,22 @@ export const OdooService = {
   },
 
   /**
+   * Get a product image as base64 from Odoo
+   */
+  async getProductImage(templateId: number) {
+    try {
+      const products = await client.call('product.template', 'read', {
+        ids: [templateId],
+        fields: ['image_256']
+      });
+      return products && products.length > 0 ? products[0].image_256 : null;
+    } catch (error) {
+      console.error('Odoo Product Image Fetch Error:', error);
+      return null;
+    }
+  },
+
+  /**
    * Get full order details including line items with product images and tracking
    */
   async getOrderFullDetails(orderId: number, authenticatedEmail?: string) {
@@ -689,15 +705,13 @@ export const OdooService = {
         });
       }
 
-      const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
-
       return {
         ...order,
         display_status: this.mapOrderState(order.state, order.invoice_status),
-        portal_url: buildPortalUrl(baseUrl, order.access_url),
+        portal_url: buildPortalUrl(process.env.ODOO_BASE_URL || 'http://localhost:8069', order.access_url),
         lines: lines.map((l: any) => ({
           ...l,
-          image_url: `${baseUrl}/web/image/product.template/${l.product_template_id[0]}/image_128`
+          image_url: `/api/products/image?id=${l.product_template_id[0]}`
         })),
         tracking: tracking.map((t: any) => ({
           ...t,
