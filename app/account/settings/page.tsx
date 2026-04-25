@@ -65,6 +65,10 @@ export default async function SettingsPage() {
           street2: profile?.street2 ?? '',
           city: profile?.city ?? '',
           zip: profile?.zip ?? '',
+          state_id: profile?.state_id?.[0],
+          country_id: profile?.country_id?.[0],
+          state_name: profile?.state_id?.[1],
+          country_name: profile?.country_id?.[1],
         }}
       />
     </div>
