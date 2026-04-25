@@ -1,0 +1,157 @@
+{
+  "google": {
+    "development": {
+      "provider": "google",
+      "environment": "development",
+      "enabled": false,
+      "googleClientId": "",
+      "javascriptOrigin": "http://localhost:3000",
+      "redirectUri": "http://localhost:3000/auth/google/callback",
+      "scopes": [
+        "openid",
+        "email",
+        "profile"
+      ],
+      "connectedGoogleEmail": "",
+      "oauthConnectedAt": null,
+      "encryptedSecrets": {},
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "staging": {
+      "provider": "google",
+      "environment": "staging",
+      "enabled": false,
+      "googleClientId": "",
+      "javascriptOrigin": "https://staging.galantesjewelry.com",
+      "redirectUri": "https://staging.galantesjewelry.com/auth/google/callback",
+      "scopes": [
+        "openid",
+        "email",
+        "profile"
+      ],
+      "connectedGoogleEmail": "",
+      "oauthConnectedAt": null,
+      "encryptedSecrets": {},
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "production": {
+      "provider": "google",
+      "environment": "production",
+      "enabled": true,
+      "googleClientId": "",
+      "javascriptOrigin": "https://galantesjewelry.com",
+      "redirectUri": "https://galantesjewelry.com/auth/google/callback",
+      "scopes": [
+        "openid",
+        "email",
+        "profile"
+      ],
+      "connectedGoogleEmail": "",
+      "oauthConnectedAt": null,
+      "encryptedSecrets": {},
+      "updatedAt": null,
+      "updatedBy": null
+    }
+  },
+  "appointments": {
+    "development": {
+      "provider": "appointments",
+      "environment": "development",
+      "googleCalendarEnabled": false,
+      "googleCalendarId": "",
+      "googleServiceAccountEmail": "",
+      "gmailNotificationsEnabled": false,
+      "gmailRecipientInbox": "ceo@galantesjewelry.com",
+      "gmailSender": "joelstalin2105@gmail.com",
+      "appointmentDurationMinutes": 60,
+      "appointmentTimezone": "America/New_York",
+      "appointmentStartTime": "09:00",
+      "appointmentEndTime": "18:00",
+      "appointmentSlotIntervalMinutes": 30,
+      "appointmentAvailableWeekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "encryptedSecrets": {},
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "staging": {
+      "provider": "appointments",
+      "environment": "staging",
+      "googleCalendarEnabled": false,
+      "googleCalendarId": "",
+      "googleServiceAccountEmail": "",
+      "gmailNotificationsEnabled": false,
+      "gmailRecipientInbox": "ceo@galantesjewelry.com",
+      "gmailSender": "joelstalin2105@gmail.com",
+      "appointmentDurationMinutes": 60,
+      "appointmentTimezone": "America/New_York",
+      "appointmentStartTime": "09:00",
+      "appointmentEndTime": "18:00",
+      "appointmentSlotIntervalMinutes": 30,
+      "appointmentAvailableWeekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "encryptedSecrets": {},
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "production": {
+      "provider": "appointments",
+      "environment": "production",
+      "googleCalendarEnabled": true,
+      "googleCalendarId": "",
+      "googleServiceAccountEmail": "",
+      "gmailNotificationsEnabled": true,
+      "gmailRecipientInbox": "ceo@galantesjewelry.com",
+      "gmailSender": "joelstalin2105@gmail.com",
+      "appointmentDurationMinutes": 60,
+      "appointmentTimezone": "America/New_York",
+      "appointmentStartTime": "09:00",
+      "appointmentEndTime": "18:00",
+      "appointmentSlotIntervalMinutes": 30,
+      "appointmentAvailableWeekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "encryptedSecrets": {},
+      "updatedAt": "2026-04-17T00:45:24.420Z",
+      "updatedBy": "admin"
+    }
+  },
+  "audit": [
+    {
+      "id": "1776386724420-ac508de6",
+      "timestamp": "2026-04-17T00:45:24.423Z",
+      "actor": "admin",
+      "provider": "appointments",
+      "environment": "production",
+      "action": "create",
+      "changedFields": [
+        "googleCalendarEnabled",
+        "gmailNotificationsEnabled"
+      ],
+      "ipAddress": "::1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+    }
+  ]
+}

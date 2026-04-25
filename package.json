@@ -11,7 +11,7 @@
     "start:express": "node server/express-app.js",
     "start:next": "next start",
     "start:appointments": "node scripts/start-appointments.mjs",
-    "lint": "eslint app components lib middleware.ts",
+    "lint": "eslint app components lib",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

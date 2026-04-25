@@ -39,6 +39,12 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
                 Invoices
               </Link>
               <Link
+                href="/account/addresses"
+                className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
+              >
+                Addresses
+              </Link>
+              <Link
                 href="/account/settings"
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >

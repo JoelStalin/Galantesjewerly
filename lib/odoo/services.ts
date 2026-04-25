@@ -573,6 +573,144 @@ export const OdooService = {
   },
 
   /**
+   * Get all child addresses (shipping, billing, etc.) for a partner
+   */
+  async getPartnerAddresses(partnerId: number) {
+    try {
+      return await client.call('res.partner', 'search_read', {
+        domain: [['parent_id', '=', partnerId], ['type', 'in', ['delivery', 'invoice', 'other']]],
+        fields: ['id', 'name', 'type', 'email', 'phone', 'street', 'street2', 'city', 'zip', 'state_id', 'country_id'],
+        order: 'type asc'
+      });
+    } catch (error) {
+      console.error('Odoo Partner Addresses Fetch Error:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Add or Update a child address for a partner
+   */
+  async savePartnerAddress(partnerId: number, data: {
+    id?: number;
+    name: string;
+    type: 'delivery' | 'invoice' | 'other';
+    phone?: string;
+    street: string;
+    street2?: string;
+    city: string;
+    zip: string;
+    state_id?: number;
+    country_id?: number;
+  }) {
+    try {
+      const vals: Record<string, any> = {
+        parent_id: partnerId,
+        name: data.name,
+        type: data.type,
+        phone: data.phone,
+        street: data.street,
+        street2: data.street2,
+        city: data.city,
+        zip: data.zip,
+        state_id: data.state_id,
+        country_id: data.country_id || 233, // Default USA
+      };
+
+      if (data.id) {
+        await client.call('res.partner', 'write', { ids: [data.id], vals });
+        return data.id;
+      } else {
+        return await client.create('res.partner', vals);
+      }
+    } catch (error) {
+      console.error('Odoo Partner Address Save Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete (archive) a partner address
+   */
+  async deletePartnerAddress(addressId: number) {
+    try {
+      return await client.call('res.partner', 'write', {
+        ids: [addressId],
+        vals: { active: false }
+      });
+    } catch (error) {
+      console.error('Odoo Partner Address Delete Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get full order details including line items with product images and tracking
+   */
+  async getOrderFullDetails(orderId: number, authenticatedEmail?: string) {
+    try {
+      const orders = await client.call('sale.order', 'search_read', {
+        domain: [['id', '=', orderId]],
+        fields: [
+          'name', 'date_order', 'state', 'amount_total', 'amount_untaxed', 'amount_tax', 
+          'invoice_status', 'order_line', 'access_url', 'partner_id', 'partner_shipping_id',
+          'picking_ids', 'commitment_date'
+        ],
+        limit: 1
+      });
+
+      if (!orders || orders.length === 0) return null;
+      const order = orders[0];
+
+      // Security
+      if (authenticatedEmail) {
+        const partner = await client.call('res.partner', 'search_read', {
+          domain: [['id', '=', order.partner_id[0]]],
+          fields: ['email'],
+          limit: 1
+        });
+        if (!partner || partner.length === 0 || partner[0].email !== authenticatedEmail) {
+          throw new Error('Access Denied');
+        }
+      }
+
+      // Fetch Lines
+      const lines = await client.call('sale.order.line', 'search_read', {
+        domain: [['id', 'in', order.order_line]],
+        fields: ['product_id', 'name', 'product_uom_qty', 'price_unit', 'price_subtotal', 'price_total', 'product_template_id']
+      });
+
+      // Fetch Picking/Tracking
+      let tracking = [];
+      if (order.picking_ids && order.picking_ids.length > 0) {
+        tracking = await client.call('stock.picking', 'search_read', {
+          domain: [['id', 'in', order.picking_ids]],
+          fields: ['name', 'state', 'carrier_tracking_ref', 'carrier_id', 'date_done']
+        });
+      }
+
+      const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
+
+      return {
+        ...order,
+        display_status: this.mapOrderState(order.state, order.invoice_status),
+        portal_url: buildPortalUrl(baseUrl, order.access_url),
+        lines: lines.map((l: any) => ({
+          ...l,
+          image_url: `${baseUrl}/web/image/product.template/${l.product_template_id[0]}/image_128`
+        })),
+        tracking: tracking.map((t: any) => ({
+          ...t,
+          carrier_name: t.carrier_id ? t.carrier_id[1] : 'Standard Shipping'
+        }))
+      };
+    } catch (error) {
+      console.error('Odoo Order Details Error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get full partner profile for the settings page
    */
   async getPartnerProfile(partnerId: number) {
@@ -582,7 +720,14 @@ export const OdooService = {
         fields: ['name', 'email', 'phone', 'street', 'street2', 'city', 'zip', 'country_id', 'state_id'],
         limit: 1,
       });
-      return partners && partners.length > 0 ? partners[0] : null;
+      if (!partners || partners.length === 0) return null;
+      
+      const p = partners[0];
+      return {
+        ...p,
+        country_name: p.country_id ? p.country_id[1] : '',
+        state_name: p.state_id ? p.state_id[1] : '',
+      };
     } catch (error) {
       console.error('Odoo Partner Profile Fetch Error:', error);
       return null;
@@ -590,7 +735,7 @@ export const OdooService = {
   },
 
   /**
-   * Update partner profile fields (name, phone, address only — email is auth-managed)
+   * Update partner profile fields
    */
   async updatePartnerProfile(partnerId: number, data: {
     name?: string;
@@ -599,6 +744,8 @@ export const OdooService = {
     street2?: string;
     city?: string;
     zip?: string;
+    state_id?: number;
+    country_id?: number;
   }) {
     try {
       const vals: Record<string, unknown> = {};
@@ -608,6 +755,8 @@ export const OdooService = {
       if (data.street2 !== undefined) vals.street2 = data.street2;
       if (data.city !== undefined)   vals.city   = data.city;
       if (data.zip !== undefined)    vals.zip    = data.zip;
+      if (data.state_id)             vals.state_id = data.state_id;
+      if (data.country_id)           vals.country_id = data.country_id;
 
       await client.call('res.partner', 'write', { ids: [partnerId], vals });
       return { success: true };

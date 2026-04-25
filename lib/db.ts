@@ -32,6 +32,8 @@ export interface SiteSettings {
   contact_address?: string;
   appointment_email?: string;
   navigation_links: { label: string; href: string }[];
+  shipping_cities?: string[] | null;
+  restricted_shipping_cities?: string[] | null;
 }
 
 export interface FeaturedItem {
@@ -269,7 +271,7 @@ async function cleanupRemovedManagedImages(previousUrls: string[], currentData: 
 export async function getSettings(): Promise<SiteSettings> {
   try {
     const data = await readDB();
-    return data.settings || INITIAL_DATA.settings;
+    return { ...INITIAL_DATA.settings, ...data.settings };
   } catch {
     return INITIAL_DATA.settings;
   }

@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { ProfileForm } from '@/components/account/ProfileForm';
@@ -6,7 +7,9 @@ import { ProfileForm } from '@/components/account/ProfileForm';
 export default async function SettingsPage() {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
-  if (!user) return null;
+  if (!user) {
+    redirect('/account/login?callbackUrl=/account/settings');
+  }
 
   let profile = null;
   try {

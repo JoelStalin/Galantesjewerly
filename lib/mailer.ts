@@ -285,6 +285,41 @@ export async function sendAppointmentNotification(input: {
   });
 }
 
+export async function sendTransactionalMail(input: {
+  environment: IntegrationEnvironment;
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}) {
+  const config = await getMailRuntimeConfig(input.environment);
+  if (!config.enabled) {
+    console.log('[Mailer] Notifications disabled, skipping email to', input.to);
+    return null;
+  }
+  
+  if (config.sendGridApiKey) {
+    sgMail.setApiKey(config.sendGridApiKey);
+    const [result] = await sgMail.send({
+      to: input.to,
+      from: config.sender,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
+    return { messageId: String(result.headers['x-message-id'] || result.statusCode) };
+  }
+
+  const transporter = createTransport(config);
+  return transporter.sendMail({
+    from: config.sender,
+    to: input.to,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
+  });
+}
+
 export async function testMailConnection(environment: IntegrationEnvironment) {
   const config = await getMailRuntimeConfig(environment);
 

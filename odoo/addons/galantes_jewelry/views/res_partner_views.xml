@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_partner_form_galantes_portal" model="ir.ui.view">
+        <field name="name">res.partner.form.galantes.portal</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Galantes Portal" name="galantes_portal">
+                    <group string="Customer Account Metadata">
+                        <field name="galantes_customer_source" readonly="1"/>
+                        <field name="galantes_customer_username" readonly="1"/>
+                        <field name="galantes_google_subject" readonly="1"/>
+                        <field name="galantes_customer_registered_at" readonly="1"/>
+                        <field name="galantes_customer_last_auth_at" readonly="1"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

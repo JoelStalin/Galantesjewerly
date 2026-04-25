@@ -260,6 +260,14 @@ export async function verifyCustomerSession(token: string): Promise<Authenticate
   }
 }
 
+export async function verifyCustomerEmailToken(token: string): Promise<AuthenticatedCustomer> {
+  const session = await verifyCustomerSession(token);
+  if (!session) {
+    throw new Error('Invalid or expired verification token');
+  }
+  return session;
+}
+
 export function getCustomerSessionCookieOptions(request: RequestLike) {
   return {
     httpOnly: true,
