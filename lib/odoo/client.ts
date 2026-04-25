@@ -136,6 +136,15 @@ class OdooClient {
         p.hasPrev = p.page > 1;
         p.pages = p.pages || Math.max(1, Math.ceil(p.total / p.pageSize));
       }
+      
+      // Transform image URLs to use local proxy
+      if (response.data && Array.isArray(response.data)) {
+        response.data = response.data.map((product: ShopProduct) => ({
+          ...product,
+          imageUrl: product.imageUrl ? `/api/products/image?id=${product.id}` : undefined
+        }));
+      }
+
       this.cache.set(cacheKey, { data: response, timestamp: Date.now() });
       return response;
     } catch (error) {
@@ -169,6 +178,12 @@ class OdooClient {
     try {
       const response = await this.fetch(`/api/products/${slug}`);
       if (!response.data) return null;
+      
+      // Proxy image
+      if (response.data.imageUrl) {
+        response.data.imageUrl = `/api/products/image?id=${response.data.id}`;
+      }
+
       this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
       return response.data;
     } catch (error) {
@@ -192,7 +207,14 @@ class OdooClient {
       const response = await this.fetch(`/api/products/${slug}/related`, {
         query: { limit },
       });
-      const data = response.data || [];
+      let data = response.data || [];
+      
+      // Proxy images
+      data = data.map((p: any) => ({
+        ...p,
+        imageUrl: p.imageUrl ? `/api/products/image?id=${p.id}` : undefined
+      }));
+
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
     } catch (error) {
@@ -232,7 +254,14 @@ class OdooClient {
       const response = await this.fetch('/api/products/featured', {
         query: { limit },
       });
-      const data = response.data || [];
+      let data = response.data || [];
+      
+      // Proxy images
+      data = data.map((p: any) => ({
+        ...p,
+        imageUrl: p.imageUrl ? `/api/products/image?id=${p.id}` : undefined
+      }));
+
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
     } catch (error) {
