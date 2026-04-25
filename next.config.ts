@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'odoo.galantesjewelry.com', pathname: '/**' },
       // Odoo Cloudflare tunnel (if applicable)
       { protocol: 'https', hostname: '*.galantesjewelry.com', pathname: '/**' },
+      // External placeholders
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'images.pexels.com', pathname: '/**' },
     ],
   },
 };
