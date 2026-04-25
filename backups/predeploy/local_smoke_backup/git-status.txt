@@ -1,0 +1,76 @@
+ M .env.gcp.example
+ M .github/workflows/deploy-staging.yml
+ M .github/workflows/deploy.yml
+ M .gitignore
+ M Dockerfile
+ M GITHUB_SECRETS_GUIDE.md
+ M README-DEPLOYMENT.md
+ M app/account/invoices/page.tsx
+ M app/account/orders/page.tsx
+ M app/api/admin/google/oauth/callback/route.ts
+ M app/api/admin/google/oauth/start/route.ts
+ M app/api/auth/customer/register/route.ts
+ M app/api/auth/google/callback/route.ts
+ M app/api/checkout/stripe/route.ts
+ M app/api/webhooks/stripe/route.ts
+ M app/auth/login/page.tsx
+ M app/cart/page.tsx
+ M app/checkout/page.tsx
+ M app/collections/page.tsx
+ M app/contact/page.tsx
+ M app/page.tsx
+ M components/ConditionalNavbar.tsx
+ M components/ContactForm.tsx
+ M components/shop/ProductCTA.tsx
+ M components/shop/ProductCard.tsx
+ M context/shop/CartContext.tsx
+ M controllers/appointmentController.js
+ M docker-compose.gcp.yml
+ M docker-compose.yml
+ M docs/deployment/GCP_MIGRATION_GUIDE.md
+ M infra/nginx/nginx.conf
+ M lib/google-calendar.ts
+ M lib/mailer.ts
+ M lib/odoo/client.ts
+ M memory/current/blockers.md
+ M memory/current/now.md
+ M odoo/Dockerfile
+ M odoo/addons/galantes_jewelry/__manifest__.py
+ M odoo/addons/galantes_jewelry/controllers/product_api.py
+ M odoo/addons/galantes_jewelry/models/__init__.py
+ M odoo/addons/galantes_jewelry/models/appointment.py
+ M odoo/addons/galantes_jewelry/models/product_template.py
+ M odoo/addons/galantes_jewelry/security/ir.model.access.csv
+ M odoo/addons/galantes_jewelry/views/product_template_views.xml
+ M odoo/config/odoo.conf
+ M scripts/deploy-prod.sh
+ M scripts/diagnose-google-calendar.js
+ M scripts/diagnose-google-calendar.mjs
+ M scripts/verify_production_profile9.py
+ M tests/e2e/admin_image_session_flow.py
+ M tests/e2e/appointment_frontend_flow.py
+ M tests/e2e/production_appointment_calendar_gmail_flow.py
+ M tests/functional/test_sales_flow.py
+ M tests/unit/lib/google-login.test.ts
+ M tests/unit/odoo-flow.test.ts
+ M tests/unit/src/config/odooClient.test.ts
+?? .env.prod.example
+?? .env.test.example
+?? backups/
+?? components/ContactFormShell.tsx
+?? components/SafeEmailLink.tsx
+?? data/appointments.json
+?? data/cms.json
+?? data/integrations.json
+?? docs/catalog/
+?? docs/deployment/GOOGLE_CUSTOMER_LOGIN_SETUP.md
+?? docs/deployment/PRODUCTION_SYNC_AND_SECRETS.md
+?? odoo/.env.example
+?? odoo/addons/galantes_jewelry/models/account_move.py
+?? odoo/addons/galantes_jewelry/models/res_partner.py
+?? odoo/addons/galantes_jewelry/views/account_move_views.xml
+?? odoo/addons/galantes_jewelry/views/res_partner_views.xml
+?? public/assets/products/
+?? scripts/backup/
+?? scripts_verify_odoo_e2e_error.png
+?? tests/unit/app/

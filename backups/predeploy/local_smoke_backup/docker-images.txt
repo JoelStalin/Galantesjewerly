@@ -1,0 +1,9 @@
+galantesjewelry-odoo:latest	158d2116e1db	20 hours ago
+galantesjewelry-web:latest	9550b386fa8e	20 hours ago
+odoo-odoo:latest	da0522f525c6	24 hours ago
+galantesjewelry-main-publish-odoo:latest	6aeb802329a7	6 days ago
+galantesjewelry-main-publish-web:latest	0ff9c79fa4c6	7 days ago
+ghcr.io/github/github-mcp-server:latest	d2550953f805	7 days ago
+postgres:15-alpine	c43f162c605f	7 days ago
+cloudflare/cloudflared:latest	6b599ca3e974	6 weeks ago
+nginx:1.27-alpine	65645c7bb6a0	12 months ago

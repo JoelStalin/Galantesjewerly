@@ -10,6 +10,10 @@ interface ProfileData {
   street2: string;
   city: string;
   zip: string;
+  state_id?: number;
+  country_id?: number;
+  state_name?: string;
+  country_name?: string;
 }
 
 interface ProfileFormProps {
@@ -21,8 +25,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const value = e.target.name === 'state_id' || e.target.name === 'country_id' 
+      ? parseInt(e.target.value, 10) 
+      : e.target.value;
+    
+    setForm(prev => ({ ...prev, [e.target.name]: value }));
     if (status !== 'idle') setStatus('idle');
   };
 
@@ -36,12 +44,14 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name:    form.name,
-          phone:   form.phone,
-          street:  form.street,
-          street2: form.street2,
-          city:    form.city,
-          zip:     form.zip,
+          name:       form.name,
+          phone:      form.phone,
+          street:     form.street,
+          street2:    form.street2,
+          city:       form.city,
+          zip:        form.zip,
+          state_id:   form.state_id,
+          country_id: form.country_id,
         }),
       });
 
@@ -68,7 +78,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <h2 className="font-serif text-xl text-primary">Personal Information</h2>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <div>
+          <div className="sm:col-span-2">
             <label htmlFor="name" className={labelClass}>Full Name</label>
             <input
               id="name"
@@ -113,7 +123,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
       {/* Shipping address */}
       <section className="space-y-5">
-        <h2 className="font-serif text-xl text-primary">Shipping Address</h2>
+        <h2 className="font-serif text-xl text-primary">Default Shipping Address</h2>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -166,6 +176,41 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               className={inputClass}
               placeholder="33036"
             />
+          </div>
+
+          <div>
+            <label htmlFor="country_id" className={labelClass}>Country</label>
+            <select
+              id="country_id"
+              name="country_id"
+              value={form.country_id || 233}
+              onChange={handleChange}
+              className={inputClass}
+            >
+              <option value={233}>United States</option>
+              <option value={62}>Dominican Republic</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="state_id" className={labelClass}>State / Province</label>
+            <select
+              id="state_id"
+              name="state_id"
+              value={form.state_id || ''}
+              onChange={handleChange}
+              className={inputClass}
+            >
+              <option value="">Select State...</option>
+              <option value={10}>Florida</option>
+              <option value={33}>New York</option>
+              <option value={5}>California</option>
+              <option value={43}>Texas</option>
+              {/* Odoo state IDs for common US states */}
+            </select>
+            {form.state_name && !form.state_id && (
+               <p className="mt-1 text-[10px] text-muted-foreground">Current: {form.state_name}</p>
+            )}
           </div>
         </div>
       </section>

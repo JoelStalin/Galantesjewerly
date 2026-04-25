@@ -18,11 +18,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Whitelist — email is auth-managed, cannot change here
-  const allowed = ['name', 'phone', 'street', 'street2', 'city', 'zip'] as const;
-  const update: Record<string, string> = {};
+  const allowed = ['name', 'phone', 'street', 'street2', 'city', 'zip', 'state_id', 'country_id'] as const;
+  const update: Record<string, any> = {};
   for (const key of allowed) {
-    if (typeof body[key] === 'string') {
-      update[key] = body[key].trim();
+    if (body[key] !== undefined) {
+      update[key] = body[key];
     }
   }
 
