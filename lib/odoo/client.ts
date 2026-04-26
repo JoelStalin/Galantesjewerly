@@ -212,7 +212,7 @@ class OdooClient {
       // Proxy images
       data = data.map((p: any) => ({
         ...p,
-        imageUrl: p.imageUrl ? `/api/products/image?id=${p.id}` : undefined
+        imageUrl: `/api/products/image?id=${p.id}`
       }));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -259,7 +259,7 @@ class OdooClient {
       // Proxy images
       data = data.map((p: any) => ({
         ...p,
-        imageUrl: p.imageUrl ? `/api/products/image?id=${p.id}` : undefined
+        imageUrl: `/api/products/image?id=${p.id}`
       }));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });

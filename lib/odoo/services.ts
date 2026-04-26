@@ -73,7 +73,7 @@ export const OdooService = {
       if (cmsSettings && cmsSettings.length > 0) {
         const s = cmsSettings[0];
         let navLinks = [];
-        try { navLinks = JSON.parse(s.navigation_json || '[]'); } catch (e) { console.error('Failed to parse nav links', e); }
+        try { navLinks = s.navigation_json ? JSON.parse(s.navigation_json) : []; } catch (e) { console.error('Failed to parse nav links', e); }
         return {
           site_title: s.site_title,
           site_description: s.site_description,
@@ -92,7 +92,7 @@ export const OdooService = {
       }
       return {};
     } catch (error) {
-      console.warn('[OdooService] Odoo fetch failed, returning empty settings.', error);
+      console.warn('[OdooService] Company settings fetch failed, using local CMS data fallback.');
       return {};
     }
   },
@@ -106,7 +106,7 @@ export const OdooService = {
       });
       return (existing && existing.length > 0) ? existing[0].id : null;
     } catch (error) {
-      console.error('Odoo Partner Search Error:', error);
+      console.warn('[OdooService] Partner search failed:', error instanceof Error ? error.message : 'Unknown error');
       return null;
     }
   },
@@ -128,7 +128,7 @@ export const OdooService = {
         customer_rank: 1,
       });
     } catch (error) {
-      console.error('Odoo Partner Sync Error:', error);
+      console.warn('[OdooService] Partner creation failed:', error instanceof Error ? error.message : 'Unknown error');
       return null;
     }
   },
@@ -147,7 +147,7 @@ export const OdooService = {
       await client.call('res.partner', 'write', { ids: [partnerId], vals });
       return partnerId;
     } catch (error) {
-      console.error('Odoo User Sync Error:', error);
+      console.warn('[OdooService] User profile sync failed:', error instanceof Error ? error.message : 'Unknown error');
       return null;
     }
   },
@@ -326,8 +326,40 @@ export const OdooService = {
   async getOrdersWithInvoices(partnerId: number, authenticatedEmail?: string) {
     try {
       const orders = await this.getPartnerOrders(partnerId, authenticatedEmail);
-      return orders.map((o: any) => ({ ...o, invoices: [] })); // Simplified for fallback
+      if (!orders || orders.length === 0) return [];
+
+      const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
+      const allInvoiceIds: number[] = orders.flatMap((o: any) => o.invoice_ids || []);
+
+      let invoiceMap: Record<number, any[]> = {};
+      if (allInvoiceIds.length > 0) {
+        const invoices = await client.call('account.move', 'search_read', {
+          domain: [['id', 'in', allInvoiceIds], ['move_type', '=', 'out_invoice']],
+          fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'access_token'],
+        });
+
+        for (const inv of (invoices || [])) {
+          const enriched = {
+            ...inv,
+            display_status: this.mapInvoiceState(inv.state, inv.payment_state),
+            portal_url: buildPortalUrl(baseUrl, inv.access_url),
+            pdf_url: buildInvoicePdfUrl(baseUrl, inv.access_url, inv.access_token),
+          };
+          for (const order of orders) {
+            if ((order.invoice_ids || []).includes(inv.id)) {
+              if (!invoiceMap[order.id]) invoiceMap[order.id] = [];
+              invoiceMap[order.id].push(enriched);
+            }
+          }
+        }
+      }
+
+      return orders.map((o: any) => ({
+        ...o,
+        invoices: invoiceMap[o.id] || [],
+      }));
     } catch (error) {
+      console.warn('[OdooService] Orders+Invoices fetch failed:', error);
       return [];
     }
   },

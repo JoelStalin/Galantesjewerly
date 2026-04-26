@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import path from 'path';
+import fs from 'fs/promises';
 import { OdooService } from '@/lib/odoo/services';
 
 export async function GET(request: Request) {
@@ -30,18 +32,15 @@ export async function GET(request: Request) {
       };
 
       const fileName = localMap[id] || 'the-islamorada-solitaire.png'; // Default to ID 1 if not found
-      if (fileName) {
-        const path = require('path');
-        const fs = require('fs/promises');
-        const localPath = path.join(process.cwd(), 'public', 'assets', 'products', fileName);
-        const buffer = await fs.readFile(localPath);
-        return new NextResponse(buffer, {
-          headers: {
-            'Content-Type': 'image/png',
-            'Cache-Control': 'public, max-age=86400'
-          }
-        });
-      }
+      
+      const localPath = path.join(process.cwd(), 'public', 'assets', 'products', fileName);
+      const buffer = await fs.readFile(localPath);
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400'
+        }
+      });
     }
 
     const buffer = Buffer.from(base64Image, 'base64');
