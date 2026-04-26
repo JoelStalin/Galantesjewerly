@@ -44,6 +44,7 @@ interface ShopControlsProps {
   startItem: number;
   endItem: number;
   activeFilters: ActiveFilters;
+  layout?: 'horizontal' | 'sidebar';
 }
 
 export function ShopControls({
@@ -53,6 +54,7 @@ export function ShopControls({
   startItem,
   endItem,
   activeFilters,
+  layout = 'horizontal',
 }: ShopControlsProps) {
   const router   = useRouter();
   const pathname = usePathname();
@@ -84,16 +86,128 @@ export function ShopControls({
     navigate({ q: searchInput.trim() || undefined });
   };
 
-  const removeFilter = (key: string) => {
-    if (key === 'price') {
-      navigate({ min_price: undefined, max_price: undefined });
-    } else {
-      navigate({ [key]: undefined });
-    }
-  };
-
   const clearAll = () => router.push(pathname);
 
+  const inputClass = 'w-full rounded-lg border border-primary/10 bg-white px-4 py-2.5 text-sm text-primary placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-colors';
+  const labelClass = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground';
+
+  if (layout === 'sidebar') {
+    return (
+      <div className="space-y-12">
+        {/* Search */}
+        <section>
+          <label className={labelClass}>Search Collection</label>
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search pieces..."
+              className={inputClass}
+            />
+            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/40 hover:text-accent">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+               </svg>
+            </button>
+          </form>
+        </section>
+
+        {/* Categories */}
+        {categories.length > 0 && (
+          <section>
+            <label className={labelClass}>Categories</label>
+            <ul className="space-y-2">
+              <li>
+                <button
+                  onClick={() => navigate({ category: undefined })}
+                  className={`text-sm transition-colors hover:text-accent ${!currentFilters.category ? 'font-bold text-primary underline underline-offset-8 decoration-accent' : 'text-muted-foreground'}`}
+                >
+                  All Collections
+                </button>
+              </li>
+              {categories.map((cat) => (
+                <li key={cat.id}>
+                  <button
+                    onClick={() => navigate({ category: cat.name })}
+                    className={`text-sm transition-colors text-left hover:text-accent ${currentFilters.category?.toLowerCase() === cat.name.toLowerCase() ? 'font-bold text-primary underline underline-offset-8 decoration-accent' : 'text-muted-foreground'}`}
+                  >
+                    {cat.name}
+                    <span className="ml-2 text-[10px] opacity-40 font-normal">({cat.count})</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Material */}
+        <section>
+          <label htmlFor="material-sidebar" className={labelClass}>Material</label>
+          <select
+            id="material-sidebar"
+            value={currentFilters.material || ''}
+            onChange={(e) => navigate({ material: e.target.value || undefined })}
+            className={inputClass}
+          >
+            {MATERIAL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </section>
+
+        {/* Price Range */}
+        <section>
+          <label className={labelClass}>Price Range</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              placeholder="Min"
+              value={currentFilters.min_price || ''}
+              onChange={(e) => navigate({ min_price: e.target.value || undefined })}
+              className={inputClass}
+              min={0}
+            />
+            <span className="text-primary/20">—</span>
+            <input
+              type="number"
+              placeholder="Max"
+              value={currentFilters.max_price || ''}
+              onChange={(e) => navigate({ max_price: e.target.value || undefined })}
+              className={inputClass}
+              min={0}
+            />
+          </div>
+        </section>
+
+        {/* Sort */}
+        <section>
+          <label htmlFor="sort-sidebar" className={labelClass}>Sort By</label>
+          <select
+            id="sort-sidebar"
+            value={currentFilters.sort || 'featured'}
+            onChange={(e) => navigate({ sort: e.target.value })}
+            className={inputClass}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </section>
+
+        {/* Mobile Toggle Info */}
+        <div className="lg:hidden pt-6 border-t border-primary/5">
+           <button onClick={clearAll} className="text-[10px] font-bold uppercase tracking-widest text-accent hover:underline">Reset All Filters</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Legacy / Horizontal layout (if needed)
   return (
     <div className="space-y-4">
       {/* Search Bar */}
