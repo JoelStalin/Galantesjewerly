@@ -3,8 +3,8 @@ import base64
 import os
 import glob
 
-# Configuration from .env (Manually extracted for this script)
-ODOO_URL = "http://localhost:8069" # Standard Docker internal or external
+# Configuration from .env
+ODOO_URL = "https://odoo.galantesjewelry.com"
 DB = "galantes_db"
 USER = "admin"
 PASS = "Galantesjewelry"

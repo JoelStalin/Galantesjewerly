@@ -141,7 +141,7 @@ class OdooClient {
       if (response.data && Array.isArray(response.data)) {
         response.data = response.data.map((product: ShopProduct) => ({
           ...product,
-          imageUrl: product.imageUrl ? `/api/products/image?id=${product.id}` : undefined
+          imageUrl: `/api/products/image?id=${product.id}`
         }));
       }
 
@@ -387,7 +387,7 @@ export default OdooClient;
 
 const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
   {
-    id: 'fallback-1',
+    id: '1',
     slug: 'the-islamorada-solitaire',
     name: 'The Islamorada Solitaire',
     shortDescription: '2ct Diamond on Platinum with Coral Engravings',
@@ -395,13 +395,13 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 18500,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3f8ad?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=1',
     category: 'Bridal',
     buyUrl: '#',
     isFeatured: true
   },
   {
-    id: 'fallback-2',
+    id: '2',
     slug: 'mariners-bond-band',
     name: "Mariner's Bond Band",
     shortDescription: '18k Rose Gold Nautical Knot Band',
@@ -409,12 +409,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 2400,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1598560912015-62d04ba4608c?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=2',
     category: 'Bridal',
     buyUrl: '#'
   },
   {
-    id: 'fallback-3',
+    id: '3',
     slug: 'compass-rose-pendant',
     name: 'The Compass Rose Pendant',
     shortDescription: '18k Gold with Sapphire Center',
@@ -422,13 +422,13 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 3200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=3',
     category: 'Nautical',
     buyUrl: '#',
     isFeatured: true
   },
   {
-    id: 'fallback-4',
+    id: '4',
     slug: 'keys-azure-drop-earrings',
     name: 'Keys Azure Drop Earrings',
     shortDescription: 'Aquamarine and Diamond Drops',
@@ -436,12 +436,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 5800,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1635767798638-3665c302e27c?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=4',
     category: 'Coastal',
     buyUrl: '#'
   },
   {
-    id: 'fallback-5',
+    id: '5',
     slug: 'anchor-soul-bracelet',
     name: 'Anchor of the Soul Bracelet',
     shortDescription: 'Diamond Pavé Anchor Cuff',
@@ -449,13 +449,13 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 8900,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=5',
     category: 'Nautical',
     buyUrl: '#',
     isFeatured: true
   },
   {
-    id: 'fallback-6',
+    id: '6',
     slug: 'coastal-tide-ring',
     name: 'Coastal Tide Ring',
     shortDescription: 'Blue Sapphire Gradient Wave Ring',
@@ -463,12 +463,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 4500,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1603561591411-0e7320b97d33?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=6',
     category: 'Coastal',
     buyUrl: '#'
   },
   {
-    id: 'fallback-7',
+    id: '7',
     slug: 'sirens-pearl-necklace',
     name: "Siren's Pearl Necklace",
     shortDescription: 'South Sea Pearl with White Gold Mermaid Tail',
@@ -476,12 +476,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 7200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=7',
     category: 'Nautical',
     buyUrl: '#'
   },
   {
-    id: 'fallback-8',
+    id: '8',
     slug: 'navigators-chrono-link',
     name: "Navigator's Chrono Link",
     shortDescription: 'Solid Heavy Link Bracelet',
@@ -489,12 +489,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 1800,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1542491595-3075c49ca294?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=8',
     category: 'Coastal',
     buyUrl: '#'
   },
   {
-    id: 'fallback-9',
+    id: '9',
     slug: 'tritons-trident-tie-bar',
     name: "Triton's Trident Tie Bar",
     shortDescription: 'Sterling Silver and Gold Tie Bar',
@@ -502,12 +502,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 650,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1626784215021-2e39ccf971cd?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=9',
     category: 'Nautical',
     buyUrl: '#'
   },
   {
-    id: 'fallback-10',
+    id: '10',
     slug: 'lighthouse-guardian-charm',
     name: 'Lighthouse Guardian Charm',
     shortDescription: 'Gold and Ruby Lighthouse Charm',
@@ -515,7 +515,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 1200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?auto=format&fit=crop&q=80&w=1000',
+    imageUrl: '/api/products/image?id=10',
     category: 'Coastal',
     buyUrl: '#'
   }
