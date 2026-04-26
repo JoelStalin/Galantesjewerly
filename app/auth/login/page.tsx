@@ -7,7 +7,7 @@ type AuthMode = 'login' | 'register';
 
 function sanitizeReturnTo(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
-    return '/account/orders';
+    return '/account/settings';
   }
 
   return value;

@@ -11,7 +11,7 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) {
-    redirect('/auth/login?returnTo=/account/orders');
+    redirect('/auth/login?returnTo=/account/settings');
   }
 
   return (

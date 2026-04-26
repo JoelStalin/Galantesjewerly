@@ -13,6 +13,16 @@ const nextConfig: NextConfig = {
   ],
   images: {
     unoptimized: disableImageOptimization,
+    localPatterns: [
+      {
+        pathname: '/api/products/image',
+        search: '?*',
+      },
+      {
+        pathname: '/api/image',
+        search: '?*',
+      },
+    ],
     remotePatterns: [
       // Odoo local/Docker instance
       { protocol: 'http', hostname: 'localhost', port: '8069', pathname: '/web/image/**' },
