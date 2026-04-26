@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
         pathname: '/api/image',
         search: '?*',
       },
+      {
+        pathname: '/assets/**',
+      },
     ],
     remotePatterns: [
       // Odoo local/Docker instance
