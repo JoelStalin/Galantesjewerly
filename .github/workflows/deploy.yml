@@ -99,9 +99,13 @@ jobs:
             update_env "STRIPE_SECRET_KEY" "${STRIPE_SECRET_KEY}"
             chmod 600 .env.prod
 
-            # 5. Build and Deploy (Full rebuild for safety)
-            echo "Rebuilding containers..."
+            # 5. Build and Deploy (HARD REBUILD)
+            echo "Performing hard rebuild of containers..."
+            sudo docker compose --env-file .env.prod -f docker-compose.production.yml down
             sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build web
+            
+            # Clean up old images and cache
+            sudo docker system prune -af
             
             # Update Odoo modules
             sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
