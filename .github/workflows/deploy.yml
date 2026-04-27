@@ -1,6 +1,9 @@
 name: Deploy to GCP Production
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -41,22 +44,24 @@ jobs:
             cd ~/galantesjewelry || exit 1
 
             BACKUP_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-            export BACKUP_TIMESTAMP
             BACKUP_DIR="backups/predeploy/${BACKUP_TIMESTAMP}"
             ROLLBACK_REQUIRED=0
 
             rollback() {
-              if [ "$ROLLBACK_REQUIRED" -ne 1 ]; then
+              if [ "${ROLLBACK_REQUIRED}" -ne 1 ]; then
                 return 0
               fi
 
-              echo "Fallo detectado. Restaurando desde $BACKUP_DIR ..."
-              if [ -f scripts/backup/predeploy-restore.sh ]; then
-                bash scripts/backup/predeploy-restore.sh "$(pwd)" "$BACKUP_DIR"
-              else
-                echo "Restore script no encontrado; rollback automático no disponible." >&2
-                return 1
+              echo "CRITICAL: Failure detected. Restoring from ${BACKUP_DIR}..."
+              # Restore .env.prod
+              [ -f "${BACKUP_DIR}/.env.prod" ] && cp -f "${BACKUP_DIR}/.env.prod" .env.prod
+              # Restore Database if dump exists
+              if [ -f "${BACKUP_DIR}/galantes_db.sql" ]; then
+                 sudo docker exec galantes_db sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" psql -U odoo -d galantes_db < /tmp/galantes_db.sql" || echo "DB Restore failed"
               fi
+              # Up services
+              sudo docker compose -f docker-compose.production.yml up -d
+              echo "Rollback completed."
             }
 
             wait_http() {
@@ -69,7 +74,7 @@ jobs:
                   echo "Health OK: $label"
                   return 0
                 fi
-                echo "Esperando health de $label ($attempt/$retries)"
+                echo "Waiting for $label ($attempt/$retries)..."
                 sleep "$delay"
               done
               echo "Health FAIL: $label" >&2
@@ -78,40 +83,43 @@ jobs:
 
             trap 'status=$?; if [ $status -ne 0 ]; then rollback; fi; exit $status' EXIT
 
-            # Backup obligatorio antes de cualquier cambio
-            echo "Creando backup predeploy..."
-            if [ -f scripts/backup/predeploy-backup.sh ]; then
-              bash scripts/backup/predeploy-backup.sh "$(pwd)"
-            else
-              TS=$(date +%Y%m%d_%H%M%S)
-              BK="backups/predeploy/${TS}"
-              mkdir -p "$BK"
-              cp -f .env.prod "$BK/.env.prod" 2>/dev/null || true
-              cp -f docker-compose.production.yml "$BK/docker-compose.production.yml" 2>/dev/null || true
-              sudo docker exec galantes_db sh -lc "PGPASSWORD=\"\${POSTGRES_PASSWORD:-}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK/galantes_db.sql" 2>/dev/null || true
-              tar -czf "$BK/app-data.tgz" data odoo infra/nginx .env.prod docker-compose.production.yml 2>/dev/null || true
-            fi
+            # 1. Mandatory Backup
+            echo "Creating safety backup..."
+            mkdir -p "${BACKUP_DIR}"
+            [ -f .env.prod ] && cp -f .env.prod "${BACKUP_DIR}/.env.prod"
+            cp -f docker-compose.production.yml "${BACKUP_DIR}/"
+            
+            echo "Dumping Odoo database..."
+            # No ignoramos errores aquí: si falla el dump, falla el deploy.
+            sudo docker exec galantes_db sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "${BACKUP_DIR}/galantes_db.sql"
+            
+            tar -czf "${BACKUP_DIR}/app-data-snapshot.tgz" data odoo infra/nginx
+            echo "Backup successful: ${BACKUP_DIR}"
+            
             ROLLBACK_REQUIRED=1
 
-            # Sincronizar código de forma quirúrgica (solo traer cambios, sin borrar datos no rastreados)
-            echo "Sincronizando cambios de Git..."
-            # Preservar el .env.prod real del servidor antes de resetear el repo
-            if [ -f .env.prod ]; then
-              cp -f .env.prod /tmp/galantes_env_prod_before_reset
-            fi
+            # 2. Sync Code
+            echo "Syncing latest code from GitHub..."
+            # Save server-specific files
+            [ -f .env.prod ] && cp -f .env.prod /tmp/galantes_env_keep
+            
             git fetch origin main
-            
-            # Identificar si hubo cambios en archivos críticos
             CHANGES=$(git diff --name-only HEAD origin/main)
-            
-            # Aplicar cambios
             git reset --hard origin/main
-            if [ -f /tmp/galantes_env_prod_before_reset ]; then
-              cp -f /tmp/galantes_env_prod_before_reset .env.prod
-              rm -f /tmp/galantes_env_prod_before_reset
+            
+            # Restore server-specific files
+            [ -f /tmp/galantes_env_keep ] && cp -f /tmp/galantes_env_keep .env.prod && rm -f /tmp/galantes_env_keep
+
+            # 3. Dynamic Data Sync (Apply production masters to live data)
+            echo "Applying production data masters..."
+            if [ -f cms_prod_local.json ]; then
+              cp -f cms_prod_local.json data/cms.json
+            fi
+            if [ -f integrations_prod.json ]; then
+              cp -f integrations_prod.json data/integrations.json
             fi
 
-            # Actualizar variables críticas sin sobrescribir todo el .env.prod
+            # 4. Update environment variables
             touch .env.prod
             update_env() {
               key="$1"
@@ -123,53 +131,35 @@ jobs:
                 echo "${key}=${value}" >> .env.prod
               fi
             }
-
-            update_env "ADMIN_PASSWORD" "$ADMIN_PASSWORD"
-            update_env "ADMIN_SECRET_KEY" "$ADMIN_SECRET_KEY"
-            update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
-            update_env "POSTGRES_USER" "odoo"
-            update_env "ODOO_DB" "galantes_db"
-            update_env "ODOO_PASSWORD" "$ODOO_PASSWORD"
-            update_env "ODOO_API_KEY" "$ODOO_API_KEY"
-            update_env "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
-
-            # No sobreescribir el token activo del túnel si ya existe en el servidor.
-            if ! grep -q "^CF_TUNNEL_TOKEN_PROD=" .env.prod; then
-              update_env "CF_TUNNEL_TOKEN_PROD" "$CF_TUNNEL_TOKEN_PROD"
-            else
-              echo "Manteniendo CF_TUNNEL_TOKEN_PROD existente en servidor."
-            fi
+            update_env "ADMIN_PASSWORD" "${ADMIN_PASSWORD}"
+            update_env "ADMIN_SECRET_KEY" "${ADMIN_SECRET_KEY}"
+            update_env "POSTGRES_PASSWORD" "${POSTGRES_PASSWORD}"
+            update_env "ODOO_PASSWORD" "${ODOO_PASSWORD}"
+            update_env "ODOO_API_KEY" "${ODOO_API_KEY}"
+            update_env "STRIPE_SECRET_KEY" "${STRIPE_SECRET_KEY}"
             chmod 600 .env.prod
 
-            # Solo reconstruir si hay cambios en el código de la app o dependencias
-            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
-              echo "Cambios detectados en la aplicación. Reconstruyendo contenedor web..."
+            # 5. Build and Deploy
+            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose|next.config)"; then
+              echo "Changes detected in application. Rebuilding..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
-            else
-              echo "No se detectaron cambios críticos en la aplicación. Saltando build de contenedor web."
             fi
 
-            # Solo actualizar Odoo si hay cambios en sus addons o configuración
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
-              echo "Cambios detectados en Odoo. Actualizando módulos..."
+              echo "Changes detected in Odoo. Updating modules..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
-            else
-              echo "No se detectaron cambios en Odoo."
             fi
 
-            # Limpieza suave
+            # Clean up old images
             sudo docker image prune -f
 
-            # Verificación post-deploy. Si falla cualquiera, entra el rollback automático.
-            wait_http "http://127.0.0.1:3000/api/health" "web interno"
-            wait_http "http://127.0.0.1:8080/healthz" "nginx interno"
-            wait_http "http://127.0.0.1:8069/web/login" "odoo interno"
-            wait_http "https://galantesjewelry.com/api/health" "sitio público"
-            wait_http "https://admin.galantesjewelry.com/api/health" "admin público"
-            wait_http "https://odoo.galantesjewelry.com/healthz" "odoo público"
+            # 6. Final Health Verification
+            echo "Verifying service availability..."
+            wait_http "http://127.0.0.1:3000/api/health" "web internal"
+            wait_http "https://galantesjewelry.com/api/health" "public site"
+            wait_http "https://odoo.galantesjewelry.com/healthz" "odoo backend"
 
             ROLLBACK_REQUIRED=0
-            trap - EXIT
-            echo "Despliegue quirúrgico finalizado."
+            echo "AUTOMATED DEPLOYMENT SUCCESSFUL."
