@@ -86,6 +86,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={outfit.variable}>
+      <head>
+        <meta name="version-id" content="v2026-04-27-hard-rebuild-001" />
+      </head>
       <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
         <CartProvider>
           <ConditionalNavbar settings={finalSettings} user={user} />
