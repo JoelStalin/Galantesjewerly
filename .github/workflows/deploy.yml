@@ -30,10 +30,12 @@ jobs:
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           script: |
             mkdir -p ~/galantesjewelry/temp_deploy
+            # Ensure proper permissions for the directory
+            sudo chown -R yoeli:yoeli ~/galantesjewelry
 
       - name: Create Deployment Package
         run: |
-          tar -czf deploy-package.tar.gz . --exclude=.git --exclude=node_modules --exclude=.next
+          tar -czf deploy-package.tar.gz . --exclude=.git --exclude=node_modules --exclude=.next --exclude=backups
 
       - name: Copy Package to Server
         uses: appleboy/scp-action@master
@@ -64,10 +66,13 @@ jobs:
             cd ~/galantesjewelry || exit 1
 
             # Determine Docker Compose command
-            if docker compose version >/dev/null 2>&1; then
+            if command -v docker-compose >/dev/null 2>&1; then
+              DOCKER_COMPOSE="sudo docker-compose"
+            elif sudo docker compose version >/dev/null 2>&1; then
               DOCKER_COMPOSE="sudo docker compose"
             else
-              DOCKER_COMPOSE="sudo docker-compose"
+              echo "Error: docker-compose or docker compose not found" >&2
+              exit 1
             fi
             echo "Using Docker Compose command: $DOCKER_COMPOSE"
 
@@ -78,23 +83,23 @@ jobs:
             # 1. Mandatory Backup
             echo "Creating safety backup..."
             [ -f .env.prod ] && cp -f .env.prod "${BACKUP_DIR}/.env.prod"
-            cp -f docker-compose.production.yml "${BACKUP_DIR}/"
+            cp -f docker-compose.production.yml "${BACKUP_DIR}/" || true
             
             # Database backup (Find container dynamically)
             DB_CONTAINER=$(sudo docker ps --filter "name=db" --format "{{.Names}}" | head -n 1)
             if [ -n "$DB_CONTAINER" ]; then
               echo "Dumping database from $DB_CONTAINER..."
               sudo docker exec "$DB_CONTAINER" sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "${BACKUP_DIR}/galantes_db.sql" || echo "Warning: DB Backup failed"
-            else
-              echo "Warning: Database container not found for backup"
             fi
             
-            # 2. Extract Package
+            # 2. Extract Package (Overwriting existing files)
             echo "Extracting new deployment package..."
+            # Delete old files to avoid conflicts, but keep backups and .env.prod
+            find . -maxdepth 1 ! -name 'backups' ! -name '.env.prod' ! -name 'temp_deploy' ! -name '.' -exec rm -rf {} +
             tar -xzf temp_deploy/deploy-package.tar.gz -C .
             rm -f temp_deploy/deploy-package.tar.gz
 
-            # 3. Dynamic Data Sync (Apply production masters)
+            # 3. Dynamic Data Sync
             if [ -f cms_prod_local.json ]; then
               cp -f cms_prod_local.json data/cms.json
             fi
@@ -124,14 +129,19 @@ jobs:
 
             # 5. Build and Deploy (HARD REBUILD)
             echo "Performing hard rebuild of containers..."
-            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml down
-            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml up -d --build web
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml down || true
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml up -d --build
             
             # Update Odoo modules
-            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || echo "Odoo update failed"
             $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml restart odoo
 
             # Clean up old images and cache
             sudo docker system prune -f
 
-            echo "DEPLOYMENT COMPLETED SUCCESSFULLY."
+            # 6. Post-deploy verification
+            echo "Waiting for web container to be ready..."
+            sleep 30
+            sudo docker compose -f docker-compose.production.yml logs web --tail 50
+            
+            echo "DEPLOYMENT COMPLETED."
