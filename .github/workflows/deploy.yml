@@ -20,7 +20,16 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install # Use install instead of ci for better resilience during refactors
+        run: npm install
+
+      - name: Prepare Server Directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: yoeli
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p ~/galantesjewelry/temp_deploy
 
       - name: Create Deployment Package
         run: |
@@ -54,6 +63,14 @@ jobs:
             set -Eeuo pipefail
             cd ~/galantesjewelry || exit 1
 
+            # Determine Docker Compose command
+            if docker compose version >/dev/null 2>&1; then
+              DOCKER_COMPOSE="sudo docker compose"
+            else
+              DOCKER_COMPOSE="sudo docker-compose"
+            fi
+            echo "Using Docker Compose command: $DOCKER_COMPOSE"
+
             BACKUP_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
             BACKUP_DIR="backups/predeploy/${BACKUP_TIMESTAMP}"
             mkdir -p "${BACKUP_DIR}"
@@ -63,8 +80,14 @@ jobs:
             [ -f .env.prod ] && cp -f .env.prod "${BACKUP_DIR}/.env.prod"
             cp -f docker-compose.production.yml "${BACKUP_DIR}/"
             
-            # Database backup (Non-blocking but logged)
-            sudo docker exec galantes_db sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "${BACKUP_DIR}/galantes_db.sql" || echo "Warning: DB Backup failed"
+            # Database backup (Find container dynamically)
+            DB_CONTAINER=$(sudo docker ps --filter "name=db" --format "{{.Names}}" | head -n 1)
+            if [ -n "$DB_CONTAINER" ]; then
+              echo "Dumping database from $DB_CONTAINER..."
+              sudo docker exec "$DB_CONTAINER" sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "${BACKUP_DIR}/galantes_db.sql" || echo "Warning: DB Backup failed"
+            else
+              echo "Warning: Database container not found for backup"
+            fi
             
             # 2. Extract Package
             echo "Extracting new deployment package..."
@@ -101,17 +124,14 @@ jobs:
 
             # 5. Build and Deploy (HARD REBUILD)
             echo "Performing hard rebuild of containers..."
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml down
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --build web
-            
-            # Clean up old images and cache
-            sudo docker system prune -af
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml down
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml up -d --build web
             
             # Update Odoo modules
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
-            sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init
+            $DOCKER_COMPOSE --env-file .env.prod -f docker-compose.production.yml restart odoo
 
-            # Clean up old images
-            sudo docker image prune -f
+            # Clean up old images and cache
+            sudo docker system prune -f
 
             echo "DEPLOYMENT COMPLETED SUCCESSFULLY."
