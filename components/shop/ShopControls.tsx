@@ -86,6 +86,14 @@ export function ShopControls({
     navigate({ q: searchInput.trim() || undefined });
   };
 
+  const removeFilter = (key: string) => {
+    if (key === 'price') {
+      navigate({ min_price: undefined, max_price: undefined });
+    } else {
+      navigate({ [key]: undefined });
+    }
+  };
+
   const clearAll = () => router.push(pathname);
 
   const inputClass = 'w-full rounded-lg border border-primary/10 bg-white px-4 py-2.5 text-sm text-primary placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-colors';

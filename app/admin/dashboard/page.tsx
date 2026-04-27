@@ -1,5 +1,6 @@
 "use client";
 
+// Re-compile trigger: 2026-04-27 11:00 AM
 import { useState, useEffect } from 'react';
 import type { PageSection, SiteSettings, FeaturedItem } from '@/lib/db';
 import ImageUploader from '@/components/admin/ImageUploader';

@@ -208,7 +208,8 @@ export async function GET(request: Request) {
       const { OdooService } = await import('@/lib/odoo/services');
       await OdooService.syncAuthenticatedUser({
         name: tokenInfo.name || '',
-        email: tokenInfo.email || '',
+        email: tokenInfo.email!,
+        authMethod: 'google',
         google_id: tokenInfo.sub,
       });
       console.log('[Google OAuth] Odoo Sync Successful');

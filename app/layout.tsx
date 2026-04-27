@@ -26,6 +26,7 @@ const FALLBACK_SETTINGS: SiteSettings = {
   favicon_url: '/favicon.ico',
   logo_url: '/logo.png',
   hero_image_url: '/hero-bg.jpg',
+  shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
   instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
   facebook_url: 'https://www.facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
   whatsapp_number: '16464965879',
@@ -85,9 +86,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={outfit.variable}>
-      <head>
-        <link rel="icon" href={finalSettings.favicon_url} sizes="any" />
-      </head>
       <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
         <CartProvider>
           <ConditionalNavbar settings={finalSettings} user={user} />

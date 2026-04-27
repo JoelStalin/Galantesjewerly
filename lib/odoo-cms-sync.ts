@@ -42,7 +42,12 @@ async function readSingletonRecord() {
 
     return records[0] || null;
   } catch (error) {
-    console.error('Odoo snapshot read failed:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('Invalid apikey') || message.includes('Access Denied')) {
+      console.warn('[OdooSync] Authentication failed (Invalid apikey/Access Denied). Using local cache.');
+    } else {
+      console.error('Odoo snapshot read failed:', error);
+    }
     return null;
   }
 }
