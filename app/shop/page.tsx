@@ -9,6 +9,7 @@
 import { Suspense }                  from 'react';
 import Link                          from 'next/link';
 import { getOdooClient }             from '@/lib/odoo/client';
+import { getSettings }               from '@/lib/db';
 import { ProductGrid }               from '@/components/shop/ProductGrid';
 import { ShopControls }              from '@/components/shop/ShopControls';
 import { Pagination }                from '@/components/shop/Pagination';
@@ -41,9 +42,10 @@ export default async function ShopPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const params  = await searchParams;
-  const client  = getOdooClient();
-  const page    = Math.max(1, parseInt(params.page || '1', 10));
+  const params   = await searchParams;
+  const client   = getOdooClient();
+  const settings = await getSettings();
+  const page     = Math.max(1, parseInt(params.page || '1', 10));
 
   // Fetch products and categories in parallel; degrade gracefully on errors.
   const [productsResult, categoriesResult] = await Promise.allSettled([
@@ -100,7 +102,7 @@ export default async function ShopPage({
       <section className="relative w-full h-[40vh] min-h-[350px] flex items-center justify-center text-white overflow-hidden">
         <div
           className="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-[2000ms] scale-105 hover:scale-100"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop')" }}
+          style={{ backgroundImage: `url('${settings.shop_hero_image_url}')` }}
         ></div>
         <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]"></div>
         

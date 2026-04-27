@@ -20,6 +20,7 @@ export interface SiteSettings {
   favicon_url: string;
   logo_url: string;
   hero_image_url: string;
+  shop_hero_image_url: string;
   brand_name: string;
   brand_tagline: string;
   site_title: string;
@@ -72,6 +73,7 @@ const INITIAL_DATA: DBData = {
     contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
     appointment_email: 'ceo@galantesjewelry.com',
     hero_image_url: '/assets/images/hero.webp',
+    shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
     navigation_links: [
       { href: '/about', label: 'Heritage' },
       { href: '/collections', label: 'Collections' },

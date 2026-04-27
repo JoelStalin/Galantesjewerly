@@ -350,6 +350,14 @@ export default function Dashboard() {
                     onUploadStateChange={(isUploading: boolean) => setUploadState('settings-hero', isUploading)}
                   />
 
+                  <ImageUploader
+                    label="Shop Page Hero Background"
+                    currentUrl={settings.shop_hero_image_url}
+                    onUploadSuccess={(url) => setSettings((current) => current ? { ...current, shop_hero_image_url: url } : current)}
+                    onRemove={() => setSettings((current) => current ? { ...current, shop_hero_image_url: '' } : current)}
+                    onUploadStateChange={(isUploading: boolean) => setUploadState('settings-shop-hero', isUploading)}
+                  />
+
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Navigation Links</label>
                     <div className="space-y-3">
