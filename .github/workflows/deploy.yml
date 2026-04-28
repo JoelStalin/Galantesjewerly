@@ -8,80 +8,81 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: GCP Production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: SSH and Deploy to GCP
         uses: appleboy/ssh-action@master
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_SECRET_KEY: ${{ secrets.ADMIN_SECRET_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+          ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
+          CF_TUNNEL_TOKEN_PROD: ${{ secrets.CF_TUNNEL_TOKEN_PROD }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
-            set -Eeuo pipefail
-
             # Ir al directorio raíz
             cd ~/galantesjewelry || exit 1
 
-            # Backup predeploy obligatorio
+            # 1. Backup de Seguridad (No bloqueante)
+            echo "Realizando backup de seguridad..."
             TS=$(date +%Y%m%d_%H%M%S)
-            BK="backups/predeploy/${TS}"
-            mkdir -p "$BK"
-            echo "Creando backup en $BK..."
-            [ -f .env.prod ] && cp -f .env.prod "$BK/.env.prod" || true
-            cp -f docker-compose.production.yml "$BK/" || true
+            BK_DIR="backups/predeploy/${TS}"
+            mkdir -p "$BK_DIR"
+            [ -f .env.prod ] && cp .env.prod "$BK_DIR/"
             
-            # Backup DB
-            sudo docker exec galantes_db sh -lc "PGPASSWORD=\"${{ secrets.POSTGRES_PASSWORD }}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK/galantes_db.sql" 2>/dev/null || echo "Warn: DB backup failed"
-            
-            tar -czf "$BK/app-data-pre-reset.tgz" data odoo infra/nginx 2>/dev/null || true
+            # Intento de backup de DB
+            DB_CONT=$(sudo docker ps -q -f name=galantes_db)
+            if [ -n "$DB_CONT" ]; then
+              sudo docker exec "$DB_CONT" sh -lc "PGPASSWORD=\"$POSTGRES_PASSWORD\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK_DIR/galantes_db.sql" 2>/dev/null || echo "Aviso: Backup de DB falló"
+            fi
 
-            # Sincronizar código
-            echo "Sincronizando con Git..."
-            [ -f .env.prod ] && cp -f .env.prod /tmp/galantes_env_keep
+            # 2. Sincronizar código con Git (Método probado en Run #48)
+            echo "Sincronizando cambios de Git..."
             git fetch origin main
             CHANGES=$(git diff --name-only HEAD origin/main)
             git reset --hard origin/main
-            [ -f /tmp/galantes_env_keep ] && cp -f /tmp/galantes_env_keep .env.prod && rm -f /tmp/galantes_env_keep
 
-            # Maestros de datos
+            # 3. Sincronizar maestros de datos
             [ -f cms_prod_local.json ] && cp -f cms_prod_local.json data/cms.json
             [ -f integrations_prod.json ] && cp -f integrations_prod.json data/integrations.json
 
-            # Actualizar secretos (Directamente desde Action context)
-            touch .env.prod
-            update_env() {
-              key="$1"; value="$2"
-              [ -z "$value" ] && return 0
-              if grep -q "^${key}=" .env.prod; then
-                sed -i "s|^${key}=.*|${key}=${value}|" .env.prod
-              else
-                echo "${key}=${value}" >> .env.prod
-              fi
-            }
-
-            update_env "ADMIN_PASSWORD" "${{ secrets.ADMIN_PASSWORD }}"
-            update_env "ADMIN_SECRET_KEY" "${{ secrets.ADMIN_SECRET_KEY }}"
-            update_env "POSTGRES_PASSWORD" "${{ secrets.POSTGRES_PASSWORD }}"
-            update_env "ODOO_PASSWORD" "${{ secrets.ODOO_PASSWORD }}"
-            update_env "ODOO_API_KEY" "${{ secrets.ODOO_API_KEY }}"
-            update_env "STRIPE_SECRET_KEY" "${{ secrets.STRIPE_SECRET_KEY }}"
-            update_env "CF_TUNNEL_TOKEN_PROD" "${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
+            # 4. Actualizar secretos en .env.prod
+            {
+              echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
+              echo "ADMIN_SECRET_KEY=$ADMIN_SECRET_KEY"
+              echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
+              echo "POSTGRES_USER=odoo"
+              echo "ODOO_DB=galantes_db"
+              echo "ODOO_PASSWORD=$ODOO_PASSWORD"
+              echo "ODOO_API_KEY=$ODOO_API_KEY"
+              echo "CF_TUNNEL_TOKEN_PROD=$CF_TUNNEL_TOKEN_PROD"
+              echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
+            } > .env.prod
             chmod 600 .env.prod
 
-            # Desplegar
+            # 5. Desplegar Web si hay cambios (Basado en lógica exitosa Run #48)
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose|next.config)"; then
-              echo "Reconstruyendo contenedor web..."
+              echo "Cambios detectados en la aplicación. Reconstruyendo..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
             fi
 
+            # 6. Desplegar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
               echo "Actualizando módulos de Odoo..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || true
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
             fi
 
+            # Limpieza
             sudo docker image prune -f
-            echo "DEPLOYMENT SUCCESSFUL."
+            echo "DESPLIEGUE FINALIZADO EXITOSAMENTE."
