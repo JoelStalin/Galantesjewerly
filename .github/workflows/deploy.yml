@@ -4,6 +4,11 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force full rebuild even without code changes'
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -48,8 +53,9 @@ jobs:
             # 2. Sincronizar código con Git (Método probado en Run #48)
             echo "Sincronizando cambios de Git..."
             git fetch origin main
-            CHANGES=$(git diff --name-only HEAD origin/main)
+            PREV_HEAD=$(git rev-parse HEAD)
             git reset --hard origin/main
+            CHANGES=$(git diff --name-only "$PREV_HEAD" HEAD)
 
             # 3. Sincronizar maestros de datos
             [ -f cms_prod_local.json ] && cp -f cms_prod_local.json data/cms.json
@@ -70,14 +76,14 @@ jobs:
             chmod 600 .env.prod
 
             # 5. Desplegar Web si hay cambios (Basado en lógica exitosa Run #48)
-            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose|next.config)"; then
+            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|public/|package.json|Dockerfile|docker-compose|next.config)" || [ "${{ inputs.force_rebuild }}" = "true" ]; then
               echo "Cambios detectados en la aplicación. Reconstruyendo..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
             fi
 
             # 6. Desplegar Odoo si hay cambios
-            if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
+            if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)" || [ "${{ inputs.force_rebuild }}" = "true" ]; then
               echo "Actualizando módulos de Odoo..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || true
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
