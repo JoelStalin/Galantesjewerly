@@ -32,6 +32,7 @@ jobs:
           host: ${{ secrets.GCP_VM_IP }}
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
           envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
             # Ir al directorio raíz
