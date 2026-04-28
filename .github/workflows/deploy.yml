@@ -8,26 +8,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: GCP Production
+    environment: Production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: SSH and Deploy to GCP
         uses: appleboy/ssh-action@master
-        env:
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          ADMIN_SECRET_KEY: ${{ secrets.ADMIN_SECRET_KEY }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
-          ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
-          CF_TUNNEL_TOKEN_PROD: ${{ secrets.CF_TUNNEL_TOKEN_PROD }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
           script: |
             set -Eeuo pipefail
 
@@ -42,34 +33,24 @@ jobs:
             [ -f .env.prod ] && cp -f .env.prod "$BK/.env.prod" || true
             cp -f docker-compose.production.yml "$BK/" || true
             
-            # Backup DB (si el contenedor existe)
-            DB_CONT=$(sudo docker ps -q -f name=galantes_db)
-            if [ -z "$DB_CONT" ]; then
-              DB_CONT=$(sudo docker ps -q -f name=db)
-            fi
-            if [ -n "$DB_CONT" ]; then
-              sudo docker exec "$DB_CONT" sh -lc "PGPASSWORD=\"${POSTGRES_PASSWORD}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK/galantes_db.sql" || echo "Warn: DB backup failed"
-            fi
+            # Backup DB
+            sudo docker exec galantes_db sh -lc "PGPASSWORD=\"${{ secrets.POSTGRES_PASSWORD }}\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK/galantes_db.sql" 2>/dev/null || echo "Warn: DB backup failed"
             
             tar -czf "$BK/app-data-pre-reset.tgz" data odoo infra/nginx 2>/dev/null || true
 
             # Sincronizar código
             echo "Sincronizando con Git..."
-            # Preservar el .env.prod local antes del reset
             [ -f .env.prod ] && cp -f .env.prod /tmp/galantes_env_keep
-            
             git fetch origin main
             CHANGES=$(git diff --name-only HEAD origin/main)
             git reset --hard origin/main
-            
-            # Restaurar .env.prod
             [ -f /tmp/galantes_env_keep ] && cp -f /tmp/galantes_env_keep .env.prod && rm -f /tmp/galantes_env_keep
 
-            # Sincronizar maestros de datos si existen en el repo
+            # Maestros de datos
             [ -f cms_prod_local.json ] && cp -f cms_prod_local.json data/cms.json
             [ -f integrations_prod.json ] && cp -f integrations_prod.json data/integrations.json
 
-            # Actualizar variables de entorno (Upsert)
+            # Actualizar secretos (Directamente desde Action context)
             touch .env.prod
             update_env() {
               key="$1"; value="$2"
@@ -81,29 +62,27 @@ jobs:
               fi
             }
 
-            update_env "ADMIN_PASSWORD" "$ADMIN_PASSWORD"
-            update_env "ADMIN_SECRET_KEY" "$ADMIN_SECRET_KEY"
-            update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
-            update_env "ODOO_PASSWORD" "$ODOO_PASSWORD"
-            update_env "ODOO_API_KEY" "$ODOO_API_KEY"
-            update_env "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
+            update_env "ADMIN_PASSWORD" "${{ secrets.ADMIN_PASSWORD }}"
+            update_env "ADMIN_SECRET_KEY" "${{ secrets.ADMIN_SECRET_KEY }}"
+            update_env "POSTGRES_PASSWORD" "${{ secrets.POSTGRES_PASSWORD }}"
+            update_env "ODOO_PASSWORD" "${{ secrets.ODOO_PASSWORD }}"
+            update_env "ODOO_API_KEY" "${{ secrets.ODOO_API_KEY }}"
+            update_env "STRIPE_SECRET_KEY" "${{ secrets.STRIPE_SECRET_KEY }}"
+            update_env "CF_TUNNEL_TOKEN_PROD" "${{ secrets.CF_TUNNEL_TOKEN_PROD }}"
             chmod 600 .env.prod
 
-            # Desplegar Web si hay cambios
+            # Desplegar
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose|next.config)"; then
               echo "Reconstruyendo contenedor web..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml build web
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml up -d --no-deps web
             fi
 
-            # Desplegar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
               echo "Actualizando módulos de Odoo..."
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || true
               sudo docker compose --env-file .env.prod -f docker-compose.production.yml restart odoo
             fi
 
-            # Limpieza
             sudo docker image prune -f
-
-            echo "Despliegue finalizado exitosamente."
+            echo "DEPLOYMENT SUCCESSFUL."
