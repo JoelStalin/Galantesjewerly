@@ -52,6 +52,7 @@ jobs:
 
             # 2. Sincronizar código con Git (Método probado en Run #48)
             echo "Sincronizando cambios de Git..."
+            sudo chown -R yoeli:yoeli . || true
             git fetch origin main
             PREV_HEAD=$(git rev-parse HEAD)
             git reset --hard origin/main
