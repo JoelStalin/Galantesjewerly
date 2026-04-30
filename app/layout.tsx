@@ -17,8 +17,8 @@ const outfit = Outfit({
 });
 
 export const dynamic = 'force-dynamic';
-const ODOO_SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
-const ODOO_SETTINGS_TIMEOUT_MS = 2500;
+const ODOO_SETTINGS_CACHE_TTL_MS = 30 * 60 * 1000; // Increased to 30 mins
+const ODOO_SETTINGS_TIMEOUT_MS = 800; // Reduced to 800ms for faster first byte
 
 type CachedOdooSettings = {
   value: Partial<SiteSettings>;

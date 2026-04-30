@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import { OdooService } from '@/lib/odoo/services';
+
+const CACHE_DIR = process.env.APP_DATA_DIR ? path.join(process.env.APP_DATA_DIR, 'blobs', 'product_images') : path.join(process.cwd(), 'data', 'blobs', 'product_images');
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,7 +14,21 @@ export async function GET(request: Request) {
     return new Response('Product ID required', { status: 400 });
   }
 
+  const cachePath = path.join(CACHE_DIR, `${id}.png`);
+
   try {
+    // 1. Check local file cache first
+    if (existsSync(cachePath)) {
+      const buffer = await fs.readFile(cachePath);
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200',
+          'X-Cache': 'HIT'
+        }
+      });
+    }
+
     const templateId = parseInt(id, 10);
     let base64Image = await OdooService.getProductImage(templateId);
 
@@ -38,17 +55,29 @@ export async function GET(request: Request) {
       return new NextResponse(buffer, {
         headers: {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=86400'
+          'Cache-Control': 'public, max-age=86400',
+          'X-Cache': 'MISS-FALLBACK'
         }
       });
     }
 
     const buffer = Buffer.from(base64Image, 'base64');
 
+    // 2. Save to cache asynchronously (don't block the response)
+    try {
+      if (!existsSync(CACHE_DIR)) {
+        await fs.mkdir(CACHE_DIR, { recursive: true });
+      }
+      await fs.writeFile(cachePath, buffer);
+    } catch (cacheError) {
+      console.error('[ProductImageProxy] Failed to write to cache:', cacheError);
+    }
+
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200'
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200',
+        'X-Cache': 'MISS'
       }
     });
   } catch (error) {
