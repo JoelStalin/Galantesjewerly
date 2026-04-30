@@ -112,10 +112,15 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: galantes_tunnel_prod
-    restart: unless-stopped
+    restart: always
     networks:
       - galante-net
     command: tunnel --no-autoupdate run --protocol http2 --token ${CF_TUNNEL_TOKEN_PROD}
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
