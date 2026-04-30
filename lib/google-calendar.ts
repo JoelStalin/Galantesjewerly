@@ -212,6 +212,15 @@ export async function isCalendarSlotAvailable(input: {
   }
 }
 
+export function buildCalendarEventSummary(submission: { inquiryType: string; name: string }): string {
+  const type = (submission.inquiryType || '').trim().replace(/\s+/g, ' ');
+  const name = (submission.name || '').trim().replace(/\s+/g, ' ');
+  if (!type && !name) return 'Jewelry Appointment';
+  if (!type) return name;
+  if (!name) return type;
+  return `${type} - ${name}`;
+}
+
 export async function createCalendarEvent(input: {
   config: CalendarRuntimeConfig;
   record: AppointmentRecord;

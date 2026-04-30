@@ -3,25 +3,37 @@ import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const standaloneDir = resolve(process.cwd(), '.next', 'standalone');
-const standaloneServer = resolve(standaloneDir, 'server.js');
+const standaloneServerCandidates = [
+  resolve(standaloneDir, 'server.js'),
+  resolve(standaloneDir, 'app', 'server.js'),
+];
+const standaloneServer = standaloneServerCandidates.find(existsSync);
 
-function syncRuntimeAsset(sourcePath, destinationPath) {
+function syncRuntimeAsset(sourcePath, destinationPaths) {
   if (!existsSync(sourcePath)) {
     return;
   }
 
-  rmSync(destinationPath, { force: true, recursive: true });
-  mkdirSync(dirname(destinationPath), { recursive: true });
-  cpSync(sourcePath, destinationPath, { recursive: true });
+  for (const destinationPath of destinationPaths) {
+    rmSync(destinationPath, { force: true, recursive: true });
+    mkdirSync(dirname(destinationPath), { recursive: true });
+    cpSync(sourcePath, destinationPath, { recursive: true });
+  }
 }
 
-if (!existsSync(standaloneServer)) {
+if (!standaloneServer) {
   console.error('Standalone build not found. Run "npm run build" before "npm run start".');
   process.exit(1);
 }
 
-syncRuntimeAsset(resolve(process.cwd(), 'public'), resolve(standaloneDir, 'public'));
-syncRuntimeAsset(resolve(process.cwd(), '.next', 'static'), resolve(standaloneDir, '.next', 'static'));
+syncRuntimeAsset(resolve(process.cwd(), 'public'), [
+  resolve(standaloneDir, 'public'),
+  resolve(standaloneDir, 'app', 'public'),
+]);
+syncRuntimeAsset(resolve(process.cwd(), '.next', 'static'), [
+  resolve(standaloneDir, '.next', 'static'),
+  resolve(standaloneDir, 'app', '.next', 'static'),
+]);
 
 const child = spawn(process.execPath, [standaloneServer], {
   stdio: 'inherit',

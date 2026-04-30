@@ -3,21 +3,26 @@ set -e
 
 echo "Galante's Jewelry: starting standalone runtime..."
 
-pkill -f "node server.js" || true
+ENTRYPOINT="server.js"
+if [ ! -f "server.js" ] && [ -f "app/server.js" ]; then
+  ENTRYPOINT="app/server.js"
+fi
+
+if [ ! -f "$ENTRYPOINT" ]; then
+  echo "Standalone entrypoint not found. Run npm run build before starting."
+  exit 1
+fi
+
+pkill -f "node ${ENTRYPOINT}" || true
 
 mkdir -p data/blobs
 chmod -R 775 data
-
-if [ ! -f "server.js" ]; then
-  echo "server.js not found. Extract or build the standalone bundle before running this script."
-  exit 1
-fi
 
 export NODE_ENV=production
 export PORT="${PORT:-3000}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export APP_DATA_DIR="${APP_DATA_DIR:-$(pwd)/data}"
 
-nohup node server.js > server.log 2>&1 &
+nohup node "$ENTRYPOINT" > server.log 2>&1 &
 
 echo "Application started. Check server.log for runtime output."

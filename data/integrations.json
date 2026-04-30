@@ -48,7 +48,7 @@
         "email",
         "profile"
       ],
-      "connectedGoogleEmail": "",
+      "connectedGoogleEmail": "ceo@galantesjewelry.com",
       "oauthConnectedAt": null,
       "encryptedSecrets": {},
       "updatedAt": null,
@@ -115,7 +115,7 @@
       "provider": "appointments",
       "environment": "production",
       "googleCalendarEnabled": true,
-      "googleCalendarId": "",
+      "googleCalendarId": "ceo@galantesjewelry.com",
       "googleServiceAccountEmail": "",
       "gmailNotificationsEnabled": true,
       "gmailRecipientInbox": "ceo@galantesjewelry.com",

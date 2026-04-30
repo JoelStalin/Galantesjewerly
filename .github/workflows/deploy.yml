@@ -52,6 +52,13 @@ jobs:
               docker_cmd compose --env-file .env.prod -f docker-compose.production.yml "$@"
             }
 
+            ensure_cloudflared() {
+              echo "Levantando cloudflared (blindado)..."
+              compose up -d --no-deps --force-recreate cloudflared
+              sleep 10
+              return 0
+            }
+
             # --- BLINDAJE DE VARIABLES (ATÓMICO) ---
             TMP_ENV=".env.prod.tmp"
             [ -f .env.prod ] && cp .env.prod "$TMP_ENV" || touch "$TMP_ENV"
@@ -85,9 +92,7 @@ jobs:
             sudo systemctl enable docker || true
 
             # --- TUNNEL PRIMERO Y SIEMPRE ---
-            echo "Levantando cloudflared (Blindado)..."
-            # Nos aseguramos de que no dependa de nada y tenga restart policy
-            compose up -d --remove-orphans cloudflared
+            ensure_cloudflared
             
             # 1. Backup de Seguridad (No bloqueante)
             echo "Realizando backup de seguridad..."
@@ -118,6 +123,7 @@ jobs:
               echo "Cambios detectados en la aplicación. Reconstruyendo..."
               compose build web
               compose up -d --no-deps web
+              ensure_cloudflared
             fi
 
             # 5. Desplegar Odoo si hay cambios
@@ -125,8 +131,10 @@ jobs:
               echo "Actualizando módulos de Odoo..."
               compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || true
               compose restart odoo
+              ensure_cloudflared
             fi
 
             # 6. Limpieza
             docker_cmd image prune -f
+            ensure_cloudflared
             echo "DESPLIEGUE FINALIZADO EXITOSAMENTE Y TUNNEL BLINDADO."

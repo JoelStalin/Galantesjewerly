@@ -193,20 +193,128 @@ export const OdooService = {
     }
   },
 
-  async automateBillingFlow(orderId: number) {
+  async automateBillingFlow(orderId: number, stripeData?: any) {
     try {
-      // 1. Confirm Order
-      await client.call('sale.order', 'action_confirm', { ids: [orderId] });
-      // 2. Create Invoice
-      const invoiceId = await client.call('sale.order', '_create_invoices', { ids: [orderId] });
-      // 3. Post Invoice
-      if (invoiceId && invoiceId.length > 0) {
-        await client.call('account.move', 'action_post', { ids: invoiceId });
+      // 1. Fetch current order state
+      const orders = await client.call('sale.order', 'read', { ids: [orderId], fields: ['state', 'invoice_status', 'invoice_ids', 'picking_ids'] });
+      if (!orders || orders.length === 0) throw new Error('Order not found');
+      const order = orders[0];
+
+      // 2. Normalize Stripe data for Odoo
+      const stripeVals = stripeData ? {
+        payment_intent_id: stripeData.paymentIntentId,
+        charge_id: stripeData.chargeId || false,
+        amount: stripeData.amount,
+        currency: stripeData.currency,
+        receipt_url: stripeData.receiptUrl,
+        customer_email: stripeData.customerEmail,
+        payment_status: stripeData.paymentStatus,
+      } : false;
+
+      // 3. Call Odoo finalization action (custom logic in galantes_jewelry module)
+      const result = await client.call('sale.order', 'action_galantes_finalize_paid_checkout', {
+        ids: [orderId],
+        stripe_payment: stripeVals,
+      }) as any;
+
+      // The action returns a list with the updated order details
+      const finalizedOrder = (Array.isArray(result) && result.length > 0) ? result[0] : null;
+
+      if (!finalizedOrder || (!finalizedOrder.invoice_ids?.length && finalizedOrder.state !== 'cancel')) {
+        // Log in Odoo if it didn't cancel but also didn't invoice
+        if (finalizedOrder?.state !== 'cancel') {
+          await client.call('sale.order', 'message_post', {
+            ids: [orderId],
+            body: 'Billing finalization completed without creating or linking an invoice.',
+          });
+          throw new Error('Billing finalization completed without creating or linking an invoice.');
+        }
       }
-      return { success: true, orderId, invoiceId };
+
+      return {
+        success: true,
+        orderId,
+        invoiceId: finalizedOrder?.invoice_ids?.[0] || null,
+        pickingIds: finalizedOrder?.picking_ids || [],
+        steps: ['confirmed', 'finalized']
+      };
     } catch (error) {
       console.error('Odoo Billing Automation Error:', error);
-      return { success: false, error: String(error) };
+      // Log failure in Odoo chatter
+      try {
+        await client.call('sale.order', 'message_post', {
+          ids: [orderId],
+          body: `Billing Automation Failed: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      } catch (e) { /* ignore */ }
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+
+  async getOrderWithInvoices(orderId: number) {
+    const orders = await client.call('sale.order', 'search_read', {
+      domain: [['id', '=', orderId]],
+      fields: ['name', 'date_order', 'state', 'amount_total', 'invoice_status', 'access_url', 'partner_id', 'invoice_ids'],
+      limit: 1
+    });
+    if (!orders || orders.length === 0) return null;
+    const o = orders[0];
+    const baseUrl = process.env.ODOO_BASE_URL || 'http://localhost:8069';
+
+    let invoices: any[] = [];
+    if (o.invoice_ids?.length > 0) {
+      const invData = await client.call('account.move', 'search_read', {
+        domain: [['id', 'in', o.invoice_ids]],
+        fields: ['name', 'invoice_date', 'state', 'amount_total', 'payment_state', 'access_url', 'access_token'],
+      });
+      invoices = (invData || []).map((inv: any) => ({
+        ...inv,
+        display_status: this.mapInvoiceState(inv.state, inv.payment_state),
+        portal_url: buildPortalUrl(baseUrl, inv.access_url),
+        pdf_url: buildInvoicePdfUrl(baseUrl, inv.access_url, inv.access_token),
+      }));
+    }
+
+    return {
+      ...o,
+      display_status: this.mapOrderState(o.state, o.invoice_status),
+      portal_url: o.access_url ? `${baseUrl}${o.access_url}` : null,
+      invoices,
+    };
+  },
+
+  async syncCompanyProfile(settings: any) {
+    try {
+      // Find US country id
+      const countries = await client.call('res.country', 'search_read', { domain: [['code', '=', 'US']], fields: ['id'], limit: 1 });
+      const countryId = countries?.[0]?.id;
+
+      // Simple address parsing for Islamorada
+      const vals: Record<string, any> = {
+        email: settings.contact_email,
+        phone: settings.contact_phone,
+        street: settings.contact_address?.split(',')[0]?.trim(),
+        city: 'Islamorada',
+        zip: '33036',
+        country_id: countryId,
+      };
+
+      // Find FL state
+      if (countryId) {
+        const states = await client.call('res.country.state', 'search_read', {
+          domain: [['code', '=', 'FL'], ['country_id', '=', countryId]],
+          fields: ['id'],
+          limit: 1
+        });
+        if (states?.length > 0) vals.state_id = states[0].id;
+      }
+
+      // Write to company 1
+      await client.call('res.company', 'write', { ids: [1], vals });
+      return true;
+    } catch (error) {
+      console.error('Company Sync Error:', error);
+      return false;
     }
   },
 
