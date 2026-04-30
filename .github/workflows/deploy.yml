@@ -26,14 +26,13 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
           ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
-          CF_TUNNEL_TOKEN_PROD: ${{ secrets.CF_TUNNEL_TOKEN_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: yoeli
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           command_timeout: 30m
-          envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,CF_TUNNEL_TOKEN_PROD,STRIPE_SECRET_KEY
+          envs: ADMIN_PASSWORD,ADMIN_SECRET_KEY,POSTGRES_PASSWORD,ODOO_PASSWORD,ODOO_API_KEY,STRIPE_SECRET_KEY
           script: |
             set -Eeuo pipefail
 
@@ -80,7 +79,6 @@ jobs:
             update_env_safe "ODOO_DB" "galantes_db"
             update_env_safe "ODOO_PASSWORD" "$ODOO_PASSWORD"
             update_env_safe "ODOO_API_KEY" "$ODOO_API_KEY"
-            update_env_safe "CF_TUNNEL_TOKEN_PROD" "$CF_TUNNEL_TOKEN_PROD"
             update_env_safe "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
             
             # Reemplazo atómico para que Docker no lea un archivo a medias
