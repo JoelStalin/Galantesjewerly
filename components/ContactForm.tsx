@@ -31,6 +31,7 @@ function formatWeekdays(weekdays: number[]) {
 }
 
 export function ContactForm() {
+  const searchParams = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
