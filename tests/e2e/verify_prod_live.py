@@ -30,12 +30,12 @@ def verify_production():
         has_hero_text = "Shop Fine Jewelry" in page_source
         
         # 3. Check for Categories
-        has_deliveries = "Deliveries" in page_source
+        has_other_category = "Other" in page_source
         
         print(f"--- VERDICT ---")
         print(f"Sidebar Present: {'✅ YES' if has_sidebar else '❌ NO'}")
         print(f"Hero Text Present: {'✅ YES' if has_hero_text else '❌ NO'}")
-        print(f"Deliveries Category Sync: {'✅ YES' if has_deliveries else '❌ NO'}")
+        print(f"Other Category Sync: {'✅ YES' if has_other_category else '❌ NO'}")
         
         if not has_sidebar or not has_hero_text:
             print("\nRESULT: DEPLOYMENT NOT LIVE YET. Production is still showing the old version.")

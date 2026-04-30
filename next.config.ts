@@ -1,10 +1,17 @@
 import type { NextConfig } from "next";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const disableImageOptimization = process.platform === 'android'
   || process.env.NEXT_DISABLE_IMAGE_OPTIMIZATION === '1';
+const projectRoot = dirname(fileURLToPath(new URL('.', import.meta.url)));
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingRoot: projectRoot,
+  turbopack: {
+    root: projectRoot,
+  },
   serverExternalPackages: [
     "googleapis",
     "google-auth-library",

@@ -50,12 +50,13 @@ export default function CheckoutSuccessPage() {
   const { clearCart } = useCart();
   const clearedCartRef = useRef(false);
   const clearCartActionRef = useRef(clearCart);
+  
+  const paymentIntent = params.get('payment_intent') || '';
+  const paymentIntentClientSecret = params.get('payment_intent_client_secret') || '';
+
   const [status, setStatus] = useState<CheckoutStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const paymentIntent = params.get('payment_intent') || '';
-  const paymentIntentClientSecret = params.get('payment_intent_client_secret') || '';
 
   useEffect(() => {
     clearCartActionRef.current = clearCart;
@@ -213,6 +214,29 @@ export default function CheckoutSuccessPage() {
               </div>
             </div>
           ) : null}
+        </div>
+
+        {/* Appointment Redirection Section */}
+        <div className="mt-12 border-t border-primary/10 pt-12 text-center">
+          <div className="mx-auto max-w-2xl rounded-3xl bg-primary text-white p-8 md:p-10 shadow-xl overflow-hidden relative">
+            <div className="relative z-10">
+              <h2 className="text-3xl font-serif mb-4">Finalize Your Delivery</h2>
+              <p className="text-primary-foreground/80 text-sm mb-8 leading-relaxed">
+                To ensure the security and authenticity of your jewelry, we coordinate all hand-offs via private appointment. 
+                {status?.order?.metadata?.shipping_carrier === 'pickup' 
+                  ? ' Please schedule your in-boutique collection time now.' 
+                  : ' Please schedule a window for our concierge to coordinate your secure delivery.'}
+              </p>
+              <Link 
+                href={`/contact?reason=order_fulfillment&orderId=${status?.order?.id || ''}&carrier=${status?.order?.metadata?.shipping_carrier || ''}`}
+                className="inline-block bg-white text-primary px-8 py-4 rounded-full text-xs font-bold uppercase tracking-[0.2em] hover:bg-accent hover:text-white transition-all transform hover:scale-105 shadow-lg"
+              >
+                Schedule Appointment Now
+              </Link>
+            </div>
+            {/* Decorative background element */}
+            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CarrierType, ShippingRate, ShippingAddress } from '@/lib/shipping/types';
+import { ShippingRate, ShippingAddress } from '@/lib/shipping/types';
 import Link from 'next/link';
 
 interface ShippingSelectorProps {
@@ -14,10 +14,12 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRates = async () => {
       setLoading(true);
+      setError(null);
       try {
         const res = await fetch('/api/shipping/rates', {
           method: 'POST',
@@ -30,14 +32,21 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
         const data = await res.json();
         if (data.success) {
           setRates(data.rates);
-          // Auto-select first available carrier rate by default
-          if (data.rates.length > 0) {
-            setSelectedRate(data.rates[0]);
-            onRateSelect(data.rates[0]);
+          const defaultRate = data.rates.find((rate: ShippingRate) => rate.carrier !== 'pickup') || data.rates[0] || null;
+          if (defaultRate) {
+            setSelectedRate(defaultRate);
+            onRateSelect(defaultRate);
           }
+        } else {
+          setRates([]);
+          setSelectedRate(null);
+          setError(data.error || 'Unable to load shipping rates.');
         }
       } catch (error) {
         console.error('Failed to load shipping rates', error);
+        setRates([]);
+        setSelectedRate(null);
+        setError('Unable to load shipping rates.');
       } finally {
         setLoading(false);
       }
@@ -71,6 +80,7 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
           <div
             key={`${rate.carrier}-${rate.serviceName}`}
             onClick={() => handleSelect(rate)}
+            data-testid={`shipping-rate-${rate.carrier}`}
             className={`relative flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm ${
               selectedRate?.carrier === rate.carrier && selectedRate?.serviceName === rate.serviceName
                 ? 'border-accent bg-accent/[0.03] ring-1 ring-accent'
@@ -105,6 +115,13 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
           </div>
         ))}
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-red-700">Shipping unavailable</p>
+          <p className="mt-1 text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       {selectedRate?.carrier === 'pickup' && (
         <div className="rounded-xl border border-dashed border-accent/40 bg-accent/[0.02] p-4 animate-in fade-in slide-in-from-top-2 duration-300">

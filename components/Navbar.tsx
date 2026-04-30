@@ -54,7 +54,7 @@ interface NavbarProps {
 export function Navbar({ settings, user, forceSolid = false, isFixed = true }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { totalCount } = useCart();
+  const { totalCount, hasHydrated } = useCart();
   const useSolidNav = forceSolid || scrolled;
   const brandName = settings.brand_name?.trim() || settings.site_title?.trim() || "Galante's Jewelry";
   const brandTagline = settings.brand_tagline?.trim() || 'By The Sea';
@@ -135,7 +135,7 @@ export function Navbar({ settings, user, forceSolid = false, isFixed = true }: N
             
             <Link href="/cart" className="relative text-gray-900 hover:text-amber-700 transition-colors">
               <ShoppingBag size={20} className="lg:w-5.5 lg:h-5.5" strokeWidth={1.5} />
-              {totalCount > 0 && (
+              {hasHydrated && totalCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 lg:h-4 lg:w-4 items-center justify-center rounded-full bg-amber-600 text-[8px] lg:text-[9px] font-bold text-white shadow-sm">
                   {totalCount}
                 </span>

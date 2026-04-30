@@ -118,6 +118,8 @@ def get_driver(profile_name: str = 'Default', headless: bool = False):
     options.add_argument(f'profile-directory={resolved_profile}')
     options.add_argument('--start-maximized')
     options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument('--disable-extensions')
+    options.add_argument('--disable-component-extensions-with-background-pages')
     options.add_argument('--no-default-browser-check')
     options.add_argument('--disable-search-engine-choice-screen')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])

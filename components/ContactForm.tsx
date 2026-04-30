@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 type AvailabilityResponse = {
   availableSlots?: Array<{ time: string; label: string }>;
@@ -42,6 +43,10 @@ export function ContactForm() {
     availableSlots: [],
     availableWeekdays: [],
   });
+
+  const reason = searchParams.get("reason");
+  const orderId = searchParams.get("orderId");
+  const carrier = searchParams.get("carrier");
 
   const scheduleSummary = useMemo(() => {
     const parts: string[] = [];
@@ -208,10 +213,16 @@ export function ContactForm() {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-xs uppercase tracking-widest font-semibold opacity-70">Inquiry Type</label>
-            <select data-testid="contact-inquiry-type" name="inquiryType" className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent appearance-none">
+            <select 
+              data-testid="contact-inquiry-type" 
+              name="inquiryType" 
+              className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent appearance-none"
+              defaultValue={reason === "order_fulfillment" ? "Order Collection/Delivery" : "Bridal & Engagement"}
+            >
               <option value="Bridal & Engagement">Bridal & Engagement</option>
               <option value="Nautical Collections">Nautical Collections</option>
               <option value="Master Repair Service">Master Repair Service</option>
+              <option value="Order Collection/Delivery">Order Collection/Delivery</option>
               <option value="General Inquiry">General Inquiry</option>
             </select>
           </div>
@@ -278,7 +289,15 @@ export function ContactForm() {
 
           <div className="flex flex-col gap-2">
             <label className="text-xs uppercase tracking-widest font-semibold opacity-70">Message</label>
-            <textarea data-testid="contact-message" required name="message" rows={4} className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent" placeholder="Tell us what you would like to explore during your visit."></textarea>
+            <textarea 
+              data-testid="contact-message" 
+              required 
+              name="message" 
+              rows={4} 
+              className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent" 
+              placeholder="Tell us what you would like to explore during your visit."
+              defaultValue={reason === "order_fulfillment" ? `I would like to schedule a time to ${carrier === 'pickup' ? 'collect' : 'receive'} my order #${orderId}.` : ""}
+            ></textarea>
           </div>
           <input type="text" name="company" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
           <button data-testid="contact-submit" type="submit" disabled={loading || loadingAvailability || !selectedTime} className="bg-primary text-white py-4 mt-4 text-xs uppercase tracking-widest font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50">

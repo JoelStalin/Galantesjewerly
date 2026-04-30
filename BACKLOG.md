@@ -85,11 +85,13 @@
 
 - Checkout Stripe → Odoo billing automático (orden + factura + delivery)
 - Portal cliente: `/account/orders` y `/account/invoices`
+- Portal cliente: redirects de `/account/orders`, `/account/invoices` y `/account/orders/[id]` para evitar pantallas vacías sin sesión
 - Appointment flow end-to-end (Google Calendar + email)
 - Admin panel: schedule controls, brand_name, sticky navbar
 - Production rollback automático en deploy
 - Named volumes en producción (datos persistentes)
 - Cloudflare tunnel producción (resiliente)
+- Cliente Odoo: se eliminó la consulta a `shop_hero_image_url` para no golpear un campo inexistente en `galante.cms.settings`
 
 ---
 

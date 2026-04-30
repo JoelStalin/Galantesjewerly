@@ -44,6 +44,7 @@ export interface OrderLine {
   product_id: number;
   product_uom_qty: number;
   price_unit: number;
+  name?: string;
 }
 
 function buildPortalUrl(baseUrl: string, accessUrl?: string | null) {
@@ -67,7 +68,7 @@ export const OdooService = {
     try {
       const cmsSettings = await client.searchRead('galante.cms.settings', {
         domain: [],
-        fields: ['site_title', 'site_description', 'logo_url', 'favicon_url', 'hero_image_url', 'shop_hero_image_url', 'instagram_url', 'facebook_url', 'whatsapp_number', 'contact_email', 'contact_phone', 'contact_address', 'appointment_email', 'navigation_json'],
+        fields: ['site_title', 'site_description', 'logo_url', 'favicon_url', 'hero_image_url', 'instagram_url', 'facebook_url', 'whatsapp_number', 'contact_email', 'contact_phone', 'contact_address', 'appointment_email', 'navigation_json'],
         limit: 1
       }) as any[];
 
@@ -81,7 +82,6 @@ export const OdooService = {
           logo_url: s.logo_url,
           favicon_url: s.favicon_url,
           hero_image_url: s.hero_image_url,
-          shop_hero_image_url: s.shop_hero_image_url,
           instagram_url: s.instagram_url,
           facebook_url: s.facebook_url,
           whatsapp_number: s.whatsapp_number,
@@ -167,6 +167,7 @@ export const OdooService = {
         product_id: l.product_id,
         product_uom_qty: l.product_uom_qty,
         price_unit: l.price_unit,
+        ...(l.name ? { name: l.name } : {}),
       }]);
       return await client.create('sale.order', {
         partner_id: partnerId,
@@ -174,6 +175,20 @@ export const OdooService = {
       });
     } catch (error) {
       console.error('Odoo Order Creation Error:', error);
+      return null;
+    }
+  },
+
+  async getProductVariantIdByDefaultCode(defaultCode: string) {
+    try {
+      const products = await client.call('product.product', 'search_read', {
+        domain: [['default_code', '=', defaultCode]],
+        fields: ['id'],
+        limit: 1,
+      });
+      return (products && products.length > 0) ? products[0].id : null;
+    } catch (error) {
+      console.error('Odoo Product Lookup Error:', error);
       return null;
     }
   },

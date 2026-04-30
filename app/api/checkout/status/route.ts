@@ -79,7 +79,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       paymentStatus: paymentIntent.status,
-      order,
+      order: order ? { ...order, metadata: paymentIntent.metadata } : null,
       invoice,
       customerEmail: paymentIntent.receipt_email || paymentIntent.metadata?.customer_email || null,
       amount: paymentIntent.amount,

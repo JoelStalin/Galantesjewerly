@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
@@ -7,7 +8,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const resolvedParams = await params;
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
-  if (!user) return null;
+  if (!user) {
+    redirect(`/auth/login?returnTo=/account/orders/${resolvedParams.id}`);
+  }
 
   const order = await OdooService.getOrderFullDetails(parseInt(resolvedParams.id, 10), user.email);
   if (!order) return <div className="p-20 text-center">Order not found</div>;

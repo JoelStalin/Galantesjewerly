@@ -1,13 +1,9 @@
 # Current Blockers
 
-## No active technical blockers
+## No active infrastructure blockers
 
-- The Android/Termux production host was updated, rebuilt, restarted, and revalidated.
-- Public OAuth now redirects to:
-  - `https://galantesjewelry.com/auth/google/callback`
-- Admin owner OAuth now redirects to:
-  - `https://admin.galantesjewelry.com/api/admin/google/oauth/callback`
-
-## Remaining manual step
-
-- If the owner Google account needs to be reconnected, a human still has to complete the Google consent screen in the browser so the refresh token is stored again.
+- Cloudflare tunnel is healthy.
+- Web, Odoo, Postgres, and nginx are healthy on the GCP VM.
+- Public home, shop, admin, and Odoo endpoints respond successfully.
+- Google OAuth owner connection was restored on April 28, 2026.
+- Google Calendar test event creation was revalidated on `ceo@galantesjewelry.com`.

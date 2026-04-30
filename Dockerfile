@@ -12,7 +12,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+ARG NODE_OPTIONS=--max-old-space-size=4096
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=$NODE_OPTIONS
 RUN npm run build
 
 FROM base AS runner

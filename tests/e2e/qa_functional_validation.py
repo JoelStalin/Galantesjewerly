@@ -30,7 +30,7 @@ def run_qa_test():
         # 1. Check Redirects (Session Persistence Fix Verification)
         print("Test 1: Verifying client redirect logic (Security/Session fix)...")
         driver.get(f"{BASE_URL}/account/settings")
-        wait.until(lambda d: "/account/login" in d.current_url)
+        wait.until(lambda d: "/auth/login" in d.current_url)
         print("✅ SUCCESS: Redirect from protected page to login works.")
 
         # 2. Check Admin Data Rendering (Settings Fix Verification)

@@ -15,7 +15,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:00:00Z",
-          "evidence": ["Directory structure created successfully"],
+          "evidence": [
+            "Directory structure created successfully"
+          ],
           "dependencies": []
         },
         {
@@ -27,7 +29,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:00:00Z",
-          "evidence": ["Variables added for appointment system, orchestration, memory"],
+          "evidence": [
+            "Variables added for appointment system, orchestration, memory"
+          ],
           "dependencies": []
         },
         {
@@ -39,7 +43,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:30:00Z",
-          "evidence": ["Appointment system rules added to AGENTS.md"],
+          "evidence": [
+            "Appointment system rules added to AGENTS.md"
+          ],
           "dependencies": []
         },
         {
@@ -51,7 +57,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:30:00Z",
-          "evidence": ["CLAUDE.md updated, GEMINI.md created with modular imports"],
+          "evidence": [
+            "CLAUDE.md updated, GEMINI.md created with modular imports"
+          ],
           "dependencies": []
         },
         {
@@ -63,7 +71,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:30:00Z",
-          "evidence": ["Memory structure and current state files created"],
+          "evidence": [
+            "Memory structure and current state files created"
+          ],
           "dependencies": []
         },
         {
@@ -75,7 +85,9 @@
           "assignee": "system",
           "created": "2026-04-14T12:00:00Z",
           "updated": "2026-04-14T12:30:00Z",
-          "evidence": ["Task ledger files created with Phase 0 tasks"],
+          "evidence": [
+            "Task ledger files created with Phase 0 tasks"
+          ],
           "dependencies": []
         }
       ]
@@ -93,7 +105,10 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:00:00Z",
-          "evidence": ["src/config/googleAuth.js created with OAuth2 client, token management, refresh logic", "Syntax validated successfully"],
+          "evidence": [
+            "src/config/googleAuth.js created with OAuth2 client, token management, refresh logic",
+            "Syntax validated successfully"
+          ],
           "dependencies": []
         },
         {
@@ -105,8 +120,13 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:05:00Z",
-          "evidence": ["src/services/calendarService.js created with createCalendarEvent function, error handling for API codes", "Syntax validated successfully"],
-          "dependencies": ["GC-001"]
+          "evidence": [
+            "src/services/calendarService.js created with createCalendarEvent function, error handling for API codes",
+            "Syntax validated successfully"
+          ],
+          "dependencies": [
+            "GC-001"
+          ]
         },
         {
           "id": "GC-003",
@@ -117,7 +137,10 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:10:00Z",
-          "evidence": ["src/services/emailService.js created with SendGrid integration, HTML/text email templates, error handling", "Syntax validated successfully"],
+          "evidence": [
+            "src/services/emailService.js created with SendGrid integration, HTML/text email templates, error handling",
+            "Syntax validated successfully"
+          ],
           "dependencies": []
         },
         {
@@ -129,7 +152,12 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:15:00Z",
-          "evidence": ["src/utils/validation.js created with payload validation, sanitization, email/date/time checks", "src/utils/dateTime.js created with ISO UTC conversion, business hours validation, date calculations", "src/utils/logger.js created with structured logging, levels, file output, service-specific loggers", "All syntax validated successfully"],
+          "evidence": [
+            "src/utils/validation.js created with payload validation, sanitization, email/date/time checks",
+            "src/utils/dateTime.js created with ISO UTC conversion, business hours validation, date calculations",
+            "src/utils/logger.js created with structured logging, levels, file output, service-specific loggers",
+            "All syntax validated successfully"
+          ],
           "dependencies": []
         },
         {
@@ -141,7 +169,11 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:20:00Z",
-          "evidence": ["src/middlewares/errorHandler.js created with global error handling, specific error types, AppError class", "src/middlewares/notFound.js created for 404 handling", "All syntax validated successfully"],
+          "evidence": [
+            "src/middlewares/errorHandler.js created with global error handling, specific error types, AppError class",
+            "src/middlewares/notFound.js created for 404 handling",
+            "All syntax validated successfully"
+          ],
           "dependencies": []
         },
         {
@@ -153,8 +185,17 @@
           "assignee": "system",
           "created": "2026-04-14T12:30:00Z",
           "updated": "2026-04-14T13:25:00Z",
-          "evidence": ["src/controllers/appointmentController.js created with createAppointment function, validation, calendar/email integration, error handling", "Syntax validated successfully"],
-          "dependencies": ["GC-001", "GC-002", "GC-003", "GC-004", "GC-005"]
+          "evidence": [
+            "src/controllers/appointmentController.js created with createAppointment function, validation, calendar/email integration, error handling",
+            "Syntax validated successfully"
+          ],
+          "dependencies": [
+            "GC-001",
+            "GC-002",
+            "GC-003",
+            "GC-004",
+            "GC-005"
+          ]
         }
       ]
     },
@@ -171,8 +212,14 @@
           "assignee": "system",
           "created": "2026-04-14T13:30:00Z",
           "updated": "2026-04-14T13:35:00Z",
-          "evidence": ["src/routes/appointmentRoutes.js created with POST /api/v1/appointments route", "app.js created with Express setup, middlewares, routes, error handling", "Syntax validated successfully"],
-          "dependencies": ["GC-006"]
+          "evidence": [
+            "src/routes/appointmentRoutes.js created with POST /api/v1/appointments route",
+            "app.js created with Express setup, middlewares, routes, error handling",
+            "Syntax validated successfully"
+          ],
+          "dependencies": [
+            "GC-006"
+          ]
         }
       ]
     },
@@ -189,8 +236,16 @@
           "assignee": "system",
           "created": "2026-04-14T13:30:00Z",
           "updated": "2026-04-14T14:00:00Z",
-          "evidence": ["bots/setupAndTestBot.js created with comprehensive environment checks", "All dependencies installed (express, body-parser, dotenv, @sendgrid/mail)", ".env configured with required variables", "token.json created with placeholder OAuth tokens", "Bot executed successfully - all 15 checks/tests passed"],
-          "dependencies": ["APP-001"]
+          "evidence": [
+            "bots/setupAndTestBot.js created with comprehensive environment checks",
+            "All dependencies installed (express, body-parser, dotenv, @sendgrid/mail)",
+            ".env configured with required variables",
+            "token.json created with placeholder OAuth tokens",
+            "Bot executed successfully - all 15 checks/tests passed"
+          ],
+          "dependencies": [
+            "APP-001"
+          ]
         }
       ]
     },
@@ -212,7 +267,9 @@
             "Added tests/unit/src/config/odooClient.test.ts covering env parsing, headers, endpoint URLs, success path, and error handling",
             "Updated memory/current files for the Odoo preparation phase, including JSON-2 contract details and key consistency risks"
           ],
-          "dependencies": ["TEST-001"]
+          "dependencies": [
+            "TEST-001"
+          ]
         }
       ]
     },
@@ -238,7 +295,126 @@
             "Verified production OAuth start routes now emit the correct Google redirect_uri values for both public and admin flows",
             "Added tests/e2e/admin_google_oauth_smoke.py and passed Selenium browser validation against the live public and admin domains"
           ],
-          "dependencies": ["ODOO-PREP-001"]
+          "dependencies": [
+            "ODOO-PREP-001"
+          ]
+        },
+        {
+          "id": "DEPLOY-002",
+          "title": "Recover failed April 28 production deploy on GCP",
+          "description": "Restore Cloudflare tunnel, production CMS/integrations data, Odoo health, and rebuild the live web app from the current VM source.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-04-28T16:40:00Z",
+          "updated": "2026-04-28T18:05:00Z",
+          "evidence": [
+            "Recovered production Cloudflare tunnel by restoring the complete .env.prod backup on the GCP VM and bringing up cloudflared first.",
+            "Recreated production Postgres/Odoo service state and verified odoo container returned to healthy status.",
+            "Restored CMS and integrations snapshots plus managed home/logo/favicon blobs on the VM and in galante_cms_settings so social links and cover assets survived restarts.",
+            "Hardened production web rebuilds by adding NODE_OPTIONS heap sizing in Dockerfile and excluding _codex_stage from .dockerignore.",
+            "Rebuilt the production web container from current VM source and verified the shop sidebar filters layout is live again.",
+            "Validated public home, /shop, admin login, and Odoo with HTTP checks plus Selenium functional smoke on April 28, 2026."
+          ],
+          "dependencies": [
+            "ODOO-INT-001"
+          ]
+        },
+        {
+          "id": "DEPLOY-003",
+          "title": "Repair post-recovery shop regressions and revalidate production",
+          "description": "Fix production shop interaction and PDP image issues, then run Selenium verification across the live environment.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-04-28T18:10:00Z",
+          "updated": "2026-04-28T19:30:00Z",
+          "evidence": [
+            "Moved shop sorting, category filters, and pagination to direct URL navigation so production filtering works reliably again.",
+            "Aligned PDP product gallery image delivery with the direct product image route to eliminate the failing _next/image optimization path.",
+            "Disabled browser extensions inside the cloned Selenium runtime profile to prevent third-party content scripts from contaminating production verification.",
+            "Passed Selenium production verification on April 28, 2026 across home, shop, contact, bridal, collections, PDP, and /api/health with zero failed checks."
+          ],
+          "dependencies": [
+            "DEPLOY-002"
+          ]
+        },
+        {
+          "id": "DEPLOY-004",
+          "title": "Restore Google OAuth owner connection and production Calendar routing",
+          "description": "Reproduce the failing Google OAuth reconnection flow with the operational Chrome profile, fix the callback/token exchange path, restore the production calendar ID, and verify live Calendar creation on the CEO calendar.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-04-28T19:35:00Z",
+          "updated": "2026-04-28T20:25:00Z",
+          "evidence": [
+            "Reproduced the exact Google OAuth policy error with Selenium using the persistent cloned Chrome Profile 9 runtime.",
+            "Fixed the admin OAuth callback so token exchange always uses the live request-derived redirect URI instead of a percent-encoded cookie value.",
+            "Completed production owner OAuth reconnection and persisted a fresh encrypted refresh token in data/integrations.json.",
+            "Restored production appointments.googleCalendarId to ceo@galantesjewelry.com from the admin panel.",
+            "Adjusted Calendar auth selection to prefer the configured service account for Calendar operations while keeping owner OAuth available for Gmail API mail delivery.",
+            "Validated with Selenium that /api/admin/verify-calendar returned success and produced an event whose decoded eid targets ceo@galantesjewelry.com."
+          ],
+          "dependencies": [
+            "DEPLOY-003"
+          ]
+        },
+        {
+          "id": "DEPLOY-005",
+          "title": "Harden customer account redirects",
+          "description": "Prevent blank account pages by redirecting unauthenticated users from /account/orders, /account/invoices, and order detail pages back to the login flow.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-04-29T00:05:00Z",
+          "updated": "2026-04-29T00:22:00Z",
+          "evidence": [
+            "Updated app/account/orders/page.tsx, app/account/invoices/page.tsx, and app/account/orders/[id]/page.tsx to redirect unauthenticated users to /auth/login with the matching returnTo target.",
+            "Added tests/unit/app/account/account-pages.test.ts to verify the three redirect paths.",
+            "Rebuilt production web and verified the live /account redirects still return HTTP 307."
+          ],
+          "dependencies": [
+            "DEPLOY-004"
+          ]
+        },
+        {
+          "id": "DEPLOY-006",
+          "title": "Remove invalid Odoo CMS field lookup",
+          "description": "Stop the frontend Odoo settings client from requesting the missing shop_hero_image_url field and keep the local shop hero fallback intact.",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "codex",
+          "created": "2026-04-29T00:10:00Z",
+          "updated": "2026-04-29T00:22:00Z",
+          "evidence": [
+            "Removed shop_hero_image_url from the galante.cms.settings field list in lib/odoo/services.ts.",
+            "Added tests/unit/lib/odoo-services.test.ts to verify the client no longer requests the missing field.",
+            "Rebuilt production web and confirmed the Odoo Invalid field warning no longer appears in recent logs."
+          ],
+          "dependencies": [
+            "DEPLOY-005"
+          ]
+        },
+        {
+          "id": "DEPLOY-007",
+          "title": "Integrate secure shipping selection in checkout",
+          "description": "Expose carrier selection in checkout, recalculate insured shipping server-side, and persist the chosen shipping service into Odoo/Stripe.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-04-29T22:00:00Z",
+          "updated": "2026-04-29T22:30:00Z",
+          "evidence": [
+            "Added ShippingSelector to app/checkout/page.tsx and wired the selected carrier into the Stripe checkout request.",
+            "Updated app/api/checkout/stripe/route.ts to validate the selected carrier on the server, recalculate insurance-based shipping, and add a shipping service line to the Odoo order.",
+            "Added an internal Galantes Secure Shipping service product in the Odoo addon so order totals match Stripe and the selected shipping service is recorded.",
+            "Hardened app/api/shipping/rates/route.ts and app/api/checkout/stripe/route.ts with a fast fallback when CMS settings are slow to hydrate from Odoo.",
+            "Validated with vitest, TypeScript, next build, and Selenium smoke on the local checkout flow using Profile 9."
+          ],
+          "dependencies": [
+            "DEPLOY-006"
+          ]
         }
       ]
     },
@@ -263,12 +439,14 @@
             "Updated the Odoo admin internal password natively to match Next.js .env.prod config.",
             "Confirmed Next.js is safely blocked behind Google Calendar configuration without throwing backend crash."
           ],
-          "dependencies": ["DEPLOY-001"]
+          "dependencies": [
+            "DEPLOY-001"
+          ]
         }
       ]
     }
   ],
-  "currentPhase": "ODOO_INT",
-  "currentTask": "ODOO-INT-001",
-  "lastUpdated": "2026-04-19T23:05:00Z"
+  "currentPhase": "DEPLOY",
+  "currentTask": "DEPLOY-007",
+  "lastUpdated": "2026-04-29T22:30:00Z"
 }

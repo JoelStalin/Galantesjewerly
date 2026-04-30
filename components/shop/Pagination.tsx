@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
 
 interface PaginationProps {
@@ -19,9 +18,6 @@ export function Pagination({
   hasPrev,
   currentParams,
 }: PaginationProps) {
-  const router   = useRouter();
-  const pathname = usePathname();
-
   const goToPage = useCallback(
     (page: number) => {
       const params = new URLSearchParams();
@@ -29,9 +25,9 @@ export function Pagination({
         if (v) params.set(k, v);
       });
       params.set('page', String(page));
-      router.push(`${pathname}?${params.toString()}`);
+      window.location.assign(`/shop?${params.toString()}`);
     },
-    [currentParams, pathname, router],
+    [currentParams],
   );
 
   /** Produce the list of page numbers / ellipsis markers to render. */

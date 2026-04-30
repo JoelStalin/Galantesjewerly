@@ -92,8 +92,10 @@ export async function GET(request: Request) {
   const allCookieNames = (cookieHeader || '').split(';').map(c => c.trim().split('=')[0]).filter(Boolean);
   const expectedState = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_STATE_COOKIE);
   const environment = parseEnvironment(getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_ENV_COOKIE));
-  const redirectUri = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE)
-    || getAdminGoogleOAuthRedirectUri(request);
+  // Always recompute the callback URL from the live request host.
+  // Cookie values are percent-encoded by the browser, which can poison the
+  // token exchange if reused as-is for redirect_uri.
+  const redirectUri = getAdminGoogleOAuthRedirectUri(request);
 
   const error = requestUrl.searchParams.get('error');
   const code = requestUrl.searchParams.get('code');

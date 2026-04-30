@@ -18,12 +18,14 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   totalCount: number;
+  hasHydrated: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   // Load cart from localStorage on init
   useEffect(() => {
@@ -35,12 +37,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to parse cart', e);
       }
     }
+    setHasHydrated(true);
   }, []);
 
   // Save cart to localStorage on change
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
     localStorage.setItem('galantes_cart', JSON.stringify(items));
-  }, [items]);
+  }, [hasHydrated, items]);
 
   const addItem = (newItem: CartItem) => {
     setItems((prev) => {
@@ -73,7 +79,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalCount }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalCount, hasHydrated }}>
       {children}
     </CartContext.Provider>
   );

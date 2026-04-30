@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import type { CategoryData } from '@/lib/odoo/client';
 
@@ -56,9 +55,6 @@ export function ShopControls({
   activeFilters,
   layout = 'horizontal',
 }: ShopControlsProps) {
-  const router   = useRouter();
-  const pathname = usePathname();
-
   const [searchInput, setSearchInput] = useState(currentFilters.q || '');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -76,9 +72,11 @@ export function ShopControls({
       Object.entries(merged).forEach(([k, v]) => {
         if (v) params.set(k, v);
       });
-      router.push(`${pathname}?${params.toString()}`);
+      const query = params.toString();
+      const nextUrl = query ? `/shop?${query}` : '/shop';
+      window.location.assign(nextUrl);
     },
-    [currentFilters, pathname, router],
+    [currentFilters],
   );
 
   const handleSearch = (e: React.FormEvent) => {
@@ -94,7 +92,7 @@ export function ShopControls({
     }
   };
 
-  const clearAll = () => router.push(pathname);
+  const clearAll = () => window.location.assign('/shop');
 
   const inputClass = 'w-full rounded-lg border border-primary/10 bg-white px-4 py-2.5 text-sm text-primary placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-colors';
   const labelClass = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground';

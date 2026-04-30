@@ -469,5 +469,26 @@
             <field name="care_and_shipping">In stock — ships same day (orders before 2 PM EST) via USPS Priority Mail. Arrives in 2–3 business days. Gift boxing included. Most popular gift item at Galante's.</field>
         </record>
 
+        <!-- ══════════════════════════════════════════════════════════════
+             SERVICES
+        ══════════════════════════════════════════════════════════════ -->
+
+        <record id="product_secure_shipping_service" model="product.template">
+            <field name="name">Galantes Secure Shipping</field>
+            <field name="default_code">GJ-SHP-001</field>
+            <field name="list_price">0.0</field>
+            <field name="type">service</field>
+            <field name="categ_id" ref="galantes_jewelry.product_category_services"/>
+            <field name="available_on_website" eval="False"/>
+            <field name="is_featured" eval="False"/>
+            <field name="sequence">99</field>
+            <field name="slug">galantes-secure-shipping</field>
+            <field name="tagline">Insured and signature-required shipping for high-value jewelry</field>
+            <field name="storefront_short_description">Internal shipping service used to record insured carrier charges for jewelry checkout.</field>
+            <field name="storefront_long_description">Protected shipping service used to synchronize the selected carrier, insurance coverage, and shipping charge into Odoo and Stripe for secure jewelry checkout.</field>
+            <field name="product_details">Service product used for insured shipping and carrier reconciliation.</field>
+            <field name="care_and_shipping">Internal service product. Not published on the storefront.</field>
+        </record>
+
     </data>
 </odoo>

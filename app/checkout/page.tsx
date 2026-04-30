@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { useCart } from '@/context/shop/CartContext';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
 import Link from 'next/link';
+import { ShippingSelector } from '@/components/checkout/ShippingSelector';
+import type { ShippingRate } from '@/lib/shipping/types';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
 export default function CheckoutPage() {
   const { items, totalCount } = useCart();
@@ -19,10 +21,25 @@ export default function CheckoutPage() {
     phone: '',
     street: '',
     city: '',
+    state: '',
     zip: '',
+    country: 'United States',
   });
+  const [selectedShippingRate, setSelectedShippingRate] = useState<ShippingRate | null>(null);
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const shippingAddress = useMemo(() => ({
+    street: customerData.street,
+    city: customerData.city,
+    state: customerData.state,
+    zip: customerData.zip,
+    country: customerData.country,
+  }), [customerData.city, customerData.country, customerData.state, customerData.street, customerData.zip]);
+  const shippingTotal = selectedShippingRate?.price || 0;
+  const orderTotal = subtotal + shippingTotal;
+  const handleRateSelect = useCallback((rate: ShippingRate) => {
+    setSelectedShippingRate(rate);
+  }, []);
 
   const handleStartPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,11 +50,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!selectedShippingRate) {
+      alert('Please choose a shipping method.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/checkout/stripe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, customerData }),
+        body: JSON.stringify({ items, customerData, shippingRate: selectedShippingRate }),
       });
 
       const data = await response.json();
@@ -102,11 +124,34 @@ export default function CheckoutPage() {
                   className="p-3 border rounded"
                   value={customerData.zip} onChange={e => setCustomerData({...customerData, zip: e.target.value})}
                 />
+                <input
+                  type="text" placeholder="State" required
+                  className="p-3 border rounded"
+                  value={customerData.state} onChange={e => setCustomerData({...customerData, state: e.target.value})}
+                />
+                <input
+                  type="text" placeholder="Country" required
+                  className="p-3 border rounded"
+                  value={customerData.country} onChange={e => setCustomerData({...customerData, country: e.target.value})}
+                />
               </div>
             </div>
 
-            <button type="submit" className="w-full bg-primary text-white py-4 uppercase tracking-widest text-xs font-bold hover:bg-primary-dark transition-colors mt-8">
-              Continue to Payment
+            <div className="pt-2">
+              <ShippingSelector
+                address={shippingAddress}
+                orderValue={subtotal}
+                onRateSelect={handleRateSelect}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={!selectedShippingRate}
+              data-testid="checkout-continue"
+              className="w-full bg-primary text-white py-4 uppercase tracking-widest text-xs font-bold hover:bg-primary-dark transition-colors mt-8 disabled:cursor-not-allowed disabled:bg-primary/40"
+            >
+              {!selectedShippingRate ? 'Select Shipping Method' : 'Continue to Payment'}
             </button>
           </form>
         ) : clientSecret ? (
@@ -146,9 +191,15 @@ export default function CheckoutPage() {
             <span className="text-gray-600">Subtotal</span>
             <span className="font-bold">${subtotal.toLocaleString()}</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Shipping</span>
+            <span className="font-bold" data-testid="checkout-shipping-total">
+              {selectedShippingRate ? (shippingTotal === 0 ? 'FREE' : `$${shippingTotal.toFixed(2)}`) : 'Choose at checkout'}
+            </span>
+          </div>
           <div className="flex justify-between text-xl font-bold border-t border-primary/10 pt-4">
             <span>Total (Estimated)</span>
-            <span>${subtotal.toLocaleString()}</span>
+            <span data-testid="checkout-total">${orderTotal.toLocaleString(undefined, { minimumFractionDigits: selectedShippingRate ? 2 : 0, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>

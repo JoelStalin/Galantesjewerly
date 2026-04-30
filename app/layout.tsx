@@ -17,6 +17,33 @@ const outfit = Outfit({
 });
 
 export const dynamic = 'force-dynamic';
+const ODOO_SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
+const ODOO_SETTINGS_TIMEOUT_MS = 2500;
+
+type CachedOdooSettings = {
+  value: Partial<SiteSettings>;
+  expiresAt: number;
+};
+
+let cachedOdooSettings: CachedOdooSettings | null = null;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
 
 const FALLBACK_SETTINGS: SiteSettings = {
   brand_name: "Galante's Jewelry",
@@ -43,7 +70,26 @@ const FALLBACK_SETTINGS: SiteSettings = {
 async function loadSiteSettings(): Promise<SiteSettings> {
   try {
     const localSettings = await getSettings();
-    const odooSettings = await OdooService.getCompanySettings();
+    const now = Date.now();
+    let odooSettings: Partial<SiteSettings> = {};
+
+    if (cachedOdooSettings && cachedOdooSettings.expiresAt > now) {
+      odooSettings = cachedOdooSettings.value;
+    } else {
+      try {
+        odooSettings = await withTimeout(
+          OdooService.getCompanySettings(),
+          ODOO_SETTINGS_TIMEOUT_MS,
+        );
+        cachedOdooSettings = {
+          value: odooSettings,
+          expiresAt: Date.now() + ODOO_SETTINGS_CACHE_TTL_MS,
+        };
+      } catch (error) {
+        console.warn('[Layout] Odoo settings fetch timed out or failed; using local CMS data.', error instanceof Error ? error.message : error);
+      }
+    }
+
     const merged = {
       ...FALLBACK_SETTINGS, 
       ...(localSettings ?? {}),

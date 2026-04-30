@@ -4,6 +4,7 @@ node_modules
 .git
 .gitignore
 .codex
+_codex_stage
 .env*
 __pycache__
 README.md

@@ -97,11 +97,11 @@ function getAppointmentTestMode() {
 }
 
 function cacheKey(config: CalendarRuntimeConfig) {
-  if (hasGoogleOAuthConfig(config)) {
-    return `oauth:${config.oauthClientId}:${config.calendarId}`;
+  if (hasServiceAccountConfig(config)) {
+    return `service:${config.serviceAccountEmail}:${config.calendarId}`;
   }
 
-  return `service:${config.serviceAccountEmail}:${config.calendarId}`;
+  return `oauth:${config.oauthClientId}:${config.calendarId}`;
 }
 
 async function getCalendarAuthClient(config: CalendarRuntimeConfig) {
@@ -113,6 +113,22 @@ async function getCalendarAuthClient(config: CalendarRuntimeConfig) {
   const cached = authClientCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.client;
+  }
+
+  // Calendar operations should prefer the service account when it is configured.
+  // The service account is the stable operational path for the shared business
+  // calendar, while owner OAuth is primarily useful for Gmail API delivery and
+  // as a fallback when no service account exists.
+  if (hasServiceAccountConfig(config)) {
+    const jwtClient = new JWT({
+      email: config.serviceAccountEmail,
+      key: config.privateKey,
+      scopes: [GOOGLE_CALENDAR_SCOPE],
+    });
+    await jwtClient.authorize();
+    authClientCache.set(key, { client: jwtClient, expiresAt: Date.now() + JWT_CACHE_TTL_MS });
+
+    return jwtClient;
   }
 
   if (hasGoogleOAuthConfig(config)) {
@@ -139,15 +155,7 @@ async function getCalendarAuthClient(config: CalendarRuntimeConfig) {
     return oauth2Client;
   }
 
-  const jwtClient = new JWT({
-    email: config.serviceAccountEmail,
-    key: config.privateKey,
-    scopes: [GOOGLE_CALENDAR_SCOPE],
-  });
-  await jwtClient.authorize();
-  authClientCache.set(key, { client: jwtClient, expiresAt: Date.now() + JWT_CACHE_TTL_MS });
-
-  return jwtClient;
+  throw new Error('Google Calendar is not configured. Please check your settings in the admin panel.');
 }
 
 async function getCalendarClient(config: CalendarRuntimeConfig) {
@@ -219,6 +227,7 @@ export async function createCalendarEvent(input: {
   }
 
   const { record, submission } = input;
+  const usesServiceAccount = hasServiceAccountConfig(input.config);
   const phoneLine = submission.phone ? `Phone: ${submission.phone}\n` : '';
   const event: calendar_v3.Schema$Event = {
     summary: `${record.id} - ${submission.name}`,
@@ -244,11 +253,6 @@ export async function createCalendarEvent(input: {
       dateTime: input.end.toISOString(),
       timeZone: input.config.timezone,
     },
-    // Co-Work Mode: Include CEO and Customer
-    attendees: [
-      { email: 'ceo@galantesjewelry.com', displayName: 'Galantes CEO', responseStatus: 'accepted' },
-      { email: submission.email, displayName: submission.name, responseStatus: 'needsAction' }
-    ],
     reminders: {
       useDefault: false,
       overrides: [
@@ -265,12 +269,23 @@ export async function createCalendarEvent(input: {
     },
   };
 
+  if (!usesServiceAccount) {
+    // Google blocks attendee invites from service accounts unless the tenant is
+    // configured with domain-wide delegation. Customer/owner notifications are
+    // handled by the app mailer, so only OAuth-backed owner calendars should
+    // send Google attendee invites directly.
+    event.attendees = [
+      { email: 'ceo@galantesjewelry.com', displayName: 'Galantes CEO', responseStatus: 'accepted' },
+      { email: submission.email, displayName: submission.name, responseStatus: 'needsAction' },
+    ];
+  }
+
   try {
     const calendar = await getCalendarClient(input.config);
     const response = await calendar.events.insert({
       calendarId: input.config.calendarId || 'primary',
       requestBody: event,
-      sendUpdates: 'all',
+      sendUpdates: usesServiceAccount ? 'none' : 'all',
     });
 
     return {

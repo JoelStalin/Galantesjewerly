@@ -1,11 +1,14 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
 export default async function InvoicesPage() {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
-  if (!user) return null;
+  if (!user) {
+    redirect('/auth/login?returnTo=/account/invoices');
+  }
 
   const partnerId = await OdooService.getPartnerByEmail(user.email)
     || await OdooService.findOrCreateCustomer({
@@ -51,9 +54,9 @@ export default async function InvoicesPage() {
                   <td className="px-6 py-8">
                     <div className="flex flex-col gap-1">
                       <span className="font-medium text-primary tracking-tight">{inv.name}</span>
-                      {inv.portal_url && (
+                      {inv.pdf_url || inv.portal_url ? (
                         <a 
-                          href={inv.portal_url} 
+                          href={inv.pdf_url || inv.portal_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-[9px] font-bold text-accent uppercase tracking-widest hover:text-accent-dark transition-colors flex items-center gap-1"
@@ -63,7 +66,7 @@ export default async function InvoicesPage() {
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                           </svg>
                         </a>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-6 py-8 text-sm text-muted-foreground font-light">

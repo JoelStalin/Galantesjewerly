@@ -26,6 +26,10 @@ from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
+DEFAULT_CATEGORY_NAME = 'Other'
+DEFAULT_CATEGORY_SLUG = 'other'
+DEFAULT_CATEGORY_ID = 0
+
 
 class ProductAPIController(http.Controller):
     """HTTP endpoints for product catalog access."""
@@ -83,8 +87,8 @@ class ProductAPIController(http.Controller):
             'sku': product.default_code or '',
             'material': product.get_material_display(),
             'materialCode': product.material or '',
-            'category': product.categ_id.name if product.categ_id else '',
-            'categoryId': product.categ_id.id if product.categ_id else None,
+            'category': product.categ_id.name if product.categ_id else DEFAULT_CATEGORY_NAME,
+            'categoryId': product.categ_id.id if product.categ_id else DEFAULT_CATEGORY_ID,
             'buyUrl': product.buy_url,
             'publicUrl': product.public_url,
             'isFeatured': product.is_featured,
@@ -147,7 +151,11 @@ class ProductAPIController(http.Controller):
                 ]
 
             if category:
-                domain.append(('categ_id.name', 'ilike', category))
+                normalized_category = str(category).strip().lower()
+                if normalized_category == DEFAULT_CATEGORY_SLUG:
+                    domain.append(('categ_id', '=', False))
+                else:
+                    domain.append(('categ_id.name', 'ilike', category))
             if material:
                 domain.append(('material', '=', material))
             if min_price:
@@ -345,12 +353,12 @@ class ProductAPIController(http.Controller):
 
             published = Product.search([('available_on_website', '=', True)])
             counts = {}
+            uncategorized_count = 0
             for p in published:
                 if p.categ_id:
                     counts[p.categ_id.id] = counts.get(p.categ_id.id, 0) + 1
-
-            if not counts:
-                return request.make_json_response({'success': True, 'data': []})
+                else:
+                    uncategorized_count += 1
 
             categories = Category.search([('id', 'in', list(counts.keys()))])
             data = []
@@ -363,6 +371,17 @@ class ProductAPIController(http.Controller):
                     'count': counts.get(cat.id, 0),
                     'parentId': cat.parent_id.id if cat.parent_id else None,
                 })
+
+            if uncategorized_count > 0:
+                data.append({
+                    'id': DEFAULT_CATEGORY_ID,
+                    'name': DEFAULT_CATEGORY_NAME,
+                    'slug': DEFAULT_CATEGORY_SLUG,
+                    'count': uncategorized_count,
+                    'parentId': None,
+                })
+
+            data = sorted(data, key=lambda item: item['name'].lower())
 
             return request.make_json_response({'success': True, 'data': data})
 

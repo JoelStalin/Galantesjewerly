@@ -28,6 +28,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
             src={activeImage}
             alt={productName}
             fill
+            unoptimized
             className="object-cover"
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
@@ -59,6 +60,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
                 alt={`${productName} – view ${idx + 1}`}
                 width={150}
                 height={150}
+                unoptimized
                 className="w-full h-full object-cover"
               />
             </button>

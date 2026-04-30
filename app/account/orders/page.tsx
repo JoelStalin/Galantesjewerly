@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 
@@ -32,7 +33,9 @@ const INVOICE_DOT: Record<string, string> = {
 export default async function OrdersPage() {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
-  if (!user) return null;
+  if (!user) {
+    redirect('/auth/login?returnTo=/account/orders');
+  }
 
   const partnerId = await OdooService.getPartnerByEmail(user.email)
     || await OdooService.findOrCreateCustomer({
@@ -137,9 +140,9 @@ export default async function OrdersPage() {
                             ${inv.amount_total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
 
-                          {inv.portal_url && (
+                          {inv.pdf_url || inv.portal_url ? (
                             <a
-                              href={inv.portal_url}
+                              href={inv.pdf_url || inv.portal_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary transition-colors hover:border-accent hover:text-accent"
@@ -151,7 +154,7 @@ export default async function OrdersPage() {
                               </svg>
                               Download PDF
                             </a>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))}

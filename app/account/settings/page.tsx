@@ -8,7 +8,7 @@ export default async function SettingsPage() {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
   if (!user) {
-    redirect('/account/login?callbackUrl=/account/settings');
+    redirect('/auth/login?returnTo=/account/settings');
   }
 
   let profile = null;
