@@ -4,7 +4,8 @@
 Production environment recovered after the failed April 28, 2026 deploy.
 
 ## Current Task
-Production is stable again. The shop regressions, Google OAuth / Calendar recovery path, the Odoo category fallback for uncategorized products, and the invalid `shop_hero_image_url` settings lookup were fixed and revalidated. The checkout now exposes insured shipping carrier selection, recalculates shipping server-side, and records a shipping service line in Odoo so Stripe and Odoo totals match. No rollback was executed after the user corrected the request. Recent performance work reduced build time by removing Turbopack workspace-root inference and caching Odoo settings in the root layout.
+Production is stable again. The shop regressions, Google OAuth / Calendar recovery path, the Odoo category fallback for uncategorized products, and the invalid `shop_hero_image_url` settings lookup were fixed and revalidated. On April 30 the Google login endpoint and calendar availability checks were revalidated again after restoring `data/integrations.json`, and the production Cloudflare tunnel was reconnected on the live VM. The checkout now exposes insured shipping carrier selection, recalculates shipping server-side, and records a shipping service line in Odoo so Stripe and Odoo totals match. No rollback was executed after the user corrected the request. Recent performance work reduced build time by removing Turbopack workspace-root inference and caching Odoo settings in the root layout.
+The restored operational CMS data is now persisted back into `galante.cms.settings` with the logo, hero image, contact address, email, phone, Instagram, Facebook, WhatsApp, and navigation JSON so Odoo remains the durable source of truth if the local cache is ever rebuilt.
 
 ## Next Actions
 - Monitor live appointment submissions now that Google OAuth owner tokens and Calendar routing are restored.
@@ -20,7 +21,7 @@ Production is stable again. The shop regressions, Google OAuth / Calendar recove
 - Web app: Healthy after rebuild from current VM source
 - Odoo: Healthy after DB credential recovery
 - CMS snapshot: Restored in both `data/cms.json` and `galante_cms_settings`
-- Integrations snapshot: Restored, including a fresh production Google OAuth refresh token
+- Integrations snapshot: Restored, including the production Google OAuth config and calendar settings
 - Shop controls: Sorting, category filters, PDP image gallery, and console health verified on production on April 28, 2026
 - Selenium runtime: Uses the cloned local Chrome profile with extensions disabled to avoid third-party DOM injection during production verification
 - Google OAuth admin callback: fixed to use the live request-derived redirect URI instead of a percent-encoded cookie value
@@ -34,4 +35,4 @@ Production is stable again. The shop regressions, Google OAuth / Calendar recove
 - None at the infrastructure/application layer. Remaining work is ordinary monitoring and git hygiene.
 
 ## Last Updated
-2026-04-29 22:30 UTC
+2026-04-30 16:08 UTC

@@ -39,7 +39,7 @@
     "production": {
       "provider": "google",
       "environment": "production",
-      "enabled": false,
+      "enabled": true,
       "googleClientId": "634248716519-icble710qg9r8ju4hjqr60o5rnl7n6rs.apps.googleusercontent.com",
       "javascriptOrigin": "https://galantesjewelry.com",
       "redirectUri": "https://galantesjewelry.com/auth/google/callback",
@@ -116,7 +116,7 @@
       "environment": "production",
       "googleCalendarEnabled": true,
       "googleCalendarId": "ceo@galantesjewelry.com",
-      "googleServiceAccountEmail": "",
+      "googleServiceAccountEmail": "galantesjewelry@deft-haven-493016-m4.iam.gserviceaccount.com",
       "gmailNotificationsEnabled": true,
       "gmailRecipientInbox": "ceo@galantesjewelry.com",
       "gmailSender": "joelstalin2105@gmail.com",

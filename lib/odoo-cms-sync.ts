@@ -12,6 +12,24 @@ type OdooCmsRecord = {
   integrations_snapshot_json?: string | null;
 };
 
+type OdooCmsFlatFields = {
+  site_title?: string | null;
+  site_description?: string | null;
+  favicon_url?: string | null;
+  logo_url?: string | null;
+  hero_image_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  whatsapp_number?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_address?: string | null;
+  appointment_email?: string | null;
+  navigation_json?: string | null;
+};
+
+type OdooCmsWriteValues = Partial<OdooCmsRecord> & OdooCmsFlatFields;
+
 type CmsSnapshot = {
   settings: SiteSettings;
   sections: PageSection[];
@@ -52,7 +70,27 @@ async function readSingletonRecord() {
   }
 }
 
-async function upsertSingletonRecord(values: Partial<OdooCmsRecord>) {
+function buildFlatCmsFields(snapshot: CmsSnapshot): OdooCmsFlatFields {
+  const settings = snapshot.settings || ({} as SiteSettings);
+
+  return {
+    site_title: settings.site_title || null,
+    site_description: settings.site_description || null,
+    favicon_url: settings.favicon_url || null,
+    logo_url: settings.logo_url || null,
+    hero_image_url: settings.hero_image_url || null,
+    instagram_url: settings.instagram_url || null,
+    facebook_url: settings.facebook_url || null,
+    whatsapp_number: settings.whatsapp_number || null,
+    contact_email: settings.contact_email || null,
+    contact_phone: settings.contact_phone || null,
+    contact_address: settings.contact_address || null,
+    appointment_email: settings.appointment_email || null,
+    navigation_json: JSON.stringify(settings.navigation_links || []),
+  };
+}
+
+async function upsertSingletonRecord(values: OdooCmsWriteValues) {
   const odoo = getOdooClient();
   if (!odoo) {
     return;
@@ -76,7 +114,10 @@ async function upsertSingletonRecord(values: Partial<OdooCmsRecord>) {
 export async function syncCmsSnapshotToOdoo(snapshot: CmsSnapshot) {
   try {
     const cms_snapshot_json = JSON.stringify(snapshot);
-    await upsertSingletonRecord({ cms_snapshot_json });
+    await upsertSingletonRecord({
+      cms_snapshot_json,
+      ...buildFlatCmsFields(snapshot),
+    });
     return { success: true };
   } catch (error) {
     console.error('Odoo CMS snapshot sync failed (non-blocking):', error);

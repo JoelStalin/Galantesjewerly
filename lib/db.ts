@@ -59,8 +59,8 @@ const dbFile = path.join(dataDir, 'cms.json');
 
 const INITIAL_DATA: DBData = {
   settings: {
-    favicon_url: '/favicon.ico',
-    logo_url: '/assets/branding/logo.png',
+    favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
+    logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
     brand_name: "Galante's Jewelry",
     brand_tagline: 'By The Sea',
     site_title: "Galante's Jewelry by the Sea ",
@@ -72,7 +72,7 @@ const INITIAL_DATA: DBData = {
     contact_phone: '(305) 555-0199',
     contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
     appointment_email: 'ceo@galantesjewelry.com',
-    hero_image_url: '/assets/images/hero.webp',
+    hero_image_url: '/api/image?id=image-1776959050826-portada.webp',
     shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
     navigation_links: [
       { href: '/about', label: 'Heritage' },
