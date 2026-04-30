@@ -15,6 +15,7 @@ type CheckoutStatusResponse = {
     amount_total: number;
     display_status: string;
     portal_url?: string | null;
+    metadata?: Record<string, any> | null;
     invoices?: Array<{
       id: number;
       name: string;
