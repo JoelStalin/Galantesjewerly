@@ -52,25 +52,49 @@ jobs:
               docker_cmd compose --env-file .env.prod -f docker-compose.production.yml "$@"
             }
 
-            update_env() {
+            # --- BLINDAJE DE VARIABLES (ATÓMICO) ---
+            TMP_ENV=".env.prod.tmp"
+            [ -f .env.prod ] && cp .env.prod "$TMP_ENV" || touch "$TMP_ENV"
+
+            update_env_safe() {
               key="$1"; value="$2"
               [ -z "$value" ] && return 0
-              touch .env.prod
-              # Ensure file ends with a newline before appending
-              [ -s .env.prod ] && [ "$(tail -c1 .env.prod | wc -l)" -eq 0 ] && echo "" >> .env.prod
-              if grep -q "^${key}=" .env.prod; then
-                sed -i "s|^${key}=.*|${key}=${value}|" .env.prod
-              else
-                echo "${key}=${value}" >> .env.prod
-              fi
+              # Eliminar si existe para evitar duplicados
+              sed -i "/^${key}=/d" "$TMP_ENV"
+              # Asegurar newline
+              [ -s "$TMP_ENV" ] && [ -z "$(tail -c1 "$TMP_ENV")" ] || echo "" >> "$TMP_ENV"
+              echo "${key}=${value}" >> "$TMP_ENV"
             }
 
+            update_env_safe "ADMIN_PASSWORD" "$ADMIN_PASSWORD"
+            update_env_safe "ADMIN_SECRET_KEY" "$ADMIN_SECRET_KEY"
+            update_env_safe "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+            update_env_safe "POSTGRES_USER" "odoo"
+            update_env_safe "ODOO_DB" "galantes_db"
+            update_env_safe "ODOO_PASSWORD" "$ODOO_PASSWORD"
+            update_env_safe "ODOO_API_KEY" "$ODOO_API_KEY"
+            update_env_safe "CF_TUNNEL_TOKEN_PROD" "$CF_TUNNEL_TOKEN_PROD"
+            update_env_safe "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
+            
+            # Reemplazo atómico para que Docker no lea un archivo a medias
+            mv "$TMP_ENV" .env.prod
+            chmod 600 .env.prod
+
+            # --- PERSISTENCIA Y REINICIO AUTOMÁTICO ---
+            echo "Asegurando Docker persistente..."
+            sudo systemctl enable docker || true
+
+            # --- TUNNEL PRIMERO Y SIEMPRE ---
+            echo "Levantando cloudflared (Blindado)..."
+            # Nos aseguramos de que no dependa de nada y tenga restart policy
+            compose up -d --remove-orphans cloudflared
+            
             # 1. Backup de Seguridad (No bloqueante)
             echo "Realizando backup de seguridad..."
             TS=$(date +%Y%m%d_%H%M%S)
             BK_DIR="backups/predeploy/${TS}"
             mkdir -p "$BK_DIR"
-            [ -f .env.prod ] && cp .env.prod "$BK_DIR/"
+            cp .env.prod "$BK_DIR/"
             
             # Intento de backup de DB
             DB_CONT=$(docker_cmd ps -q -f name=galantes_db)
@@ -78,51 +102,31 @@ jobs:
               docker_cmd exec "$DB_CONT" sh -lc "PGPASSWORD=\"$POSTGRES_PASSWORD\" pg_dump -U odoo -d galantes_db --no-owner --no-privileges --clean --if-exists" > "$BK_DIR/galantes_db.sql" 2>/dev/null || echo "Aviso: Backup de DB falló"
             fi
 
-            # 2. Sincronizar código con Git (Método probado en Run #48)
+            # 2. Sincronizar código con Git
             echo "Sincronizando cambios de Git..."
-            [ -f .env.prod ] && cp -f .env.prod /tmp/galantes_env_before_reset
             git fetch origin main
             PREV_HEAD=$(git rev-parse HEAD)
             git reset --hard origin/main
             CHANGES=$(git diff --name-only "$PREV_HEAD" HEAD)
-            [ -f /tmp/galantes_env_before_reset ] && cp -f /tmp/galantes_env_before_reset .env.prod && rm -f /tmp/galantes_env_before_reset
 
             # 3. Sincronizar maestros de datos
             [ -f cms_prod_local.json ] && cp -f cms_prod_local.json data/cms.json
             [ -f integrations_prod.json ] && cp -f integrations_prod.json data/integrations.json
 
-            # 4. Actualizar secretos en .env.prod sin borrar el resto de variables
-            update_env "ADMIN_PASSWORD" "$ADMIN_PASSWORD"
-            update_env "ADMIN_SECRET_KEY" "$ADMIN_SECRET_KEY"
-            update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
-            update_env "POSTGRES_USER" "odoo"
-            update_env "ODOO_DB" "galantes_db"
-            update_env "ODOO_PASSWORD" "$ODOO_PASSWORD"
-            update_env "ODOO_API_KEY" "$ODOO_API_KEY"
-            update_env "CF_TUNNEL_TOKEN_PROD" "$CF_TUNNEL_TOKEN_PROD"
-            update_env "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
-            chmod 600 .env.prod
-
-            # 5. Levantar Cloudflare Tunnel primero
-            echo "Levantando cloudflared..."
-            compose up -d cloudflared
-            sleep 10
-            docker_cmd ps --filter name=galantes_tunnel_prod --format "table {{.Names}}\t{{.Status}}"
-
-            # 6. Desplegar Web si hay cambios
+            # 4. Desplegar Web si hay cambios
             if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|public/|package.json|Dockerfile|docker-compose|next.config)" || [ "${{ inputs.force_rebuild }}" = "true" ]; then
               echo "Cambios detectados en la aplicación. Reconstruyendo..."
               compose build web
               compose up -d --no-deps web
             fi
 
-            # 7. Desplegar Odoo si hay cambios
+            # 5. Desplegar Odoo si hay cambios
             if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)" || [ "${{ inputs.force_rebuild }}" = "true" ]; then
               echo "Actualizando módulos de Odoo..."
               compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d galantes_db -u galantes_jewelry --stop-after-init || true
               compose restart odoo
             fi
 
-            # 8. Limpieza
+            # 6. Limpieza
             docker_cmd image prune -f
-            echo "DESPLIEGUE FINALIZADO EXITOSAMENTE."
+            echo "DESPLIEGUE FINALIZADO EXITOSAMENTE Y TUNNEL BLINDADO."
