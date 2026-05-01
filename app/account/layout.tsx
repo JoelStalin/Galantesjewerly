@@ -1,6 +1,8 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
+import { buildCustomerLoginHref } from '@/lib/customer-navigation';
 
 interface AccountLayoutProps {
   children: React.ReactNode;
@@ -8,10 +10,12 @@ interface AccountLayoutProps {
 
 export default async function AccountLayout({ children }: AccountLayoutProps) {
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const currentUrl = requestHeaders.get('x-current-url') || '';
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
 
   if (!user) {
-    return <>{children}</>;
+    redirect(buildCustomerLoginHref(currentUrl));
   }
 
   return (

@@ -2,20 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { sanitizeCustomerReturnTo } from '@/lib/customer-navigation';
 
 type AuthMode = 'login' | 'register';
 
-function sanitizeReturnTo(value: string | null) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) {
-    return '/account/settings';
-  }
-
-  return value;
-}
-
 export default function CustomerLoginPage() {
   const searchParams = useSearchParams();
-  const returnTo = useMemo(() => sanitizeReturnTo(searchParams.get('returnTo')), [searchParams]);
+  const returnTo = useMemo(() => sanitizeCustomerReturnTo(searchParams.get('returnTo')), [searchParams]);
   const [mode, setMode] = useState<AuthMode>('login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');

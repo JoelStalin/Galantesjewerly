@@ -599,6 +599,25 @@
           "dependencies": [
             "DEPLOY-016"
           ]
+        },
+        {
+          "id": "DEPLOY-018",
+          "title": "Centralize account auth guard and harden returnTo sanitization",
+          "description": "Move the customer account protection into the account layout and reject auth-page returnTo values so customer navigation cannot bounce through logout or other auth routes.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T12:33:00Z",
+          "updated": "2026-05-01T12:33:00Z",
+          "evidence": [
+            "Updated app/account/layout.tsx to redirect unauthenticated users from the shared account layout instead of relying only on page-level guards.",
+            "Shared sanitizeCustomerReturnTo in lib/customer-navigation.ts and hardened it to reject /auth routes before login returns the user.",
+            "Updated app/auth/login/page.tsx to use the shared sanitizer and added regression tests for the account layout and auth-path returnTo handling.",
+            "Validated the targeted Vitest suites, repo lint, and a real Selenium QA run against http://127.0.0.1:3001 with browser console logs reviewed."
+          ],
+          "dependencies": [
+            "DEPLOY-017"
+          ]
         }
       ]
     },
@@ -631,6 +650,6 @@
     }
   ],
   "currentPhase": "DEPLOY",
-  "currentTask": "DEPLOY-017",
-  "lastUpdated": "2026-05-01T12:25:51.0592235Z"
+  "currentTask": "DEPLOY-018",
+  "lastUpdated": "2026-05-01T12:33:00Z"
 }
