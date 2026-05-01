@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { ProfileForm } from '@/components/account/ProfileForm';
+import { withTimeoutFallback } from '@/lib/with-timeout-fallback';
+
+const ACCOUNT_ODDO_TIMEOUT_MS = 2000;
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
@@ -13,12 +16,30 @@ export default async function SettingsPage() {
 
   let profile = null;
   try {
-    const partnerId = await OdooService.getPartnerByEmail(user.email)
-      || await OdooService.findOrCreateCustomer({
-        name: user.name || user.username || user.email,
-        email: user.email,
-      });
-    profile = partnerId ? await OdooService.getPartnerProfile(partnerId) : null;
+    const partnerResolution = await withTimeoutFallback(
+      (async () => {
+        const existingPartnerId = await OdooService.getPartnerByEmail(user.email);
+        if (existingPartnerId) {
+          return existingPartnerId;
+        }
+
+        return await OdooService.findOrCreateCustomer({
+          name: user.name || user.username || user.email,
+          email: user.email,
+        });
+      })(),
+      ACCOUNT_ODDO_TIMEOUT_MS,
+      null,
+    );
+    const partnerId = partnerResolution.value;
+    if (partnerId) {
+      const profileResolution = await withTimeoutFallback(
+        OdooService.getPartnerProfile(partnerId),
+        ACCOUNT_ODDO_TIMEOUT_MS,
+        null,
+      );
+      profile = profileResolution.value;
+    }
   } catch (error) {
     console.error('Account settings Odoo sync failed:', error);
   }

@@ -2,6 +2,20 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
+import { withTimeoutFallback } from '@/lib/with-timeout-fallback';
+
+type InvoiceSummary = {
+  id: number;
+  name: string;
+  invoice_date?: string | null;
+  amount_total: number;
+  payment_state: string;
+  display_status: string;
+  pdf_url?: string | null;
+  portal_url?: string | null;
+};
+
+const ACCOUNT_ODDO_TIMEOUT_MS = 2000;
 
 export default async function InvoicesPage() {
   const cookieStore = await cookies();
@@ -10,12 +24,31 @@ export default async function InvoicesPage() {
     redirect('/auth/login?returnTo=/account/invoices');
   }
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email)
-    || await OdooService.findOrCreateCustomer({
-      name: user.name || user.username || user.email,
-      email: user.email,
-    });
-  const invoices = partnerId ? await OdooService.getPartnerInvoices(partnerId) : [];
+  const partnerResolution = await withTimeoutFallback(
+    (async () => {
+      const existingPartnerId = await OdooService.getPartnerByEmail(user.email);
+      if (existingPartnerId) {
+        return existingPartnerId;
+      }
+
+      return await OdooService.findOrCreateCustomer({
+        name: user.name || user.username || user.email,
+        email: user.email,
+      });
+    })(),
+    ACCOUNT_ODDO_TIMEOUT_MS,
+    null,
+  );
+  const partnerId = partnerResolution.value;
+  const invoicesResolution = partnerId
+    ? await withTimeoutFallback(
+      OdooService.getPartnerInvoices(partnerId) as Promise<InvoiceSummary[]>,
+      ACCOUNT_ODDO_TIMEOUT_MS,
+      [],
+    )
+    : { value: [], timedOut: false };
+  const invoices = invoicesResolution.value;
+  const accountDataTimedOut = partnerResolution.timedOut || invoicesResolution.timedOut;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -26,6 +59,13 @@ export default async function InvoicesPage() {
         </div>
         <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{invoices.length} documents</span>
       </div>
+
+      {accountDataTimedOut ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          We are having trouble reaching the billing system right now. Your session is still active, but invoice details
+          may appear empty until the backend responds.
+        </div>
+      ) : null}
 
       {invoices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -49,14 +89,14 @@ export default async function InvoicesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {invoices.map((inv: any) => (
+              {invoices.map((inv) => (
                 <tr key={inv.id} className="group transition-colors hover:bg-primary/[0.02]">
                   <td className="px-6 py-8">
                     <div className="flex flex-col gap-1">
                       <span className="font-medium text-primary tracking-tight">{inv.name}</span>
                       {inv.pdf_url || inv.portal_url ? (
                         <a 
-                          href={inv.pdf_url || inv.portal_url} 
+                          href={inv.pdf_url ?? inv.portal_url ?? undefined} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-[9px] font-bold text-accent uppercase tracking-widest hover:text-accent-dark transition-colors flex items-center gap-1"

@@ -1,7 +1,31 @@
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
+import { withTimeoutFallback } from '@/lib/with-timeout-fallback';
+
+type OrderInvoiceSummary = {
+  id: number;
+  name: string;
+  invoice_date?: string | null;
+  amount_total: number;
+  display_status: string;
+  payment_state: string;
+  pdf_url?: string | null;
+  portal_url?: string | null;
+};
+
+type OrderSummary = {
+  id: number;
+  name: string;
+  date_order: string;
+  amount_total: number;
+  state: string;
+  display_status: string;
+  portal_url?: string | null;
+  invoices?: OrderInvoiceSummary[];
+};
 
 const STATUS_STYLES: Record<string, string> = {
   sale:   'bg-green-50 text-green-700 border-green-100',
@@ -29,6 +53,7 @@ const INVOICE_DOT: Record<string, string> = {
   not_paid:   'bg-amber-500',
   partial:    'bg-amber-500',
 };
+const ACCOUNT_ODDO_TIMEOUT_MS = 2000;
 
 export default async function OrdersPage() {
   const cookieStore = await cookies();
@@ -37,12 +62,31 @@ export default async function OrdersPage() {
     redirect('/auth/login?returnTo=/account/orders');
   }
 
-  const partnerId = await OdooService.getPartnerByEmail(user.email)
-    || await OdooService.findOrCreateCustomer({
-      name: user.name || user.username || user.email,
-      email: user.email,
-    });
-  const orders = partnerId ? await OdooService.getOrdersWithInvoices(partnerId) : [];
+  const partnerResolution = await withTimeoutFallback(
+    (async () => {
+      const existingPartnerId = await OdooService.getPartnerByEmail(user.email);
+      if (existingPartnerId) {
+        return existingPartnerId;
+      }
+
+      return await OdooService.findOrCreateCustomer({
+        name: user.name || user.username || user.email,
+        email: user.email,
+      });
+    })(),
+    ACCOUNT_ODDO_TIMEOUT_MS,
+    null,
+  );
+  const partnerId = partnerResolution.value;
+  const ordersResolution = partnerId
+    ? await withTimeoutFallback(
+      OdooService.getOrdersWithInvoices(partnerId) as Promise<OrderSummary[]>,
+      ACCOUNT_ODDO_TIMEOUT_MS,
+      [],
+    )
+    : { value: [], timedOut: false };
+  const orders = ordersResolution.value;
+  const accountDataTimedOut = partnerResolution.timedOut || ordersResolution.timedOut;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -54,6 +98,13 @@ export default async function OrdersPage() {
         <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{orders.length} orders total</span>
       </div>
 
+      {accountDataTimedOut ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          We are having trouble reaching the billing system right now. Your session is still active, but order details may
+          appear empty until the backend responds.
+        </div>
+      ) : null}
+
       {orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="mb-6 rounded-full bg-primary/5 p-8">
@@ -63,13 +114,13 @@ export default async function OrdersPage() {
           </div>
           <p className="font-serif text-xl text-primary">Your jewelry box is currently empty.</p>
           <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">Discover our handcrafted nautical collections and begin your story with us.</p>
-          <a href="/shop" className="mt-10 inline-flex items-center justify-center rounded-full border border-accent bg-accent px-8 py-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-dark transition-all hover:bg-accent-light hover:shadow-lg">
+          <Link href="/shop" className="mt-10 inline-flex items-center justify-center rounded-full border border-accent bg-accent px-8 py-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-dark transition-all hover:bg-accent-light hover:shadow-lg">
             Browse Collections
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="space-y-6">
-          {orders.map((order: any) => (
+          {orders.map((order) => (
             <div key={order.id} className="overflow-hidden rounded-xl border border-primary/10 bg-white/50 shadow-sm backdrop-blur-sm">
               {/* Order header */}
               <div className="flex flex-col gap-4 bg-primary/[0.03] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -119,7 +170,7 @@ export default async function OrdersPage() {
                     Attached Invoices
                   </p>
                   <div className="space-y-2">
-                    {order.invoices.map((inv: any) => (
+                    {order.invoices.map((inv) => (
                       <div key={inv.id} className="flex flex-col gap-2 rounded-lg border border-primary/5 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-primary">{inv.name}</span>
@@ -142,7 +193,7 @@ export default async function OrdersPage() {
 
                           {inv.pdf_url || inv.portal_url ? (
                             <a
-                              href={inv.pdf_url || inv.portal_url}
+                              href={inv.pdf_url ?? inv.portal_url ?? undefined}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary transition-colors hover:border-accent hover:text-accent"
