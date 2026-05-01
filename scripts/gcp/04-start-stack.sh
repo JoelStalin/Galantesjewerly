@@ -45,7 +45,7 @@ vm_ssh "set -e; \
 log_info "Iniciando servicios"
 vm_ssh "set -e; \
     cd '$GCP_VM_REPO_DIR'; \
-    sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml up -d"
+    sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml up -d --no-deps web odoo nginx certbot cloudflared"
 
 log_info "Esperando healthchecks (hasta 5 min para Odoo)"
 for i in $(seq 1 30); do
