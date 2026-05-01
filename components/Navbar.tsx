@@ -7,6 +7,7 @@ import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import { SiteSettings } from '@/lib/db';
 import type { AuthenticatedCustomer } from '@/lib/customer-auth';
 import { useCart } from '@/context/shop/CartContext';
+import { buildCustomerLoginHref } from '@/lib/customer-navigation';
 
 const FALLBACK_NAV = [
   { label: 'Heritage', href: '/about' },
@@ -49,15 +50,21 @@ interface NavbarProps {
   user?: AuthenticatedCustomer | null;
   forceSolid?: boolean;
   isFixed?: boolean;
+  currentUrl?: string;
 }
 
-export function Navbar({ settings, user, forceSolid = false, isFixed = true }: NavbarProps) {
+export function Navbar({ settings, user, forceSolid = false, isFixed = true, currentUrl }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { totalCount, hasHydrated } = useCart();
   const useSolidNav = forceSolid || scrolled;
   const brandName = settings.brand_name?.trim() || settings.site_title?.trim() || "Galante's Jewelry";
   const brandTagline = settings.brand_tagline?.trim() || 'By The Sea';
+  const fallbackCurrentUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '';
+  const customerLoginHref = buildCustomerLoginHref(currentUrl || fallbackCurrentUrl);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,6 +79,7 @@ export function Navbar({ settings, user, forceSolid = false, isFixed = true }: N
 
   return (
     <nav 
+      data-testid="site-navbar"
       className={`${isFixed ? 'fixed' : 'absolute'} top-0 left-0 w-full z-50 transition-all duration-300 ${
         useSolidNav ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'
       }`}
@@ -123,7 +131,7 @@ export function Navbar({ settings, user, forceSolid = false, isFixed = true }: N
           {/* Icons & Actions */}
           <div className="flex items-center justify-end space-x-4 lg:space-x-6 flex-1">
             <Link
-              href={user ? "/account" : "/auth/login"}
+              href={user ? "/account" : customerLoginHref}
               className="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-amber-700 transition-colors"
               title={user ? "Account" : "Customer Login"}
             >
@@ -177,7 +185,7 @@ export function Navbar({ settings, user, forceSolid = false, isFixed = true }: N
             ))}
             <div className="pt-6 flex flex-col space-y-4">
               <Link
-                href={user ? "/account" : "/auth/login"}
+                href={user ? "/account" : customerLoginHref}
                 className="flex items-center space-x-3 px-3 py-2 text-gray-700"
                 onClick={() => setIsOpen(false)}
               >

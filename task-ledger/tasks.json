@@ -415,6 +415,190 @@
           "dependencies": [
             "DEPLOY-006"
           ]
+        },
+        {
+          "id": "DEPLOY-008",
+          "title": "Repair broken skill reference paths and shared docs",
+          "description": "Restore missing skill reference files, fix stale relative links, and add compatibility docs for the shared skill tool registry and sample PRD outputs.",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "codex",
+          "created": "2026-05-01T02:11:53.2077348Z",
+          "updated": "2026-05-01T02:20:28.1242316Z",
+          "evidence": [
+            "Added shared .agents/skills/CLAUDE.md and .agents/skills/INSTALLATION.md anchors for package-level parent links.",
+            "Created shared .agents/tools registry plus email and paid-ads integration docs to satisfy cross-skill references.",
+            "Added missing skill reference docs for onboarding-cro, page-cro, paywall-upgrade-cro, programmatic-seo, seo-audit, email-sequence, competitor-alternatives, and code-to-prd.",
+            "Fixed stale relative links in c-level-advisor, engineering-skills, marketing-skills, pm-skills, ra-qm-skills, security-pen-testing, vercel-react-best-practices, and competitor-alternatives."
+          ],
+          "dependencies": [
+            "DEPLOY-007"
+          ]
+        },
+        {
+          "id": "DEPLOY-009",
+          "title": "Harden Odoo JSON-2 retry behavior for 404 responses",
+          "description": "Treat missing Odoo JSON-2 resources as non-retryable errors and add a regression test so sync calls fail fast on 404.",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "codex",
+          "created": "2026-05-01T02:23:48.3785570Z",
+          "updated": "2026-05-01T02:23:48.3785570Z",
+          "evidence": [
+            "Updated src/config/odooClient.js to stop retrying 404 responses alongside 401/403 and config errors.",
+            "Added a unit regression test proving Odoo 404 responses fail fast after a single fetch attempt.",
+            "Validated the targeted Odoo unit test suite with vitest."
+          ],
+          "dependencies": [
+            "DEPLOY-008"
+          ]
+        },
+        {
+          "id": "DEPLOY-010",
+          "title": "Add structured Odoo sync diagnostics",
+          "description": "Emit structured logs for appointment Odoo sync outcomes and cover the failure path with a unit test so sync problems are easier to audit.",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "codex",
+          "created": "2026-05-01T22:27:52Z",
+          "updated": "2026-05-01T22:31:00Z",
+          "evidence": [
+            "Updated lib/appointment-flow.ts to log structured Odoo sync success, skip, and failure diagnostics.",
+            "Added tests/unit/lib/appointment-flow.test.ts to cover the structured failure log path.",
+            "Validated the change with focused Vitest coverage and the repo lint task."
+          ],
+          "dependencies": [
+            "DEPLOY-009"
+          ]
+        },
+        {
+          "id": "DEPLOY-011",
+          "title": "Preserve runtime data during GCP repo sync",
+          "description": "Backup and restore the live data/ tree around the VM git reset so production content and operational state survive code syncs.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T23:05:00Z",
+          "updated": "2026-05-01T23:05:00Z",
+          "evidence": [
+            "Updated scripts/gcp/02-push-to-vm.sh to back up data/ on the VM before git reset --hard and restore it after the sync finishes.",
+            "Added an EXIT trap so the backup is restored even if the sync fails partway through.",
+            "Validated the modified GCP shell scripts with bash -n using Git Bash."
+          ],
+          "dependencies": [
+            "DEPLOY-010"
+          ]
+        },
+        {
+          "id": "DEPLOY-012",
+          "title": "Create rollback backup of GCP production",
+          "description": "Capture a predeploy backup of the live GCP stack, including database, persistent volumes, app data, and runtime logs, so production can be rolled back if the next change fails.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T02:39:23Z",
+          "updated": "2026-05-01T02:39:23Z",
+          "evidence": [
+            "Ran scripts/backup/predeploy-backup.sh on the GCP VM at /home/yoeli/galantesjewelry with ENV_FILE=.env.gcp and COMPOSE_FILE=docker-compose.gcp.yml.",
+            "Used sudo and an absolute BACKUP_BASE_DIR so Docker could snapshot the live postgres-data and odoo-data volumes without permission or mount-path errors.",
+            "Verified the backup directory /home/yoeli/galantesjewelry/backups/predeploy/20260501_023923 contains galantes_db.sql, postgres-data.tgz, odoo-data.tgz, app-data.tgz, and runtime logs/inspects."
+          ],
+          "dependencies": [
+            "DEPLOY-011"
+          ]
+        },
+        {
+          "id": "DEPLOY-013",
+          "title": "Promote runtime changes to GCP production",
+          "description": "Deploy the current runtime-only code changes to the live GCP web container and validate the public health endpoint after cutover.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T04:34:30Z",
+          "updated": "2026-05-01T04:34:30Z",
+          "evidence": [
+            "Created a runtime-only release archive from app/, components/, lib/, scripts/, and src/ while excluding .agents, memory, task-ledger, backups, data, and test runtime artifacts.",
+            "Uploaded the release archive to the GCP VM and extracted it into /home/yoeli/galantesjewelry.",
+            "Rebuilt and recreated the galantes_web container with docker compose using .env.prod on the VM.",
+            "Validated that galantes_web is healthy and https://galantesjewelry.com/api/health returned ok."
+          ],
+          "dependencies": [
+            "DEPLOY-012"
+          ]
+        },
+        {
+          "id": "DEPLOY-014",
+          "title": "Protect customer addresses route with auth guard",
+          "description": "Add the missing customer-session redirect to /account/addresses so the customer options menu cannot land on an unprotected account screen.",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "codex",
+          "created": "2026-05-01T12:00:41.2090496Z",
+          "updated": "2026-05-01T12:05:00.0000000Z",
+          "evidence": [
+            "Added a customer-session guard to app/account/addresses/page.tsx so unauthenticated users are redirected to /auth/login?returnTo=/account/addresses.",
+            "Extended tests/unit/app/account/account-pages.test.ts with an addresses redirect regression test.",
+            "Validated the focused account-page test suite and repo lint."
+          ],
+          "dependencies": [
+            "DEPLOY-013"
+          ]
+        },
+        {
+          "id": "DEPLOY-015",
+          "title": "Preserve returnTo through customer login",
+          "description": "Make the customer login links remember the current URL so users return to the page they were on after signing in.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T12:05:47.6732259Z",
+          "updated": "2026-05-01T12:05:47.6732259Z",
+          "evidence": [
+            "Added lib/customer-navigation.ts with buildCustomerLoginHref so customer login links preserve the current path and query string.",
+            "Updated components/Navbar.tsx to use the current pathname/search params for both desktop and mobile customer login links.",
+            "Added tests/unit/lib/customer-navigation.test.ts to cover cart return behavior and auth-page loop prevention.",
+            "Validated the focused tests and repo lint."
+          ],
+          "dependencies": [
+            "DEPLOY-014"
+          ]
+        },
+        {
+          "id": "DEPLOY-016",
+          "title": "Make customer sessions durable until logout",
+          "description": "Extend the customer session lifetime so authenticated customer sections remain available until the user explicitly signs out.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T12:08:25.7877922Z",
+          "updated": "2026-05-01T12:08:25.7877922Z",
+          "evidence": [
+            "Updated lib/customer-auth.ts to reuse the long-lived Google session max age and set customer JWT expiry to the matching far-future date.",
+            "Added a customer-auth regression test covering token sign/verify for durable sessions.",
+            "Validated the customer auth, customer navigation, and account redirect test suites plus repo lint."
+          ],
+          "dependencies": [
+            "DEPLOY-015"
+          ]
+        },
+        {
+          "id": "DEPLOY-017",
+          "title": "Verify customer login returnTo with Selenium QA",
+          "description": "Run a real Selenium functional check against the current code to confirm the customer login link returns to the cart and logout blocks protected account pages.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T12:25:51.0592235Z",
+          "updated": "2026-05-01T12:25:51.0592235Z",
+          "evidence": [
+            "Added scripts/verify_customer_login_return_to_profile9.py to exercise the cart -> login -> cart flow and confirm logout blocks /account/orders.",
+            "Started a local Next.js dev server on 127.0.0.1:3001 and ran the Selenium QA against the current code.",
+            "Validated the login link preserved returnTo=/cart, registration returned to /cart, logout returned home, and /account/orders redirected back to login after logout.",
+            "Captured browser console logs during the QA run, including the expected Odoo fallback warnings and the returnTo debug output."
+          ],
+          "dependencies": [
+            "DEPLOY-016"
+          ]
         }
       ]
     },
@@ -447,6 +631,6 @@
     }
   ],
   "currentPhase": "DEPLOY",
-  "currentTask": "DEPLOY-007",
-  "lastUpdated": "2026-04-29T22:30:00Z"
+  "currentTask": "DEPLOY-017",
+  "lastUpdated": "2026-05-01T12:25:51.0592235Z"
 }

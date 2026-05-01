@@ -1,10 +1,20 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { AddressBook } from '@/components/account/AddressBook';
+import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 
 export const metadata = {
   title: 'Address Book - Galante\'s Jewelry',
 };
 
-export default function AddressesPage() {
+export default async function AddressesPage() {
+  const cookieStore = await cookies();
+  const user = await getAuthenticatedCustomerFromCookies(cookieStore);
+
+  if (!user) {
+    redirect('/auth/login?returnTo=/account/addresses');
+  }
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="border-b border-primary/10 pb-6">

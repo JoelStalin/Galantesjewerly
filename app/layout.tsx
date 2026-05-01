@@ -6,7 +6,7 @@ import { Outfit } from 'next/font/google';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { CartProvider } from '@/context/shop/CartContext';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { ConditionalNavbar } from '@/components/ConditionalNavbar';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
 
@@ -113,15 +113,16 @@ async function loadSiteSettings(): Promise<SiteSettings> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await loadSiteSettings();
+  const brandName = settings.brand_name?.trim() || settings.site_title;
   return {
-    title: settings.site_title,
+    title: brandName,
     description: settings.site_description,
     icons: { icon: settings.favicon_url || FALLBACK_SETTINGS.favicon_url },
     openGraph: {
-      title: settings.site_title,
+      title: brandName,
       description: settings.site_description,
       url: 'https://galantesjewelry.com',
-      siteName: "Galante's Jewelry",
+      siteName: brandName,
       locale: 'en_US',
       type: 'website',
     },
@@ -131,6 +132,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const finalSettings = await loadSiteSettings();
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const currentUrl = requestHeaders.get('x-current-url') || '';
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
 
   return (
@@ -140,7 +143,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
         <CartProvider>
-          <ConditionalNavbar settings={finalSettings} user={user} />
+          <ConditionalNavbar settings={finalSettings} user={user} currentUrl={currentUrl} />
           <main className="flex-grow">{children}</main>
         </CartProvider>
         

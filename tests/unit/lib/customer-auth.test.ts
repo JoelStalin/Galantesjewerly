@@ -36,5 +36,27 @@ describe('customer auth', () => {
     const byEmail = await auth.authenticateCustomerAccount('joel@example.com', 'Password123!');
     expect(byEmail.username).toBe('joel');
   });
+
+  it('creates a durable customer session token', async () => {
+    vi.stubEnv('CUSTOMER_SESSION_SECRET', 'test_customer_session_secret');
+
+    const auth = await import('@/lib/customer-auth');
+
+    const token = await auth.signCustomerSession({
+      authMethod: 'password',
+      email: 'joel@example.com',
+      name: 'Joel Test',
+      username: 'joel',
+    });
+
+    const session = await auth.verifyCustomerSession(token);
+
+    expect(session).toEqual({
+      authMethod: 'password',
+      email: 'joel@example.com',
+      name: 'Joel Test',
+      username: 'joel',
+    });
+  });
 });
 

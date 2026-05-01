@@ -54,6 +54,16 @@ describe('account pages', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/auth/login?returnTo=/account/invoices');
   });
 
+  it('redirects unauthenticated users from addresses', async () => {
+    mocks.cookies.mockResolvedValue({} as never);
+    mocks.getAuthenticatedCustomerFromCookies.mockResolvedValue(null);
+
+    const { default: AddressesPage } = await import('@/app/account/addresses/page');
+
+    await expect(AddressesPage()).rejects.toThrow('NEXT_REDIRECT');
+    expect(mocks.redirect).toHaveBeenCalledWith('/auth/login?returnTo=/account/addresses');
+  });
+
   it('redirects unauthenticated users from order detail', async () => {
     mocks.cookies.mockResolvedValue({} as never);
     mocks.getAuthenticatedCustomerFromCookies.mockResolvedValue(null);

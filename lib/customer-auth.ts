@@ -4,10 +4,10 @@ import path from 'node:path';
 import { SignJWT, jwtVerify } from 'jose';
 import { getDataRoot } from '@/lib/runtime-paths';
 import { shouldUseSecureCookies } from '@/lib/auth';
-import { GOOGLE_USER_COOKIE, verifyGoogleUserSession } from '@/lib/google-login';
+import { GOOGLE_USER_COOKIE, GOOGLE_USER_SESSION_MAX_AGE, verifyGoogleUserSession } from '@/lib/google-login';
 
 export const CUSTOMER_SESSION_COOKIE = 'customer_session';
-export const CUSTOMER_SESSION_MAX_AGE = 60 * 60 * 24 * 30;
+export const CUSTOMER_SESSION_MAX_AGE = GOOGLE_USER_SESSION_MAX_AGE;
 
 export type CustomerSessionPayload = {
   sub: string;
@@ -233,10 +233,12 @@ export async function authenticateCustomerAccount(identifier: string, password: 
 }
 
 export async function signCustomerSession(customer: AuthenticatedCustomer) {
+  const expiresAt = new Date(Date.now() + CUSTOMER_SESSION_MAX_AGE * 1000);
+
   return await new SignJWT(toSessionPayload(customer))
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
+    .setExpirationTime(expiresAt)
     .sign(getCustomerSessionKey());
 }
 

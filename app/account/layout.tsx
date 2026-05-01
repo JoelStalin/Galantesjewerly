@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 
@@ -10,16 +9,17 @@ interface AccountLayoutProps {
 export default async function AccountLayout({ children }: AccountLayoutProps) {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
+
   if (!user) {
-    redirect('/auth/login?returnTo=/account/settings');
+    return <>{children}</>;
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12 md:px-12">
+    <div className="mx-auto max-w-7xl px-6 pb-12 pt-48 md:px-12 md:pb-16 md:pt-56">
       <div className="flex flex-col gap-12 md:flex-row">
         {/* Sidebar Nav */}
         <aside className="w-full md:w-64 md:shrink-0">
-          <div className="space-y-8 md:sticky md:top-28 md:max-h-[calc(100vh-8rem)] md:overflow-y-auto">
+          <div className="space-y-8 md:sticky md:top-56 md:max-h-[calc(100vh-14rem)] md:overflow-y-auto">
             <div>
               <h2 className="font-serif text-2xl text-primary">My Account</h2>
               <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
