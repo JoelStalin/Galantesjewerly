@@ -34,10 +34,36 @@ load_env() {
     if [ ! -f "$env_file" ]; then
         die "No se encontro $env_file. Copia .env.gcp.example y rellenalo."
     fi
-    # shellcheck disable=SC1090
-    set -a
-    source "$env_file"
-    set +a
+
+    local line key value
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        case "$line" in
+            ''|'#'*) continue ;;
+        esac
+
+        if [[ "$line" != *=* ]]; then
+            continue
+        fi
+
+        key="${line%%=*}"
+        value="${line#*=}"
+        key="${key#export }"
+        key="${key%%[[:space:]]*}"
+        key="${key%$'\r'}"
+        value="${value%$'\r'}"
+
+        case "$value" in
+            \"*\")
+                value="${value:1:${#value}-2}"
+                ;;
+            \'*\')
+                value="${value:1:${#value}-2}"
+                ;;
+        esac
+
+        export "$key=$value"
+    done < "$env_file"
 }
 
 # Valida que una variable no este vacia ni sea placeholder

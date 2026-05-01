@@ -40,16 +40,16 @@ vm_ssh "set -e; \
 log_info "Construyendo imagenes (cache-friendly)"
 vm_ssh "set -e; \
     cd '$GCP_VM_REPO_DIR'; \
-    docker compose --env-file .env.gcp -f docker-compose.gcp.yml build web odoo"
+    sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml build web odoo"
 
 log_info "Iniciando servicios"
 vm_ssh "set -e; \
     cd '$GCP_VM_REPO_DIR'; \
-    docker compose --env-file .env.gcp -f docker-compose.gcp.yml up -d"
+    sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml up -d"
 
 log_info "Esperando healthchecks (hasta 5 min para Odoo)"
 for i in $(seq 1 30); do
-    STATUS="$(vm_run "cd '$GCP_VM_REPO_DIR' && docker compose --env-file .env.gcp -f docker-compose.gcp.yml ps --format json" 2>/dev/null || echo '')"
+    STATUS="$(vm_run "cd '$GCP_VM_REPO_DIR' && sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml ps --format json" 2>/dev/null || echo '')"
     if echo "$STATUS" | grep -q '"Health":"healthy"'; then
         HEALTHY_COUNT="$(echo "$STATUS" | grep -c '"Health":"healthy"' || true)"
         log_info "  ${HEALTHY_COUNT} servicios healthy (iteracion $i/30)"
@@ -63,6 +63,6 @@ for i in $(seq 1 30); do
 done
 
 log_info "Estado final:"
-vm_ssh "cd '$GCP_VM_REPO_DIR' && docker compose --env-file .env.gcp -f docker-compose.gcp.yml ps"
+vm_ssh "cd '$GCP_VM_REPO_DIR' && sudo -n docker compose --env-file .env.gcp -f docker-compose.gcp.yml ps"
 
 log_ok "Stack arriba. Proximo paso: 03-issue-certs.sh (si aun no hay TLS) o 07-validate.sh"

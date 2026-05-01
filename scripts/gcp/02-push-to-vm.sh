@@ -7,6 +7,10 @@
 # Fallback: rsync via gcloud scp con exclusiones.
 # Despues copia .env.gcp (fuera del git history) y ejecuta npm ci si hay
 # cambios en package.json.
+#
+# Importante: data/ contiene estado operativo persistente y puede estar
+# versionado dentro del repo. Antes de cualquier git reset hard, este script
+# hace backup temporal de data/ en la VM y lo restaura al final.
 # =========================================================================
 set -euo pipefail
 
@@ -35,10 +39,46 @@ else
     log_warn "Sin remoto git. Usare rsync para enviar el arbol actual."
 fi
 
+REMOTE_DATA_BACKUP_DIR="/tmp/galantes-deploy-backups"
+REMOTE_DATA_BACKUP_FILE="$REMOTE_DATA_BACKUP_DIR/data.tgz"
+REMOTE_DATA_BACKED_UP=0
+
+cleanup_remote_data() {
+    if [ "$REMOTE_DATA_BACKED_UP" = "1" ]; then
+        restore_remote_data
+    fi
+}
+
+trap cleanup_remote_data EXIT
+
+backup_remote_data() {
+    log_info "Preservando data/ operativa de la VM"
+    vm_ssh "set -e; \
+        mkdir -p '$REMOTE_DATA_BACKUP_DIR'; \
+        if [ -d '$GCP_VM_REPO_DIR/data' ]; then \
+            tar -czf '$REMOTE_DATA_BACKUP_FILE' -C '$GCP_VM_REPO_DIR' data; \
+        fi"
+    REMOTE_DATA_BACKED_UP=1
+}
+
+restore_remote_data() {
+    if vm_run "test -f '$REMOTE_DATA_BACKUP_FILE'"; then
+        log_info "Restaurando data/ operativa preservada"
+        vm_ssh "set -e; \
+            tar -xzf '$REMOTE_DATA_BACKUP_FILE' -C '$GCP_VM_REPO_DIR'; \
+            rm -f '$REMOTE_DATA_BACKUP_FILE'"
+    else
+        log_info "No habia backup temporal de data/ para restaurar"
+    fi
+    REMOTE_DATA_BACKED_UP=0
+}
+
 # ---- Estrategia A: git pull ----
 if [ "$USE_GIT" = "1" ]; then
+    backup_remote_data
     log_info "Clonando / actualizando repo en la VM"
     vm_ssh "set -e; \
+        rm -f '$GCP_VM_REPO_DIR/proxy.ts' '$GCP_VM_REPO_DIR/middleware.ts'; \
         if [ ! -d '$GCP_VM_REPO_DIR/.git' ]; then \
             git clone '$REPO_URL' '$GCP_VM_REPO_DIR'; \
         fi; \
@@ -47,6 +87,7 @@ if [ "$USE_GIT" = "1" ]; then
         git fetch --all --prune; \
         git checkout '$REPO_BRANCH'; \
         git reset --hard 'origin/$REPO_BRANCH'"
+    restore_remote_data
 fi
 
 # ---- Estrategia B: rsync via gcloud scp ----
