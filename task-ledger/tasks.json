@@ -618,6 +618,25 @@
           "dependencies": [
             "DEPLOY-017"
           ]
+        },
+        {
+          "id": "DEPLOY-019",
+          "title": "Migrate Next interceptors and redeploy production invoices flow",
+          "description": "Move the request header logic to Next 16 proxy.ts, fix the GCP deploy scripts for the live stack, and verify the customer invoices route in production after the restart.",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "codex",
+          "created": "2026-05-01T21:42:35Z",
+          "updated": "2026-05-01T21:42:35Z",
+          "evidence": [
+            "Replaced middleware.ts with proxy.ts so Next 16 builds without the middleware/proxy conflict while still injecting x-current-url for customer navigation.",
+            "Hardened scripts/gcp/lib/common.sh, scripts/gcp/02-push-to-vm.sh, and scripts/gcp/04-start-stack.sh so GCP deploys handle .env.gcp safely, use the correct VM repo path, and restart only the actual compose services.",
+            "Synced the codex/preserve-env-2026-04-30 branch to the production VM, rebuilt the web image successfully, and restarted the live stack.",
+            "Ran a real Selenium check against https://galantesjewelry.com that injected a production customer_session cookie and confirmed /account/invoices loads without redirecting to /auth/login."
+          ],
+          "dependencies": [
+            "DEPLOY-018"
+          ]
         }
       ]
     },
@@ -650,6 +669,6 @@
     }
   ],
   "currentPhase": "DEPLOY",
-  "currentTask": "DEPLOY-018",
-  "lastUpdated": "2026-05-01T12:33:00Z"
+  "currentTask": "DEPLOY-019",
+  "lastUpdated": "2026-05-01T21:42:35Z"
 }

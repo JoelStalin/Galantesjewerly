@@ -15,6 +15,7 @@ Customer login links now preserve the current URL through `returnTo`, so clickin
 Customer sessions are now durable until logout as well, so the authenticated customer sections stay available across navigation without expiring on the short 30-day window.
 The login-return flow was then verified with a real Selenium run against a local Next.js server: cart -> login -> cart worked, logout returned home, and `/account/orders` redirected back to login after logout.
 I then tightened the customer auth surface: the shared account layout now redirects unauthenticated visitors centrally, and the login `returnTo` sanitizer rejects `/auth` routes so users cannot bounce through logout or other auth pages after signing in. That follow-up was validated again with targeted Vitest, lint, and a fresh Selenium run against `http://127.0.0.1:3001`; the browser logs showed only the expected development/Odoo fallback noise and the flow still passed end to end.
+Next 16 then blocked the production build because both `middleware.ts` and `proxy.ts` were present, so I migrated the request-header logic into `proxy.ts`, removed `middleware.ts`, and hardened the GCP deploy scripts to use the real VM path and `sudo docker compose` against the actual compose services. After that the production stack rebuilt cleanly and the live Selenium QA against `https://galantesjewelry.com` confirmed the customer invoices page loads without redirecting to login.
 
 ## Next Actions
 - Monitor live appointment submissions now that Google OAuth owner tokens and Calendar routing are restored.
@@ -29,6 +30,8 @@ I then tightened the customer auth surface: the shared account layout now redire
 - Real Selenium QA confirmed the cart login returnTo flow and logout blocking behavior.
 - The shared account layout now owns the unauthenticated redirect, and auth-page `returnTo` values are sanitized before login completes.
 - The latest Selenium pass against `http://127.0.0.1:3001` confirmed the hardened flow still works end to end.
+- The production build now uses `proxy.ts` only; the Next 16 middleware/proxy conflict is gone.
+- Production stack restart completed on the GCP VM, and live Selenium confirmed `/account/invoices` loads from a valid customer session without bouncing to `/auth/login`.
 - Keep the rollback path documented, but do not execute it unless explicitly requested again.
 - Keep an eye on Odoo latency; the layout now times out quickly and falls back to local CMS data if Odoo is slow.
 - Keep the shared skill docs under watch; the broken relative links in the skill tree were repaired and revalidated.
@@ -57,4 +60,4 @@ I then tightened the customer auth surface: the shared account layout now redire
 - None at the infrastructure/application layer. Remaining work is ordinary monitoring and git hygiene.
 
 ## Last Updated
-2026-05-01 12:33 UTC
+2026-05-01 21:42 UTC
