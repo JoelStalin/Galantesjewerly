@@ -32,30 +32,35 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
             <nav className="flex flex-col gap-2 font-semibold uppercase tracking-widest text-xs">
               <Link
                 href="/account/orders"
+                prefetch={false}
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Orders
               </Link>
               <Link
                 href="/account/invoices"
+                prefetch={false}
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Invoices
               </Link>
               <Link
                 href="/account/addresses"
+                prefetch={false}
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Addresses
               </Link>
               <Link
                 href="/account/settings"
+                prefetch={false}
                 className="border-b border-transparent py-2 transition-colors hover:border-accent hover:text-accent"
               >
                 Settings
               </Link>
               <Link
                 href="/auth/logout"
+                prefetch={false}
                 className="mt-4 text-red-500 transition-colors hover:text-red-600"
               >
                 Sign Out
