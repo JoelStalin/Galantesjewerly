@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useEffect } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type AvailabilityResponse = {
@@ -11,10 +11,21 @@ type AvailabilityResponse = {
   endTime?: string;
   slotIntervalMinutes?: number;
   availableWeekdays?: number[];
+  conflictBufferMinutes?: number;
   error?: string;
 };
 
 const weekdayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DEFAULT_AVAILABILITY: AvailabilityResponse = {
+  availableSlots: [],
+  availableWeekdays: [0, 1, 2, 3, 4, 5, 6],
+  timezone: "America/New_York",
+  durationMinutes: 60,
+  startTime: "09:00",
+  endTime: "18:00",
+  slotIntervalMinutes: 30,
+  conflictBufferMinutes: 5,
+};
 
 function getTodayForDateInput() {
   const now = new Date();
@@ -32,6 +43,7 @@ function formatWeekdays(weekdays: number[]) {
 
 export function ContactForm() {
   const searchParams = useSearchParams();
+  const queryParams = searchParams ?? new URLSearchParams();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -40,14 +52,11 @@ export function ContactForm() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
-  const [availability, setAvailability] = useState<AvailabilityResponse>({
-    availableSlots: [],
-    availableWeekdays: [],
-  });
+  const [availability, setAvailability] = useState<AvailabilityResponse>(DEFAULT_AVAILABILITY);
 
-  const reason = searchParams.get("reason");
-  const orderId = searchParams.get("orderId");
-  const carrier = searchParams.get("carrier");
+  const reason = queryParams.get("reason");
+  const orderId = queryParams.get("orderId");
+  const carrier = queryParams.get("carrier");
 
   const scheduleSummary = useMemo(() => {
     const parts: string[] = [];
@@ -64,8 +73,65 @@ export function ContactForm() {
       parts.push(availability.timezone);
     }
 
+    if (availability.conflictBufferMinutes) {
+      parts.push(`${availability.conflictBufferMinutes}-minute protection window`);
+    }
+
     return parts.join(" | ");
-  }, [availability.durationMinutes, availability.endTime, availability.startTime, availability.timezone]);
+  }, [availability.conflictBufferMinutes, availability.durationMinutes, availability.endTime, availability.startTime, availability.timezone]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadScheduleMetadata() {
+      setLoadingAvailability(true);
+      setAvailabilityError("");
+
+      try {
+        const response = await fetch("/api/contact/availability", {
+          cache: "no-store",
+        });
+        const result: AvailabilityResponse = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Could not load appointment availability.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setAvailability({
+          availableSlots: result.availableSlots || [],
+          timezone: result.timezone,
+          durationMinutes: result.durationMinutes,
+          startTime: result.startTime,
+          endTime: result.endTime,
+          slotIntervalMinutes: result.slotIntervalMinutes,
+          availableWeekdays: result.availableWeekdays || [],
+          conflictBufferMinutes: result.conflictBufferMinutes,
+        });
+      } catch (caughtError) {
+        if (!cancelled) {
+          setAvailabilityError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "We could not load available appointment times.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingAvailability(false);
+        }
+      }
+    }
+
+    void loadScheduleMetadata();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadAvailability = async (appointmentDate: string) => {
     setSelectedTime("");
@@ -100,6 +166,7 @@ export function ContactForm() {
         endTime: result.endTime,
         slotIntervalMinutes: result.slotIntervalMinutes,
         availableWeekdays: result.availableWeekdays || [],
+        conflictBufferMinutes: result.conflictBufferMinutes,
       });
 
       if (!result.availableSlots?.length) {
