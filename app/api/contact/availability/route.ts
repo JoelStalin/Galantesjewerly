@@ -8,19 +8,42 @@ import { resolveGoogleEnvironmentFromHost } from '@/lib/google-login';
 export const runtime = 'nodejs';
 
 const availabilitySchema = z.object({
-  appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   appointmentTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    const appointmentDate = url.searchParams.get('appointmentDate') || undefined;
+    const appointmentTime = url.searchParams.get('appointmentTime') || undefined;
+
+    if (appointmentTime && !appointmentDate) {
+      return NextResponse.json(
+        { error: 'An appointment date is required when checking a specific time.' },
+        { status: 400 },
+      );
+    }
+
     const payload = availabilitySchema.parse({
-      appointmentDate: url.searchParams.get('appointmentDate'),
-      appointmentTime: url.searchParams.get('appointmentTime') || undefined,
+      appointmentDate,
+      appointmentTime,
     });
     const environment = resolveGoogleEnvironmentFromHost(request.headers.get('host') || '');
     const calendarConfig = await getCalendarRuntimeConfig(environment);
+
+    if (!payload.appointmentDate) {
+      return NextResponse.json({
+        availableSlots: [],
+        timezone: calendarConfig.timezone,
+        durationMinutes: calendarConfig.durationMinutes,
+        startTime: calendarConfig.startTime,
+        endTime: calendarConfig.endTime,
+        slotIntervalMinutes: calendarConfig.slotIntervalMinutes,
+        availableWeekdays: calendarConfig.availableWeekdays,
+        conflictBufferMinutes: 5,
+      });
+    }
 
     if (payload.appointmentTime) {
       const { start, end } = buildAppointmentInterval({
@@ -39,6 +62,7 @@ export async function GET(request: Request) {
         endTime: calendarConfig.endTime,
         slotIntervalMinutes: calendarConfig.slotIntervalMinutes,
         availableWeekdays: calendarConfig.availableWeekdays,
+        conflictBufferMinutes: 5,
       });
     }
 
@@ -77,6 +101,7 @@ export async function GET(request: Request) {
       endTime: calendarConfig.endTime,
       slotIntervalMinutes: calendarConfig.slotIntervalMinutes,
       availableWeekdays: calendarConfig.availableWeekdays,
+      conflictBufferMinutes: 5,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not check availability.';
