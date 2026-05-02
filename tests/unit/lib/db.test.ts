@@ -1,69 +1,126 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * @vitest-environment node
+ */
+import path from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the file system used by db.ts
-vi.mock('fs', () => ({
-  existsSync: vi.fn(() => true),
-  readFileSync: vi.fn(() => JSON.stringify({
-    settings: {
-      site_title: "Test Jewelry",
-      site_description: "Test description",
-      favicon_url: "/favicon.ico",
-      logo_url: "/logo.png",
+const fileStore = new Map<string, string>();
+const dataRoot = 'C:/virtual-data';
+const cmsFilePath = path.join(dataRoot, 'cms.json');
+const syncCmsSnapshotToOdoo = vi.fn(async () => ({ success: true }));
+const loadCmsSnapshotFromOdoo = vi.fn(async () => ({
+  settings: {
+    site_title: 'Odoo title',
+    site_description: 'Odoo description',
+    favicon_url: '/odoo-favicon.ico',
+    logo_url: '/odoo-logo.png',
+  },
+  sections: [],
+  featured_items: [
+    {
+      id: 'odoo-featured',
+      title: 'Odoo featured',
+      content_text: 'Should not win over local data',
+      image_url: 'https://odoo.example/image.webp',
+      action_text: 'Open',
+      action_link: '/odoo',
+      is_active: true,
+      order_index: 0,
     },
-    sections: [
-      {
-        id: "1",
-        section_identifier: "hero",
-        title: "Hero Title",
-        content_text: "Hero content",
-        image_url: "",
-        is_active: true,
-      },
-    ],
-    featured: [],
-  })),
-  writeFileSync: vi.fn(),
-  statSync: vi.fn(() => ({ mtimeMs: Date.now() })),
-  mkdirSync: vi.fn(),
+  ],
 }));
 
-vi.mock('path', async () => {
-  const actual = await vi.importActual<typeof import('path')>('path');
-  return { ...actual };
-});
+vi.mock('fs/promises', () => ({
+  default: {
+    mkdir: vi.fn(async () => undefined),
+    readFile: vi.fn(async (filePath: string) => {
+      if (!fileStore.has(filePath)) {
+        const error = new Error(`ENOENT: no such file or directory, open '${filePath}'`);
+        (error as NodeJS.ErrnoException).code = 'ENOENT';
+        throw error;
+      }
+      return fileStore.get(filePath)!;
+    }),
+    writeFile: vi.fn(async (filePath: string, content: string) => {
+      fileStore.set(filePath, content);
+    }),
+    stat: vi.fn(async () => ({ mtimeMs: 123456789 })),
+  },
+  mkdir: vi.fn(async () => undefined),
+  readFile: vi.fn(async (filePath: string) => {
+    if (!fileStore.has(filePath)) {
+      const error = new Error(`ENOENT: no such file or directory, open '${filePath}'`);
+      (error as NodeJS.ErrnoException).code = 'ENOENT';
+      throw error;
+    }
+    return fileStore.get(filePath)!;
+  }),
+  writeFile: vi.fn(async (filePath: string, content: string) => {
+    fileStore.set(filePath, content);
+  }),
+  stat: vi.fn(async () => ({ mtimeMs: 123456789 })),
+}));
 
-describe('SiteSettings structure', () => {
-  it('has required fields defined', () => {
-    const settings = {
-      site_title: "Galante's Jewelry",
-      site_description: "Luxury jewelry",
-      favicon_url: "/favicon.ico",
-      logo_url: "/logo.png",
-    };
-    expect(settings.site_title).toBeTruthy();
-    expect(settings.favicon_url).toBeTruthy();
+vi.mock('@/lib/runtime-paths', () => ({
+  getDataRoot: () => dataRoot,
+}));
+
+vi.mock('@/lib/odoo-cms-sync', () => ({
+  loadCmsSnapshotFromOdoo,
+  syncCmsSnapshotToOdoo,
+}));
+
+vi.mock('@/lib/storage', () => ({
+  deleteManagedImage: vi.fn(async () => undefined),
+}));
+
+describe('CMS persistence', () => {
+  beforeEach(() => {
+    fileStore.clear();
+    loadCmsSnapshotFromOdoo.mockClear();
+    syncCmsSnapshotToOdoo.mockClear();
+    vi.resetModules();
   });
-});
 
-describe('PageSection structure', () => {
-  it('validates required section fields', () => {
-    const section = {
-      id: "1",
-      section_identifier: "hero",
-      title: "Test",
-      content_text: "Content",
-      image_url: "",
-      is_active: true,
+  it('prefers the local CMS file over the Odoo snapshot', async () => {
+    const localCms = {
+      settings: {
+        site_title: 'Local title',
+        site_description: 'Local description',
+        favicon_url: '/local-favicon.ico',
+        logo_url: '/local-logo.png',
+      },
+      sections: [],
+      featured_items: [
+        {
+          id: 'local-featured',
+          title: 'Local featured',
+          content_text: 'Local data must win',
+          image_url: '/api/image?id=local-featured.webp',
+          action_text: 'Open',
+          action_link: '/local',
+          is_active: true,
+          order_index: 0,
+        },
+      ],
     };
-    expect(section.section_identifier).toBe("hero");
-    expect(typeof section.is_active).toBe("boolean");
-  });
 
-  it('section_identifier must be a non-empty string', () => {
-    const identifiers = ["hero", "philosophy", "review", "cta"];
-    identifiers.forEach(id => {
-      expect(typeof id).toBe("string");
-      expect(id.length).toBeGreaterThan(0);
+    fileStore.set(cmsFilePath, JSON.stringify(localCms));
+
+    const { getFeaturedItems, getSettings } = await import('@/lib/db');
+
+    await expect(getSettings()).resolves.toMatchObject({
+      site_title: 'Local title',
+      favicon_url: '/local-favicon.ico',
     });
+
+    await expect(getFeaturedItems()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'local-featured',
+        image_url: '/api/image?id=local-featured.webp',
+      }),
+    ]);
+
+    expect(loadCmsSnapshotFromOdoo).not.toHaveBeenCalled();
   });
 });

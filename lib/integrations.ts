@@ -301,44 +301,43 @@ async function ensureStoreFile() {
   await fs.mkdir(dataDir, { recursive: true });
 }
 
+function hydrateStore(parsed: Partial<IntegrationStore>): IntegrationStore {
+  const nextStore = emptyStore();
+
+  for (const environment of integrationEnvironments) {
+    nextStore.google[environment] = {
+      ...nextStore.google[environment],
+      ...(parsed.google?.[environment] || {}),
+      provider: 'google',
+      environment,
+      connectedGoogleEmail: parsed.google?.[environment]?.connectedGoogleEmail || '',
+      oauthConnectedAt: parsed.google?.[environment]?.oauthConnectedAt || null,
+    };
+  }
+
+  for (const environment of integrationEnvironments) {
+    nextStore.appointments[environment] = {
+      ...nextStore.appointments[environment],
+      ...(parsed.appointments?.[environment] || {}),
+      provider: 'appointments',
+      environment,
+    };
+  }
+
+  nextStore.audit = Array.isArray(parsed.audit) ? parsed.audit.slice(0, 100) : [];
+  return nextStore;
+}
+
 async function readStore(): Promise<IntegrationStore> {
   await ensureStoreFile();
-
-  const odooSnapshot = await loadIntegrationsSnapshotFromOdoo();
-  if (odooSnapshot) {
-    await writeStore(odooSnapshot);
-    return odooSnapshot;
-  }
 
   try {
     const fileContent = await fs.readFile(integrationsFile, 'utf-8');
     const parsed = JSON.parse(fileContent) as Partial<IntegrationStore>;
-    const nextStore = emptyStore();
-
-    for (const environment of integrationEnvironments) {
-      nextStore.google[environment] = {
-        ...nextStore.google[environment],
-        ...(parsed.google?.[environment] || {}),
-        provider: 'google',
-        environment,
-        connectedGoogleEmail: parsed.google?.[environment]?.connectedGoogleEmail || '',
-        oauthConnectedAt: parsed.google?.[environment]?.oauthConnectedAt || null,
-      };
-    }
-
-    for (const environment of integrationEnvironments) {
-      nextStore.appointments[environment] = {
-        ...nextStore.appointments[environment],
-        ...(parsed.appointments?.[environment] || {}),
-        provider: 'appointments',
-        environment,
-      };
-    }
-
-    nextStore.audit = Array.isArray(parsed.audit) ? parsed.audit.slice(0, 100) : [];
-    return nextStore;
+    return hydrateStore(parsed);
   } catch {
-    const nextStore = emptyStore();
+    const odooSnapshot = await loadIntegrationsSnapshotFromOdoo();
+    const nextStore = odooSnapshot ? hydrateStore(odooSnapshot) : emptyStore();
     await writeStore(nextStore);
     return nextStore;
   }

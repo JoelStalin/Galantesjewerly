@@ -159,54 +159,46 @@ let memCache: DBData | null = null;
 let memCacheMtimeMs: number | null = null;
 let initPromise: Promise<void> | null = null;
 
+function hydrateCmsData(parsed: Partial<DBData>) {
+  let needsUpdate = false;
+
+  if (!parsed.settings) {
+    parsed.settings = INITIAL_DATA.settings;
+    needsUpdate = true;
+  } else {
+    parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
+  }
+
+  if (!parsed.sections) {
+    parsed.sections = INITIAL_DATA.sections;
+    needsUpdate = true;
+  }
+
+  if (!parsed.featured_items) {
+    parsed.featured_items = INITIAL_DATA.featured_items;
+    parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
+    needsUpdate = true;
+  }
+
+  return {
+    data: {
+      settings: parsed.settings ?? INITIAL_DATA.settings,
+      sections: parsed.sections ?? INITIAL_DATA.sections,
+      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
+    },
+    needsUpdate,
+  };
+}
+
 async function performInit() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
   } catch {}
 
-  const odooSnapshot = await loadCmsSnapshotFromOdoo();
-  if (odooSnapshot) {
-    const hydratedData: DBData = {
-      settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
-      sections: odooSnapshot.sections,
-      featured_items: odooSnapshot.featured_items,
-    };
-
-    await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
-    memCache = hydratedData;
-    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
-    return;
-  }
-
   try {
     const fileContent = await fs.readFile(dbFile, 'utf-8');
     const parsed = JSON.parse(fileContent) as Partial<DBData>;
-
-    // Migration logic moved here to run only once per process
-    let needsUpdate = false;
-    if (!parsed.settings) {
-      parsed.settings = INITIAL_DATA.settings;
-      needsUpdate = true;
-    } else {
-      parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
-    }
-
-    if (!parsed.sections) {
-      parsed.sections = INITIAL_DATA.sections;
-      needsUpdate = true;
-    }
-
-    if (!parsed.featured_items) {
-      parsed.featured_items = INITIAL_DATA.featured_items;
-      parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
-      needsUpdate = true;
-    }
-
-    const hydratedData: DBData = {
-      settings: parsed.settings ?? INITIAL_DATA.settings,
-      sections: parsed.sections ?? INITIAL_DATA.sections,
-      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
-    };
+    const { data: hydratedData, needsUpdate } = hydrateCmsData(parsed);
 
     if (needsUpdate) {
       await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
@@ -214,8 +206,17 @@ async function performInit() {
     memCache = hydratedData;
     memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   } catch {
-    await fs.writeFile(dbFile, JSON.stringify(INITIAL_DATA, null, 2), 'utf-8');
-    memCache = INITIAL_DATA;
+    const odooSnapshot = await loadCmsSnapshotFromOdoo();
+    const fallbackData: DBData = odooSnapshot
+      ? {
+          settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
+          sections: odooSnapshot.sections,
+          featured_items: odooSnapshot.featured_items,
+        }
+      : INITIAL_DATA;
+
+    await fs.writeFile(dbFile, JSON.stringify(fallbackData, null, 2), 'utf-8');
+    memCache = fallbackData;
     memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   }
 }
