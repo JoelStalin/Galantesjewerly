@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { buildAppointmentInterval } from '@/lib/appointments';
+import { buildAppointmentInterval, listAppointmentRecords } from '@/lib/appointments';
 import { listScheduleSlotsForDate } from '@/lib/appointment-schedule';
 import { getCalendarRuntimeConfig, isCalendarSlotAvailable } from '@/lib/google-calendar';
 import { resolveGoogleEnvironmentFromHost } from '@/lib/google-login';
@@ -11,6 +11,17 @@ const availabilitySchema = z.object({
   appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   appointmentTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
+
+async function hasLocalAppointmentConflict(appointmentDate: string, appointmentTime: string) {
+  const records = await listAppointmentRecords({ limit: 1000 });
+
+  return records.some((record) =>
+    record.appointmentDate === appointmentDate &&
+    record.appointmentTime === appointmentTime &&
+    record.status !== 'validation_failed' &&
+    record.status !== 'calendar_failed',
+  );
+}
 
 export async function GET(request: Request) {
   try {
@@ -46,6 +57,19 @@ export async function GET(request: Request) {
     }
 
     if (payload.appointmentTime) {
+      if (await hasLocalAppointmentConflict(payload.appointmentDate, payload.appointmentTime)) {
+        return NextResponse.json({
+          available: false,
+          timezone: calendarConfig.timezone,
+          durationMinutes: calendarConfig.durationMinutes,
+          startTime: calendarConfig.startTime,
+          endTime: calendarConfig.endTime,
+          slotIntervalMinutes: calendarConfig.slotIntervalMinutes,
+          availableWeekdays: calendarConfig.availableWeekdays,
+          conflictBufferMinutes: 5,
+        });
+      }
+
       const { start, end } = buildAppointmentInterval({
         appointmentDate: payload.appointmentDate,
         appointmentTime: payload.appointmentTime,
@@ -85,6 +109,9 @@ export async function GET(request: Request) {
           continue;
         }
         throw error;
+      }
+      if (await hasLocalAppointmentConflict(payload.appointmentDate, slot.time)) {
+        continue;
       }
       const available = await isCalendarSlotAvailable({ config: calendarConfig, start, end });
 
