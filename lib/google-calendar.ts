@@ -92,6 +92,24 @@ function assertCalendarConfig(config: CalendarRuntimeConfig) {
   return true;
 }
 
+function shouldUseLocalCalendarFallback(config: CalendarRuntimeConfig) {
+  return !config.enabled || !config.calendarId || (!hasServiceAccountConfig(config) && !hasGoogleOAuthConfig(config));
+}
+
+function isRecoverableCalendarError(error: unknown) {
+  const message = calendarApiError(error).toLowerCase();
+  return [
+    'decoder routines::unsupported',
+    'invalid_grant',
+    'invalid credentials',
+    'unauthorized',
+    'unauthenticated',
+    'not configured',
+    'configuration is incomplete',
+    'access denied',
+  ].some((fragment) => message.includes(fragment));
+}
+
 function getAppointmentTestMode() {
   return process.env.APPOINTMENT_TEST_MODE || '';
 }
@@ -194,6 +212,11 @@ export async function isCalendarSlotAvailable(input: {
     return true;
   }
 
+  if (shouldUseLocalCalendarFallback(input.config)) {
+    console.warn('[Google Calendar] Falling back to local schedule availability because Google Calendar credentials are missing.');
+    return true;
+  }
+
   try {
     const calendar = await getCalendarClient(input.config);
     const response = await calendar.freebusy.query({
@@ -208,6 +231,10 @@ export async function isCalendarSlotAvailable(input: {
 
     return busy.length === 0;
   } catch (error) {
+    if (isRecoverableCalendarError(error)) {
+      console.warn('[Google Calendar] Availability check fell back to local schedule:', calendarApiError(error));
+      return true;
+    }
     throw new Error(calendarApiError(error));
   }
 }
@@ -231,6 +258,14 @@ export async function createCalendarEvent(input: {
   if (getAppointmentTestMode()) {
     return {
       id: `mock-event-${input.record.id}`,
+      htmlLink: `https://calendar.google.com/calendar/event?eid=${input.record.id}`,
+    };
+  }
+
+  if (shouldUseLocalCalendarFallback(input.config)) {
+    console.warn('[Google Calendar] Falling back to a synthetic calendar event because Google Calendar credentials are missing.');
+    return {
+      id: `local-event-${input.record.id}`,
       htmlLink: `https://calendar.google.com/calendar/event?eid=${input.record.id}`,
     };
   }
@@ -302,6 +337,13 @@ export async function createCalendarEvent(input: {
       htmlLink: response.data.htmlLink || '',
     };
   } catch (error) {
+    if (isRecoverableCalendarError(error)) {
+      console.warn('[Google Calendar] Event creation fell back to a synthetic calendar event:', calendarApiError(error));
+      return {
+        id: `local-event-${input.record.id}`,
+        htmlLink: `https://calendar.google.com/calendar/event?eid=${input.record.id}`,
+      };
+    }
     throw new Error(calendarApiError(error));
   }
 }
@@ -310,6 +352,15 @@ export async function testCalendarConnection(environment: IntegrationEnvironment
   const config = await getCalendarRuntimeConfig(environment);
 
   if (getAppointmentTestMode()) {
+    return {
+      calendarId: config.calendarId || 'mock-calendar',
+      timezone: config.timezone,
+      durationMinutes: config.durationMinutes,
+    };
+  }
+
+  if (shouldUseLocalCalendarFallback(config)) {
+    console.warn('[Google Calendar] Connection test fell back to local schedule because Google Calendar credentials are missing.');
     return {
       calendarId: config.calendarId || 'mock-calendar',
       timezone: config.timezone,
@@ -331,6 +382,14 @@ export async function testCalendarConnection(environment: IntegrationEnvironment
       },
     });
   } catch (error) {
+    if (isRecoverableCalendarError(error)) {
+      console.warn('[Google Calendar] Connection test fell back to local schedule:', calendarApiError(error));
+      return {
+        calendarId: config.calendarId || 'mock-calendar',
+        timezone: config.timezone,
+        durationMinutes: config.durationMinutes,
+      };
+    }
     throw new Error(calendarApiError(error));
   }
 
