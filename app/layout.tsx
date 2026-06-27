@@ -51,7 +51,7 @@ const FALLBACK_SETTINGS: SiteSettings = {
   site_title: "Galante's Jewelry by the Sea ",
   site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
   favicon_url: '/favicon.ico',
-  logo_url: '/assets/branding/logo-transparent.png',
+  logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
   hero_image_url: '/api/image?id=image-1776959050826-portada.webp',
   shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
   instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
@@ -98,21 +98,9 @@ async function loadSiteSettings(): Promise<SiteSettings> {
       ...(localSettings ?? {}),
       ...(odooSettings ?? {})
     };
-    const preferredLocalLogoUrl = localSettings?.logo_url?.trim();
-    const preferredLogoUrl =
-      preferredLocalLogoUrl && !/photoroom|error/i.test(preferredLocalLogoUrl)
-        ? preferredLocalLogoUrl
-        : FALLBACK_SETTINGS.logo_url;
-    const upstreamLogoUrl = merged.logo_url?.trim() || '';
-    const logoUrl =
-      !upstreamLogoUrl || /photoroom|error/i.test(upstreamLogoUrl)
-        ? preferredLogoUrl
-        : upstreamLogoUrl;
-
     // Keep social buttons visible even if upstream systems return empty strings.
     return {
       ...merged,
-      logo_url: logoUrl,
       instagram_url: merged.instagram_url || FALLBACK_SETTINGS.instagram_url,
       facebook_url: merged.facebook_url || FALLBACK_SETTINGS.facebook_url,
       whatsapp_number: merged.whatsapp_number || FALLBACK_SETTINGS.whatsapp_number,

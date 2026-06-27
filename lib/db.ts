@@ -60,7 +60,7 @@ const dbFile = path.join(dataDir, 'cms.json');
 const INITIAL_DATA: DBData = {
   settings: {
     favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
-    logo_url: '/assets/branding/logo-transparent.png',
+    logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
     brand_name: "Galante's Jewelry",
     brand_tagline: 'By The Sea',
     site_title: "Galante's Jewelry by the Sea ",
@@ -154,14 +154,6 @@ const INITIAL_DATA: DBData = {
     }
   ]
 };
-
-function sanitizeLogoUrl(logoUrl?: string | null) {
-  const trimmedLogoUrl = logoUrl?.trim();
-  if (!trimmedLogoUrl || /photoroom|error/i.test(trimmedLogoUrl)) {
-    return INITIAL_DATA.settings.logo_url;
-  }
-  return trimmedLogoUrl;
-}
 
 let memCache: DBData | null = null;
 let memCacheMtimeMs: number | null = null;
@@ -282,11 +274,7 @@ async function cleanupRemovedManagedImages(previousUrls: string[], currentData: 
 export async function getSettings(): Promise<SiteSettings> {
   try {
     const data = await readDB();
-    return {
-      ...INITIAL_DATA.settings,
-      ...data.settings,
-      logo_url: sanitizeLogoUrl(data.settings?.logo_url),
-    };
+    return { ...INITIAL_DATA.settings, ...data.settings };
   } catch {
     return INITIAL_DATA.settings;
   }
@@ -295,11 +283,7 @@ export async function getSettings(): Promise<SiteSettings> {
 export async function updateSettings(updates: Partial<SiteSettings>): Promise<SiteSettings> {
   const data = await readDB();
   const previousUrls = [data.settings?.favicon_url, data.settings?.logo_url].filter((value): value is string => Boolean(value));
-  data.settings = {
-    ...data.settings,
-    ...updates,
-    logo_url: sanitizeLogoUrl(updates.logo_url ?? data.settings?.logo_url),
-  };
+  data.settings = { ...data.settings, ...updates };
   await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   await cleanupRemovedManagedImages(previousUrls, data);
