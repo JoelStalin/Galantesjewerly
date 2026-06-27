@@ -6,7 +6,7 @@ import { Outfit } from 'next/font/google';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { CartProvider } from '@/context/shop/CartContext';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { ConditionalNavbar } from '@/components/ConditionalNavbar';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
 
@@ -51,7 +51,7 @@ const FALLBACK_SETTINGS: SiteSettings = {
   site_title: "Galante's Jewelry by the Sea ",
   site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
   favicon_url: '/favicon.ico',
-  logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
+  logo_url: '/assets/branding/logo-transparent.png',
   hero_image_url: '/api/image?id=image-1776959050826-portada.webp',
   shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
   instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
@@ -98,10 +98,21 @@ async function loadSiteSettings(): Promise<SiteSettings> {
       ...(localSettings ?? {}),
       ...(odooSettings ?? {})
     };
+    const preferredLocalLogoUrl = localSettings?.logo_url?.trim();
+    const preferredLogoUrl =
+      preferredLocalLogoUrl && !/photoroom|error/i.test(preferredLocalLogoUrl)
+        ? preferredLocalLogoUrl
+        : FALLBACK_SETTINGS.logo_url;
+    const upstreamLogoUrl = merged.logo_url?.trim() || '';
+    const logoUrl =
+      !upstreamLogoUrl || /photoroom|error/i.test(upstreamLogoUrl)
+        ? preferredLogoUrl
+        : upstreamLogoUrl;
 
     // Keep social buttons visible even if upstream systems return empty strings.
     return {
       ...merged,
+      logo_url: logoUrl,
       instagram_url: merged.instagram_url || FALLBACK_SETTINGS.instagram_url,
       facebook_url: merged.facebook_url || FALLBACK_SETTINGS.facebook_url,
       whatsapp_number: merged.whatsapp_number || FALLBACK_SETTINGS.whatsapp_number,
@@ -113,15 +124,16 @@ async function loadSiteSettings(): Promise<SiteSettings> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await loadSiteSettings();
+  const brandName = settings.brand_name?.trim() || settings.site_title;
   return {
-    title: settings.site_title,
+    title: brandName,
     description: settings.site_description,
     icons: { icon: settings.favicon_url || FALLBACK_SETTINGS.favicon_url },
     openGraph: {
-      title: settings.site_title,
+      title: brandName,
       description: settings.site_description,
       url: 'https://galantesjewelry.com',
-      siteName: "Galante's Jewelry",
+      siteName: brandName,
       locale: 'en_US',
       type: 'website',
     },
@@ -131,6 +143,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const finalSettings = await loadSiteSettings();
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const currentUrl = requestHeaders.get('x-current-url') || '';
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
 
   return (
@@ -138,9 +152,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <meta name="version-id" content="v2026-04-27-hard-rebuild-001" />
       </head>
-      <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
+      <body className={`${outfit.className} bg-background text-foreground flex min-h-screen flex-col`}>
         <CartProvider>
-          <ConditionalNavbar settings={finalSettings} user={user} />
+          <ConditionalNavbar settings={finalSettings} user={user} currentUrl={currentUrl} />
           <main className="flex-grow">{children}</main>
         </CartProvider>
         

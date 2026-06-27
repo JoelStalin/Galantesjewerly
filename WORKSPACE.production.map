@@ -1,0 +1,3175 @@
+# 🗺️ GALANTES JEWELRY WORKSPACE MAP
+# Last Full Sync: 2026-06-27 04:46:52
+# Scope: Dedicated repo / production checkout
+
+## 📜 Agent Rule
+1. Read this file before broad repo exploration.
+2. Regenerate it after structural changes with `python scripts/update_repo_map.py`.
+
+## 📂 Repository Tree
+```text
+├── .dockerignore
+├── .env.compose.tmp
+├── .env.example [KEY]
+├── .env.gcp
+├── .env.gcp.bak.20260422062321
+├── .env.gcp.example [KEY]
+├── .env.prod
+├── .env.prod.bak.20260422065320
+├── .env.prod.before_odoo_key_fix_20260422_222145
+├── .env.prod.before_tunnel_fix_20260422_214728
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .semgrepignore
+├── .vale.ini
+├── AGENTS.md [KEY]
+├── BACKLOG.md
+├── BUGS_FIXED.md
+├── CLAUDE.md [KEY]
+├── CONVERSATION_HANDOFF.md
+├── DELIVERY.md
+├── DEPLOYMENT-CHECKLIST.md
+├── Dockerfile
+├── FINAL-SUMMARY.md
+├── FIX_GOOGLE_CALENDAR.md
+├── FULL_FLOW_TEST.md
+├── GITHUB_SECRETS_GUIDE.md
+├── GOOGLE_OAUTH_FIXES.md
+├── INTEGRATION-COMPLETE.md
+├── MARKETING_STRATEGY_ES.md
+├── OAUTH_CHECKLIST.md
+├── ODOO_SETUP.md
+├── PROJECT_SUMMARY.md
+├── QUICKSTART-DEPLOYMENT.md
+├── QUICKSTART.md
+├── README-DEPLOYMENT.md
+├── README.md [KEY]
+├── START-HERE.md
+├── START_HERE.md
+├── TESTING.md
+├── appointment-flow.ts
+├── clone_cloudflare.py
+├── cloudflare_route_latest.html
+├── cms.json
+├── cms_prod_local.json
+├── cms_prod_utf8.json
+├── db.ts
+├── docker-compose-prod-local.yml
+├── docker-compose-prod-v2.yml
+├── docker-compose-prod-v3.yml
+├── docker-compose-prod-v4-fix.yml
+├── docker-compose-prod-v5-final.yml
+├── docker-compose.dev.yml
+├── docker-compose.gcp.yml
+├── docker-compose.local.yml
+├── docker-compose.production.yml [KEY]
+├── docker-compose.staging.yml
+├── docker-compose.yml [KEY]
+├── eslint.config.mjs
+├── globals.css
+├── integrations_prod.json
+├── integrations_prod_utf8.json
+├── layout.tsx
+├── middleware.ts.backup-20260421
+├── next.config.ts
+├── nginx_prod_local.conf
+├── nginx_prod_utf8.conf
+├── odoo_api_key_probe.py
+├── optimize_cloudflare.py
+├── package-lock.json
+├── package.json [KEY]
+├── patch_integrations.py
+├── playwright.config.ts
+├── postcss.config.mjs
+├── proxy.ts
+├── pytest.ini
+├── requirements-test.txt
+├── scripts_verify_odoo_e2e_error.png
+├── selenium_test.py
+├── shipping_test_error.png
+├── skills-lock.json
+├── start-standalone.mjs
+├── start_app.sh
+├── temp_image_b64.txt
+├── tsconfig.json
+├── validate_oauth.sh
+├── verify_cloudflare.py
+├── vitest.config.ts
+├── .agents/
+  ├── skills/
+    ├── a11y-audit/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── assets/
+        └── sample-component.tsx
+      ├── expected_outputs/
+        └── sample-contrast-output.txt
+        └── sample-scan-output.json
+        └── sample-scan-report.md
+      ├── references/
+        └── aria-patterns.md
+        └── audit-report-template.md
+        └── ci-cd-integration.md
+        └── color-contrast-guide.md
+        └── examples-by-framework.md
+        └── framework-a11y-patterns.md
+        └── testing-checklist.md
+        └── wcag-22-new-criteria.md
+        └── wcag-quick-ref.md
+      ├── scripts/ [KEY]
+        └── a11y_scanner.py
+        └── contrast_checker.py
+    ├── ab-test-setup/
+      └── SKILL.md
+      ├── references/
+        └── sample-size-guide.md
+        └── test-templates.md
+      ├── scripts/ [KEY]
+        └── sample_size_calculator.py
+    ├── ad-creative/
+      └── SKILL.md
+      ├── references/
+        └── creative-frameworks.md
+        └── platform-specs.md
+      ├── scripts/ [KEY]
+        └── ad_copy_validator.py
+    ├── adversarial-reviewer/
+      └── SKILL.md
+    ├── agent-designer/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── agent_evaluator.py
+      └── agent_planner.py
+      └── tool_schema_generator.py
+      ├── assets/
+        └── sample_execution_logs.json
+        └── sample_system_requirements.json
+        └── sample_tool_descriptions.json
+      ├── expected_outputs/
+        └── sample_agent_architecture.json
+        └── sample_evaluation_report.json
+        └── sample_tool_schemas.json
+      ├── references/
+        └── agent_architecture_patterns.md
+        └── evaluation_methodology.md
+        └── tool_design_best_practices.md
+    ├── agent-workflow-designer/
+      └── SKILL.md
+      ├── references/
+        └── workflow-patterns.md
+      ├── scripts/ [KEY]
+        └── workflow_scaffolder.py
+    ├── agenthub/
+      └── CLAUDE.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── agents/
+        └── hub-coordinator.md
+      ├── references/
+        └── agent-templates.md
+        └── coordination-strategies.md
+        └── dag-patterns.md
+      ├── scripts/ [KEY]
+        └── board_manager.py
+        └── dag_analyzer.py
+        └── dry_run.py
+        └── hub_init.py
+        └── result_ranker.py
+        └── session_manager.py
+      ├── skills/
+        ├── board/
+          └── SKILL.md
+        ├── eval/
+          └── SKILL.md
+        ├── init/
+          └── SKILL.md
+        ├── merge/
+          └── SKILL.md
+        ├── run/
+          └── SKILL.md
+        ├── spawn/
+          └── SKILL.md
+        ├── status/
+          └── SKILL.md
+    ├── agile-product-owner/
+      └── SKILL.md
+      ├── assets/
+        └── sprint_planning_template.md
+        └── user_story_template.md
+      ├── references/
+        └── sprint-planning-guide.md
+        └── user-story-templates.md
+      ├── scripts/ [KEY]
+        └── user_story_generator.py
+    ├── ai-security/
+      └── SKILL.md
+      ├── references/
+        └── atlas-coverage.md
+      ├── scripts/ [KEY]
+        └── ai_threat_scanner.py
+    ├── ai-seo/
+      └── SKILL.md
+      ├── references/
+        └── ai-search-landscape.md
+        └── content-patterns.md
+        └── monitoring-guide.md
+    ├── analytics-tracking/
+      └── SKILL.md
+      ├── references/
+        └── debugging-playbook.md
+        └── event-taxonomy-guide.md
+        └── gtm-patterns.md
+      ├── scripts/ [KEY]
+        └── tracking_plan_generator.py
+    ├── api-design-reviewer/
+      └── SKILL.md
+      ├── references/
+        └── api_antipatterns.md
+        └── rest_design_rules.md
+      ├── scripts/ [KEY]
+        └── api_linter.py
+        └── api_scorecard.py
+        └── breaking_change_detector.py
+    ├── api-test-suite-builder/
+      └── SKILL.md
+      ├── references/
+        └── example-test-files.md
+    ├── app-store-optimization/
+      └── HOW_TO_USE.md
+      └── README.md [KEY]
+      └── SKILL.md
+      └── expected_output.json
+      └── sample_input.json
+      ├── assets/
+        └── aso-audit-template.md
+      ├── references/
+        └── aso-best-practices.md
+        └── keyword-research-guide.md
+        └── platform-requirements.md
+      ├── scripts/ [KEY]
+        └── ab_test_planner.py
+        └── aso_scorer.py
+        └── competitor_analyzer.py
+        └── keyword_analyzer.py
+        └── launch_checklist.py
+        └── localization_helper.py
+        └── metadata_optimizer.py
+        └── review_analyzer.py
+    ├── apple-hig-expert/
+      └── SKILL.md
+      ├── references/
+        └── accessibility.md
+        └── platform-specifics.md
+        └── visual-design.md
+      ├── scripts/ [KEY]
+        └── hig_checker.py
+      ├── templates/
+        └── hig-audit-template.md
+    ├── atlassian-admin/
+      └── SKILL.md
+      ├── assets/
+        └── permission_scheme_template.json
+      ├── references/
+        └── security-hardening-guide.md
+        └── user-provisioning-checklist.md
+      ├── scripts/ [KEY]
+        └── permission_audit_tool.py
+    ├── atlassian-templates/
+      └── SKILL.md
+      ├── references/
+        └── governance-framework.md
+        └── template-design-patterns.md
+      ├── scripts/ [KEY]
+        └── template_scaffolder.py
+    ├── autoresearch-agent/
+      └── CLAUDE.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── agents/
+        └── experiment-runner.md
+      ├── evaluators/
+        └── benchmark_size.py
+        └── benchmark_speed.py
+        └── build_speed.py
+        └── llm_judge_content.py
+        └── llm_judge_copy.py
+        └── llm_judge_prompt.py
+        └── memory_usage.py
+        └── test_pass_rate.py
+      ├── references/
+        └── experiment-domains.md
+        └── program-template.md
+      ├── scripts/ [KEY]
+        └── log_results.py
+        └── run_experiment.py
+        └── setup_experiment.py
+      ├── skills/
+        ├── loop/
+          └── SKILL.md
+        ├── resume/
+          └── SKILL.md
+        ├── run/
+          └── SKILL.md
+        ├── setup/
+          └── SKILL.md
+        ├── status/
+          └── SKILL.md
+    ├── aws-solution-architect/
+      └── SKILL.md
+      ├── assets/
+        └── expected_output.json
+        └── sample_input.json
+      ├── references/
+        └── architecture_patterns.md
+        └── best_practices.md
+        └── service_selection.md
+      ├── scripts/ [KEY]
+        └── architecture_designer.py
+        └── cost_optimizer.py
+        └── serverless_stack.py
+    ├── azure-cloud-architect/
+      └── SKILL.md
+      ├── references/
+        └── architecture_patterns.md
+        └── best_practices.md
+        └── service_selection.md
+      ├── scripts/ [KEY]
+        └── architecture_designer.py
+        └── bicep_generator.py
+        └── cost_optimizer.py
+    ├── behuman/
+      └── SKILL.md
+      └── evals.json
+      ├── references/
+        └── api-integration.md
+    ├── board/
+      └── SKILL.md
+    ├── board-prep/
+      └── SKILL.md
+    ├── brand-guidelines/
+      └── SKILL.md
+      ├── references/
+        └── brand-identity-and-framework.md
+    ├── browser-automation/
+      └── SKILL.md
+      ├── references/
+        └── anti_detection_patterns.md
+        └── data_extraction_recipes.md
+        └── playwright_browser_api.md
+      ├── scripts/ [KEY]
+        └── anti_detection_checker.py
+        └── form_automation_builder.py
+        └── scraping_toolkit.py
+    ├── browserstack/
+      └── SKILL.md
+    ├── business-growth-skills/
+      └── CLAUDE.md [KEY]
+      └── SKILL.md
+    ├── business-investment-advisor/
+      └── SKILL.md
+    ├── c-level-advisor/
+      └── CLAUDE.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── c_level_leadership_skills_overview.md
+      ├── agent-protocol/
+        └── SKILL.md
+        ├── references/
+          └── invocation-patterns.md
+      ├── board-deck-builder/
+        └── SKILL.md
+        ├── references/
+          └── deck-frameworks.md
+        ├── templates/
+          └── board-deck-template.md
+      ├── board-meeting/
+        └── SKILL.md
+        ├── references/
+          └── meeting-facilitation.md
+        ├── templates/
+          └── meeting-agenda.md
+          └── meeting-minutes.md
+      ├── ceo-advisor/
+        └── SKILL.md
+        ├── references/
+          └── board_governance_investor_relations.md
+          └── executive_decision_framework.md
+          └── leadership_organizational_culture.md
+        ├── scripts/ [KEY]
+          └── financial_scenario_analyzer.py
+          └── strategy_analyzer.py
+      ├── cfo-advisor/
+        └── SKILL.md
+        ├── references/
+          └── cash_management.md
+          └── financial_planning.md
+          └── fundraising_playbook.md
+        ├── scripts/ [KEY]
+          └── burn_rate_calculator.py
+          └── fundraising_model.py
+          └── unit_economics_analyzer.py
+      ├── change-management/
+        └── SKILL.md
+        ├── references/
+          └── change-playbook.md
+      ├── chief-of-staff/
+        └── SKILL.md
+        ├── references/
+          └── routing-matrix.md
+          └── synthesis-framework.md
+      ├── chro-advisor/
+        └── SKILL.md
+        ├── references/
+          └── comp_frameworks.md
+          └── org_design.md
+          └── people_strategy.md
+        ├── scripts/ [KEY]
+          └── comp_benchmarker.py
+          └── hiring_plan_modeler.py
+      ├── ciso-advisor/
+        └── SKILL.md
+        ├── references/
+          └── compliance_roadmap.md
+          └── incident_response.md
+          └── security_strategy.md
+        ├── scripts/ [KEY]
+          └── compliance_tracker.py
+          └── risk_quantifier.py
+      ├── cmo-advisor/
+        └── SKILL.md
+        ├── references/
+          └── brand_positioning.md
+          └── growth_frameworks.md
+          └── marketing_org.md
+        ├── scripts/ [KEY]
+          └── growth_model_simulator.py
+          └── marketing_budget_modeler.py
+      ├── company-os/
+        └── SKILL.md
+        ├── references/
+          └── implementation-guide.md
+          └── os-comparison.md
+      ├── competitive-intel/
+        └── SKILL.md
+        ├── references/
+          └── ci-playbook.md
+        ├── templates/
+          └── battlecard-template.md
+      ├── context-engine/
+        └── SKILL.md
+        ├── references/
+          └── anonymization-protocol.md
+      ├── coo-advisor/
+        └── SKILL.md
+        ├── references/
+          └── ops_cadence.md
+          └── process_frameworks.md
+          └── scaling_playbook.md
+        ├── scripts/ [KEY]
+          └── okr_tracker.py
+          └── ops_efficiency_analyzer.py
+      ├── cpo-advisor/
+        └── SKILL.md
+        ├── references/
+          └── pmf_playbook.md
+          └── product_org_design.md
+          └── product_strategy.md
+        ├── scripts/ [KEY]
+          └── pmf_scorer.py
+          └── portfolio_analyzer.py
+      ├── cro-advisor/
+        └── SKILL.md
+        ├── references/
+          └── nrr_playbook.md
+          └── pricing_strategy.md
+          └── sales_playbook.md
+        ├── scripts/ [KEY]
+          └── churn_analyzer.py
+          └── revenue_forecast_model.py
+      ├── cs-onboard/
+        └── SKILL.md
+        ├── references/
+          └── interview-guide.md
+        ├── templates/
+          └── company-context-template.md
+      ├── cto-advisor/
+        └── SKILL.md
+        ├── references/
+          └── architecture_decision_records.md
+          └── engineering_metrics.md
+          └── technology_evaluation_framework.md
+        ├── scripts/ [KEY]
+          └── team_scaling_calculator.py
+          └── tech_debt_analyzer.py
+      ├── culture-architect/
+        └── SKILL.md
+        ├── references/
+          └── culture-playbook.md
+        ├── templates/
+          └── culture-code-template.md
+      ├── decision-logger/
+        └── SKILL.md
+        ├── scripts/ [KEY]
+          └── decision_tracker.py
+        ├── templates/
+          └── decision-entry.md
+      ├── executive-mentor/
+        └── SKILL.md
+        ├── agents/
+          └── devils-advocate.md
+        ├── references/
+          └── board_dynamics.md
+          └── crisis_playbook.md
+          └── hard_things.md
+        ├── scripts/ [KEY]
+          └── decision_matrix_scorer.py
+          └── stakeholder_mapper.py
+        ├── skills/
+          ├── board-prep/
+            └── SKILL.md
+          ├── challenge/
+            └── SKILL.md
+          ├── hard-call/
+            └── SKILL.md
+          ├── postmortem/
+            └── SKILL.md
+          ├── stress-test/
+            └── SKILL.md
+      ├── founder-coach/
+        └── SKILL.md
+        ├── references/
+          └── founder-toolkit.md
+          └── leadership-growth.md
+      ├── internal-narrative/
+        └── SKILL.md
+        ├── references/
+          └── narrative-frameworks.md
+        ├── templates/
+          └── all-hands-template.md
+      ├── intl-expansion/
+        └── SKILL.md
+        ├── references/
+          └── market-entry-playbook.md
+          └── regional-guide.md
+      ├── ma-playbook/
+        └── SKILL.md
+        ├── references/
+          └── due-diligence-checklist.md
+          └── integration-playbook.md
+      ├── org-health-diagnostic/
+        └── SKILL.md
+        ├── references/
+          └── health-benchmarks.md
+        ├── scripts/ [KEY]
+          └── health_scorer.py
+      ├── scenario-war-room/
+        └── SKILL.md
+        ├── references/
+          └── scenario-planning.md
+        ├── scripts/ [KEY]
+          └── scenario_modeler.py
+      ├── strategic-alignment/
+        └── SKILL.md
+        ├── references/
+          └── alignment-playbook.md
+        ├── scripts/ [KEY]
+          └── alignment_checker.py
+    ├── campaign-analytics/
+      └── SKILL.md
+      ├── assets/
+        └── ab_test_template.md
+        └── campaign_report_template.md
+        └── channel_comparison_template.md
+        └── expected_output.json
+        └── sample_campaign_data.json
+      ├── references/
+        └── attribution-models-guide.md
+        └── campaign-metrics-benchmarks.md
+        └── funnel-optimization-framework.md
+      ├── scripts/ [KEY]
+        └── attribution_analyzer.py
+        └── campaign_roi_calculator.py
+        └── funnel_analyzer.py
+    ├── capa-officer/
+      └── SKILL.md
+      ├── references/
+        └── effectiveness-verification-guide.md
+        └── rca-methodologies.md
+      ├── scripts/ [KEY]
+        └── capa_tracker.py
+        └── root_cause_analyzer.py
+    ├── caveman/
+      └── SKILL.md
+    ├── caveman-commit/
+      └── SKILL.md
+    ├── caveman-compress/
+      └── README.md [KEY]
+      └── SECURITY.md
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── __init__.py
+        └── __main__.py
+        └── benchmark.py
+        └── cli.py
+        └── compress.py
+        └── detect.py
+        └── validate.py
+    ├── caveman-help/
+      └── SKILL.md
+    ├── caveman-review/
+      └── SKILL.md
+    ├── challenge/
+      └── SKILL.md
+    ├── changelog-generator/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── changelog-formatting-guide.md
+        └── ci-integration.md
+        └── monorepo-strategy.md
+      ├── scripts/ [KEY]
+        └── commit_linter.py
+        └── generate_changelog.py
+    ├── churn-prevention/
+      └── SKILL.md
+      ├── references/
+        └── cancel-flow-playbook.md
+        └── dunning-guide.md
+      ├── scripts/ [KEY]
+        └── churn_impact_calculator.py
+    ├── ci-cd-pipeline-builder/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── deployment-gates.md
+        └── github-actions-templates.md
+        └── gitlab-ci-templates.md
+      ├── scripts/ [KEY]
+        └── pipeline_generator.py
+        └── stack_detector.py
+    ├── cloud-security/
+      └── SKILL.md
+      ├── references/
+        └── cspm-checks.md
+      ├── scripts/ [KEY]
+        └── cloud_posture_check.py
+    ├── code-reviewer/
+      └── SKILL.md
+      ├── references/
+        └── code_review_checklist.md
+        └── coding_standards.md
+        └── common_antipatterns.md
+      ├── scripts/ [KEY]
+        └── code_quality_checker.py
+        └── pr_analyzer.py
+        └── review_report_generator.py
+    ├── code-to-prd/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── assets/
+        └── sample-analysis.json
+      ├── expected_outputs/
+        └── sample-enum-dictionary.md
+        └── sample-page-user-list.md
+        └── sample-prd-readme.md
+      ├── references/
+        └── framework-patterns.md
+        └── prd-quality-checklist.md
+      ├── scripts/ [KEY]
+        └── codebase_analyzer.py
+        └── prd_scaffolder.py
+    ├── code-tour/
+      └── SKILL.md
+      └── evals.json
+    ├── codebase-onboarding/
+      └── SKILL.md
+      ├── references/
+        └── onboarding-template.md
+        └── output-format-templates.md
+      ├── scripts/ [KEY]
+        └── codebase_analyzer.py
+    ├── cold-email/
+      └── SKILL.md
+      ├── references/
+        └── deliverability-guide.md
+        └── follow-up-playbook.md
+        └── frameworks.md
+      ├── scripts/ [KEY]
+        └── email_sequence_analyzer.py
+    ├── competitive-teardown/
+      └── SKILL.md
+      ├── references/
+        └── analysis-templates.md
+        └── competitive-analysis-frameworks.md
+        └── data-collection-guide.md
+        └── scoring-rubric.md
+      ├── scripts/ [KEY]
+        └── competitive_matrix_builder.py
+    ├── competitor-alternatives/
+      └── SKILL.md
+      ├── references/
+        └── content-architecture.md
+        └── templates.md
+      ├── scripts/ [KEY]
+        └── comparison_matrix_builder.py
+    ├── compress/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── __init__.py
+        └── __main__.py
+        └── benchmark.py
+        └── cli.py
+        └── compress.py
+        └── detect.py
+        └── validate.py
+    ├── confluence-expert/
+      └── SKILL.md
+      ├── references/
+        └── macro-cheat-sheet.md
+        └── space-architecture-patterns.md
+        └── templates.md
+      ├── scripts/ [KEY]
+        └── content_audit_analyzer.py
+        └── space_structure_generator.py
+    ├── content-creator/
+      └── SKILL.md
+      ├── assets/
+        └── content_calendar_template.md
+      ├── examples/
+        └── brand_voice_analysis_example.md
+        └── seo_optimization_example.md
+      ├── references/
+        └── analytics_guide.md
+        └── brand_guidelines.md
+        └── content_frameworks.md
+        └── social_media_optimization.md
+    ├── content-humanizer/
+      └── SKILL.md
+      ├── references/
+        └── ai-tells-checklist.md
+        └── voice-techniques.md
+      ├── scripts/ [KEY]
+        └── humanizer_scorer.py
+    ├── content-production/
+      └── SKILL.md
+      ├── references/
+        └── content-brief-guide.md
+        └── optimization-checklist.md
+      ├── scripts/ [KEY]
+        └── brand_voice_analyzer.py
+        └── content_scorer.py
+        └── seo_optimizer.py
+      ├── templates/
+        └── content-brief-template.md
+    ├── content-strategy/
+      └── SKILL.md
+      ├── references/
+        └── content-strategy-reference.md
+      ├── scripts/ [KEY]
+        └── topic_cluster_mapper.py
+    ├── contract-and-proposal-writer/
+      └── SKILL.md
+    ├── copy-editing/
+      └── SKILL.md
+      ├── references/
+        └── plain-english-alternatives.md
+      ├── scripts/ [KEY]
+        └── readability_scorer.py
+    ├── copywriting/
+      └── SKILL.md
+      ├── references/
+        └── copy-frameworks.md
+        └── natural-transitions.md
+      ├── scripts/ [KEY]
+        └── headline_scorer.py
+    ├── coverage/
+      └── SKILL.md
+    ├── customer-success-manager/
+      └── SKILL.md
+      ├── assets/
+        └── executive_business_review_template.md
+        └── expected_output.json
+        └── onboarding_checklist_template.md
+        └── qbr_template.md
+        └── sample_customer_data.json
+        └── success_plan_template.md
+      ├── references/
+        └── cs-metrics-benchmarks.md
+        └── cs-playbooks.md
+        └── health-scoring-framework.md
+      ├── scripts/ [KEY]
+        └── churn_risk_analyzer.py
+        └── expansion_opportunity_scorer.py
+        └── health_score_calculator.py
+    ├── data-quality-auditor/
+      └── SKILL.md
+      ├── references/
+        └── data-quality-concepts.md
+      ├── scripts/ [KEY]
+        └── data_profiler.py
+        └── missing_value_analyzer.py
+        └── outlier_detector.py
+    ├── database-designer/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── index_optimizer.py
+      └── migration_generator.py
+      └── schema_analyzer.py
+      ├── assets/
+        └── sample_query_patterns.json
+        └── sample_schema.json
+        └── sample_schema.sql
+      ├── expected_outputs/
+        └── index_optimization_sample.txt
+        └── migration_sample.txt
+        └── schema_analysis_sample.txt
+      ├── references/
+        └── database-design-reference.md
+        └── database_selection_decision_tree.md
+        └── index_strategy_patterns.md
+        └── normalization_guide.md
+    ├── database-schema-designer/
+      └── SKILL.md
+      ├── references/
+        └── full-schema-examples.md
+    ├── demo-video/
+      └── SKILL.md
+      └── evals.json
+      ├── references/
+        └── scene-design-system.md
+    ├── dependency-auditor/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── test-inventory.json
+      ├── assets/
+        └── sample_go.mod
+        └── sample_package.json
+        └── sample_requirements.txt
+      ├── expected_outputs/
+        └── sample_license_report.txt
+        └── sample_upgrade_plan.txt
+        └── sample_vulnerability_report.json
+      ├── references/
+        └── dependency_management_best_practices.md
+        └── license_compatibility_matrix.md
+        └── vulnerability_assessment_guide.md
+      ├── scripts/ [KEY]
+        └── dep_scanner.py
+        └── license_checker.py
+        └── upgrade_planner.py
+      ├── test-project/
+        └── package.json [KEY]
+    ├── deploy-to-vercel/
+      └── SKILL.md
+      ├── resources/
+        └── deploy-codex.sh
+        └── deploy.sh
+    ├── docker-development/
+      └── SKILL.md
+      ├── references/
+        └── compose-patterns.md
+        └── dockerfile-best-practices.md
+      ├── scripts/ [KEY]
+        └── compose_validator.py
+        └── dockerfile_analyzer.py
+    ├── email-sequence/
+      └── SKILL.md
+      ├── references/
+        └── email-sequence-playbook.md
+      ├── scripts/ [KEY]
+        └── sequence_analyzer.py
+    ├── email-template-builder/
+      └── SKILL.md
+    ├── engineering-advanced-skills/
+      └── SKILL.md
+    ├── engineering-skills/
+      └── CLAUDE.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── START_HERE.md
+      └── TEAM_STRUCTURE_GUIDE.md
+    ├── env-secrets-manager/
+      └── SKILL.md
+      ├── references/
+        └── secret-patterns.md
+        └── validation-detection-rotation.md
+      ├── scripts/ [KEY]
+        └── env_auditor.py
+    ├── epic-design/
+      └── SKILL.md
+      ├── references/
+        └── accessibility.md
+        └── asset-pipeline.md
+        └── depth-system.md
+        └── directional-reveals.md
+        └── examples.md
+        └── inter-section-effects.md
+        └── motion-system.md
+        └── performance.md
+        └── text-animations.md
+      ├── scripts/ [KEY]
+        └── inspect-assets.py
+        └── validate-layers.js
+    ├── eval/
+      └── SKILL.md
+    ├── experiment-designer/
+      └── SKILL.md
+      ├── references/
+        └── experiment-playbook.md
+        └── statistics-reference.md
+      ├── scripts/ [KEY]
+        └── sample_size_calculator.py
+    ├── extract/
+      └── SKILL.md
+    ├── fda-consultant-specialist/
+      └── SKILL.md
+      ├── references/
+        └── device_cybersecurity_guidance.md
+        └── fda_capa_requirements.md
+        └── fda_submission_guide.md
+        └── hipaa_compliance_framework.md
+        └── qsr_compliance_requirements.md
+      ├── scripts/ [KEY]
+        └── fda_submission_tracker.py
+        └── hipaa_risk_assessment.py
+        └── qsr_compliance_checker.py
+    ├── finance-skills/
+      └── CLAUDE.md [KEY]
+      └── SKILL.md
+    ├── financial-analyst/
+      └── SKILL.md
+      ├── assets/
+        └── dcf_analysis_template.md
+        └── expected_output.json
+        └── forecast_report_template.md
+        └── sample_financial_data.json
+        └── variance_report_template.md
+      ├── references/
+        └── financial-ratios-guide.md
+        └── forecasting-best-practices.md
+        └── industry-adaptations.md
+        └── valuation-methodology.md
+      ├── scripts/ [KEY]
+        └── budget_variance_analyzer.py
+        └── dcf_valuation.py
+        └── forecast_builder.py
+        └── ratio_calculator.py
+    ├── fix/
+      └── SKILL.md
+      └── flaky-taxonomy.md
+    ├── focused-fix/
+      └── SKILL.md
+    ├── form-cro/
+      └── SKILL.md
+      ├── references/
+        └── form-cro-playbook.md
+      ├── scripts/ [KEY]
+        └── form_field_analyzer.py
+    ├── free-tool-strategy/
+      └── SKILL.md
+      ├── references/
+        └── launch-playbook.md
+        └── tool-types-guide.md
+      ├── scripts/ [KEY]
+        └── tool_roi_estimator.py
+    ├── gcp-cloud-architect/
+      └── SKILL.md
+      ├── references/
+        └── architecture_patterns.md
+        └── best_practices.md
+        └── service_selection.md
+      ├── scripts/ [KEY]
+        └── architecture_designer.py
+        └── cost_optimizer.py
+        └── deployment_manager.py
+    ├── gdpr-dsgvo-expert/
+      └── SKILL.md
+      ├── references/
+        └── dpia_methodology.md
+        └── gdpr_compliance_guide.md
+        └── german_bdsg_requirements.md
+      ├── scripts/ [KEY]
+        └── data_subject_rights_tracker.py
+        └── dpia_generator.py
+        └── gdpr_compliance_checker.py
+    ├── gemini-api-dev/
+      └── SKILL.md
+    ├── gemini-interactions-api/
+      └── SKILL.md
+    ├── gemini-live-api-dev/
+      └── SKILL.md
+    ├── gemini-skills/
+    ├── generate/
+      └── SKILL.md
+      └── patterns.md
+    ├── git-worktree-manager/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── docker-compose-patterns.md
+        └── port-allocation-strategy.md
+      ├── scripts/ [KEY]
+        └── worktree_cleanup.py
+        └── worktree_manager.py
+    ├── google-workspace-cli/
+      └── SKILL.md
+      ├── assets/
+        └── persona-profiles.md
+        └── workspace-config.json
+      ├── references/
+        └── gws-command-reference.md
+        └── recipes-cookbook.md
+        └── troubleshooting.md
+      ├── scripts/ [KEY]
+        └── auth_setup_guide.py
+        └── gws_doctor.py
+        └── gws_recipe_runner.py
+        └── output_analyzer.py
+        └── workspace_audit.py
+    ├── hard-call/
+      └── SKILL.md
+    ├── helm-chart-builder/
+      └── SKILL.md
+      ├── references/
+        └── chart-patterns.md
+        └── values-design.md
+      ├── scripts/ [KEY]
+        └── chart_analyzer.py
+        └── values_validator.py
+    ├── incident-commander/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        └── incident_report_template.md
+        └── runbook_template.md
+        └── sample_incident_classification.json
+        └── sample_incident_data.json
+        └── sample_incident_pir_data.json
+        └── sample_timeline_events.json
+        └── simple_incident.json
+        └── simple_timeline_events.json
+      ├── expected_outputs/
+        └── incident_classification_text_output.txt
+        └── pir_markdown_output.md
+        └── simple_incident_classification.txt
+        └── timeline_reconstruction_text_output.txt
+      ├── references/
+        └── communication_templates.md
+        └── incident-response-framework.md
+        └── incident_severity_matrix.md
+        └── rca_frameworks_guide.md
+        └── reference-information.md
+        └── sla-management-guide.md
+      ├── scripts/ [KEY]
+        └── incident_classifier.py
+        └── incident_timeline_builder.py
+        └── pir_generator.py
+        └── postmortem_generator.py
+        └── severity_classifier.py
+        └── timeline_reconstructor.py
+    ├── incident-response/
+      └── SKILL.md
+      ├── references/
+        └── regulatory-deadlines.md
+      ├── scripts/ [KEY]
+        └── incident_triage.py
+    ├── information-security-manager-iso27001/
+      └── SKILL.md
+      ├── references/
+        └── incident-response.md
+        └── iso27001-controls.md
+        └── risk-assessment-guide.md
+      ├── scripts/ [KEY]
+        └── compliance_checker.py
+        └── risk_assessment.py
+    ├── init/
+      └── SKILL.md
+    ├── interview-system-designer/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── hiring_calibrator.py
+      └── loop_designer.py
+      └── question_bank_generator.py
+      ├── assets/
+        └── sample_interview_results.json
+        └── sample_role_definitions.json
+      ├── expected_outputs/
+        └── product_manager_senior_questions.json
+        └── product_manager_senior_questions.txt
+        └── senior_software_engineer_senior_interview_loop.json
+        └── senior_software_engineer_senior_interview_loop.txt
+      ├── references/
+        └── bias_mitigation_checklist.md
+        └── competency_matrix_templates.md
+        └── debrief_facilitation_guide.md
+        └── interview-frameworks.md
+      ├── scripts/ [KEY]
+        └── interview_planner.py
+    ├── isms-audit-expert/
+      └── SKILL.md
+      ├── references/
+        └── cloud-security-audit.md
+        └── iso27001-audit-methodology.md
+        └── security-control-testing.md
+      ├── scripts/ [KEY]
+        └── isms_audit_scheduler.py
+    ├── jira-expert/
+      └── SKILL.md
+      ├── references/
+        └── AUTOMATION.md
+        └── WORKFLOWS.md
+        └── automation-examples.md
+        └── jql-examples.md
+      ├── scripts/ [KEY]
+        └── jql_query_builder.py
+        └── workflow_validator.py
+    ├── karpathy-coder/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── agents/
+        └── karpathy-reviewer.md
+      ├── commands/
+        └── karpathy-check.md
+      ├── expected_outputs/
+        └── assumption_linter.json
+        └── complexity_checker.json
+        └── diff_surgeon.json
+        └── goal_verifier.json
+      ├── hooks/
+        └── karpathy-gate.sh
+      ├── references/
+        └── anti-patterns.md
+        └── enforcement-patterns.md
+        └── karpathy-principles.md
+      ├── scripts/ [KEY]
+        └── assumption_linter.py
+        └── complexity_checker.py
+        └── diff_surgeon.py
+        └── goal_verifier.py
+    ├── landing-page-generator/
+      └── SKILL.md
+      ├── references/
+        └── conversion-patterns.md
+        └── copy-frameworks.md
+        └── landing-page-patterns.md
+        └── seo-checklist.md
+      ├── scripts/ [KEY]
+        └── landing_page_scaffolder.py
+    ├── launch-strategy/
+      └── SKILL.md
+      ├── references/
+        └── launch-frameworks-and-checklists.md
+      ├── scripts/ [KEY]
+        └── launch_readiness_scorer.py
+    ├── llm-cost-optimizer/
+      └── SKILL.md
+    ├── llm-wiki/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── agents/
+        └── wiki-ingestor.md
+        └── wiki-librarian.md
+        └── wiki-linter.md
+      ├── assets/
+        └── AGENTS.md.template
+        └── CLAUDE.md.template
+        └── cursorrules.template
+        └── index.md.template
+        └── log.md.template
+        ├── example-vault/
+          └── README.md [KEY]
+          ├── wiki/
+            └── index.md
+            └── log.md
+            ├── concepts/
+              └── sparse-autoencoder.md
+            ├── entities/
+              └── anthropic.md
+            ├── sources/
+              └── monosemanticity.md
+            ├── synthesis/
+              └── interpretability-overview.md
+        ├── page-templates/
+          └── comparison.md
+          └── concept.md
+          └── entity.md
+          └── source-summary.md
+          └── synthesis.md
+      ├── commands/
+        └── wiki-ingest.md
+        └── wiki-init.md
+        └── wiki-lint.md
+        └── wiki-log.md
+        └── wiki-query.md
+      ├── expected_outputs/
+        └── README.md [KEY]
+        └── append_log.json
+        └── export_marp.json
+        └── graph_analyzer.json
+        └── ingest_source.json
+        └── init_vault.json
+        └── lint_wiki.json
+        └── update_index.json
+        └── wiki_search.json
+      ├── references/
+        └── cross-tool-setup.md
+        └── ingest-workflow.md
+        └── lint-workflow.md
+        └── memex-principles.md
+        └── obsidian-setup.md
+        └── page-formats.md
+        └── query-workflow.md
+        └── wiki-schema.md
+      ├── scripts/ [KEY]
+        └── append_log.py
+        └── export_marp.py
+        └── graph_analyzer.py
+        └── ingest_source.py
+        └── init_vault.py
+        └── lint_wiki.py
+        └── update_index.py
+        └── wiki_search.py
+    ├── loop/
+      └── SKILL.md
+    ├── marketing-context/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── context_validator.py
+      ├── templates/
+        └── marketing-context-template.md
+    ├── marketing-demand-acquisition/
+      └── SKILL.md
+      ├── references/
+        └── attribution-guide.md
+        └── campaign-templates.md
+        └── hubspot-workflows.md
+        └── international-playbooks.md
+      ├── scripts/ [KEY]
+        └── calculate_cac.py
+    ├── marketing-ideas/
+      └── SKILL.md
+      ├── references/
+        └── ideas-by-category.md
+    ├── marketing-ops/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── campaign_tracker.py
+    ├── marketing-psychology/
+      └── SKILL.md
+      ├── references/
+        └── mental-models-catalog.md
+    ├── marketing-skills/
+      └── CLAUDE.md [KEY]
+      └── MARKETING-EXECUTION-PLAN.md
+      └── MARKETING-EXPANSION-PLAN.md
+      └── README.md [KEY]
+      └── SKILL.md
+      └── marketing_skills_roadmap.md
+    ├── marketing-strategy-pmm/
+      └── SKILL.md
+      ├── references/
+        └── international-gtm.md
+        └── launch-checklists.md
+        └── messaging-templates.md
+        └── positioning-frameworks.md
+    ├── mcp-server-builder/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── openapi-extraction-guide.md
+        └── python-server-template.md
+        └── typescript-server-template.md
+        └── validation-checklist.md
+      ├── scripts/ [KEY]
+        └── mcp_validator.py
+        └── openapi_to_mcp.py
+    ├── mdr-745-specialist/
+      └── SKILL.md
+      ├── references/
+        └── clinical-evidence-requirements.md
+        └── mdr-classification-guide.md
+        └── technical-documentation-templates.md
+      ├── scripts/ [KEY]
+        └── mdr_gap_analyzer.py
+    ├── meeting-analyzer/
+      └── SKILL.md
+    ├── merge/
+      └── SKILL.md
+    ├── migrate/
+      └── SKILL.md
+      └── cypress-mapping.md
+      └── selenium-mapping.md
+    ├── migration-architect/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        └── database_schema_after.json
+        └── database_schema_before.json
+        └── sample_database_migration.json
+        └── sample_service_migration.json
+      ├── expected_outputs/
+        └── rollback_runbook.json
+        └── rollback_runbook.txt
+        └── sample_database_migration_plan.json
+        └── sample_database_migration_plan.txt
+        └── sample_service_migration_plan.json
+        └── sample_service_migration_plan.txt
+        └── schema_compatibility_report.json
+        └── schema_compatibility_report.txt
+      ├── references/
+        └── data_reconciliation_strategies.md
+        └── migration_patterns_catalog.md
+        └── zero_downtime_techniques.md
+      ├── scripts/ [KEY]
+        └── compatibility_checker.py
+        └── migration_planner.py
+        └── rollback_generator.py
+    ├── monorepo-navigator/
+      └── SKILL.md
+      ├── references/
+        └── monorepo-patterns.md
+        └── monorepo-tooling-reference.md
+      ├── scripts/ [KEY]
+        └── monorepo_analyzer.py
+    ├── ms365-tenant-manager/
+      └── SKILL.md
+      └── expected_output.json
+      └── sample_input.json
+      ├── references/
+        └── powershell-templates.md
+        └── security-policies.md
+        └── troubleshooting.md
+      ├── scripts/ [KEY]
+        └── powershell_generator.py
+        └── tenant_setup.py
+        └── user_management.py
+    ├── observability-designer/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        └── sample_alerts.json
+        └── sample_service_api.json
+        └── sample_service_web.json
+      ├── expected_outputs/
+        └── sample_dashboard.json
+        └── sample_slo_framework.json
+      ├── references/
+        └── alert_design_patterns.md
+        └── dashboard_best_practices.md
+        └── slo_cookbook.md
+      ├── scripts/ [KEY]
+        └── alert_optimizer.py
+        └── dashboard_generator.py
+        └── slo_designer.py
+    ├── onboarding-cro/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── activation_funnel_analyzer.py
+    ├── page-cro/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── conversion_audit.py
+    ├── paid-ads/
+      └── SKILL.md
+      ├── references/
+        └── ad-copy-templates.md
+        └── audience-targeting.md
+        └── platform-setup-checklists.md
+      ├── scripts/ [KEY]
+        └── roas_calculator.py
+    ├── paywall-upgrade-cro/
+      └── SKILL.md
+    ├── performance-profiler/
+      └── SKILL.md
+      ├── references/
+        └── profiling-recipes.md
+      ├── scripts/ [KEY]
+        └── performance_profiler.py
+    ├── playwright-pro/
+      └── CLAUDE.md [KEY]
+      └── LICENSE
+      └── README.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── agents/
+        └── migration-planner.md
+        └── test-architect.md
+        └── test-debugger.md
+      ├── hooks/
+        └── detect-playwright.sh
+        └── hooks.json
+        └── validate-test.sh
+      ├── integrations/
+        ├── browserstack-mcp/
+          └── package.json [KEY]
+          └── tsconfig.json
+          ├── src/
+            └── client.ts
+            └── index.ts
+            └── types.ts
+        ├── testrail-mcp/
+          └── package.json [KEY]
+          └── tsconfig.json
+          ├── src/
+            └── client.ts
+            └── index.ts
+            └── types.ts
+      ├── reference/
+        └── assertions.md
+        └── common-pitfalls.md
+        └── fixtures.md
+        └── flaky-tests.md
+        └── golden-rules.md
+        └── locators.md
+      ├── skills/
+        ├── browserstack/
+          └── SKILL.md
+        ├── coverage/
+          └── SKILL.md
+        ├── fix/
+          └── SKILL.md
+          └── flaky-taxonomy.md
+        ├── generate/
+          └── SKILL.md
+          └── patterns.md
+        ├── init/
+          └── SKILL.md
+        ├── migrate/
+          └── SKILL.md
+          └── cypress-mapping.md
+          └── selenium-mapping.md
+        ├── report/
+          └── SKILL.md
+        ├── review/
+          └── SKILL.md
+          └── anti-patterns.md
+        ├── testrail/
+          └── SKILL.md
+      ├── templates/
+        └── README.md [KEY]
+        ├── accessibility/
+          └── color-contrast.md
+          └── keyboard-navigation.md
+          └── screen-reader.md
+        ├── api/
+          └── auth-headers.md
+          └── error-responses.md
+          └── graphql.md
+          └── rate-limiting.md
+          └── rest-crud.md
+        ├── auth/
+          └── login.md
+          └── logout.md
+          └── mfa.md
+          └── password-reset.md
+          └── rbac.md
+          └── remember-me.md
+          └── session-timeout.md
+          └── sso.md
+        ├── checkout/
+          └── add-to-cart.md
+          └── apply-coupon.md
+          └── order-confirm.md
+          └── order-history.md
+          └── payment.md
+          └── update-quantity.md
+        ├── crud/
+          └── bulk-operations.md
+          └── create.md
+          └── delete.md
+          └── read.md
+          └── soft-delete.md
+          └── update.md
+        ├── dashboard/
+          └── chart-rendering.md
+          └── data-loading.md
+          └── date-range-filter.md
+          └── export.md
+          └── realtime-updates.md
+        ├── forms/
+          └── autosave.md
+          └── conditional-fields.md
+          └── file-upload.md
+          └── multi-step.md
+          └── single-step.md
+          └── validation.md
+        ├── notifications/
+          └── in-app.md
+          └── notification-center.md
+          └── toast-messages.md
+        ├── onboarding/
+          └── email-verification.md
+          └── first-time-setup.md
+          └── registration.md
+          └── welcome-tour.md
+        ├── search/
+          └── basic-search.md
+          └── empty-state.md
+          └── filters.md
+          └── pagination.md
+          └── sorting.md
+        ├── settings/
+          └── account-delete.md
+          └── notification-prefs.md
+          └── password-change.md
+          └── profile-update.md
+    ├── pm-skills/
+      └── CLAUDE.md [KEY]
+      └── IMPLEMENTATION_SUMMARY.md
+      └── INSTALLATION_GUIDE.txt
+      └── README.md [KEY]
+      └── REAL_WORLD_SCENARIO.md
+      └── SKILL.md
+    ├── popup-cro/
+      └── SKILL.md
+      ├── references/
+        └── popup-cro-playbook.md
+    ├── postmortem/
+      └── SKILL.md
+    ├── pr-review-expert/
+      └── SKILL.md
+    ├── pricing-strategy/
+      └── SKILL.md
+      ├── references/
+        └── pricing-models.md
+        └── pricing-page-playbook.md
+      ├── scripts/ [KEY]
+        └── pricing_modeler.py
+    ├── product-analytics/
+      └── SKILL.md
+      ├── references/
+        └── dashboard-templates.md
+        └── metrics-frameworks.md
+      ├── scripts/ [KEY]
+        └── metrics_calculator.py
+    ├── product-discovery/
+      └── SKILL.md
+      ├── references/
+        └── discovery-frameworks.md
+      ├── scripts/ [KEY]
+        └── assumption_mapper.py
+    ├── product-manager-toolkit/
+      └── SKILL.md
+      ├── assets/
+        └── prd_template.md
+        └── rice_input_template.csv
+      ├── references/
+        └── frameworks.md
+        └── input-output-examples.md
+        └── prd_templates.md
+      ├── scripts/ [KEY]
+        └── customer_interview_analyzer.py
+        └── rice_prioritizer.py
+    ├── product-skills/
+      └── CLAUDE.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+    ├── product-strategist/
+      └── SKILL.md
+      ├── assets/
+        └── okr_template.md
+      ├── references/
+        └── okr_framework.md
+        └── strategy_types.md
+        ├── examples/
+          └── sample_growth_okrs.json
+      ├── scripts/ [KEY]
+        └── okr_cascade_generator.py
+    ├── programmatic-seo/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── url_pattern_generator.py
+    ├── promote/
+      └── SKILL.md
+    ├── prompt-engineer-toolkit/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── evaluation-rubric.md
+        └── prompt-templates.md
+        └── technique-guide.md
+      ├── scripts/ [KEY]
+        └── prompt_tester.py
+        └── prompt_versioner.py
+    ├── prompt-governance/
+      └── SKILL.md
+    ├── qms-audit-expert/
+      └── SKILL.md
+      ├── references/
+        └── iso13485-audit-guide.md
+        └── nonconformity-classification.md
+      ├── scripts/ [KEY]
+        └── audit_schedule_optimizer.py
+    ├── quality-documentation-manager/
+      └── SKILL.md
+      ├── references/
+        └── 21cfr11-compliance-guide.md
+        └── document-control-procedures.md
+      ├── scripts/ [KEY]
+        └── document_validator.py
+        └── document_version_control.py
+    ├── quality-manager-qmr/
+      └── SKILL.md
+      ├── references/
+        └── management-review-guide.md
+        └── quality-kpi-framework.md
+      ├── scripts/ [KEY]
+        └── management_review_tracker.py
+        └── quality_effectiveness_monitor.py
+    ├── quality-manager-qms-iso13485/
+      └── SKILL.md
+      ├── references/
+        └── iso13485-clause-requirements.md
+        └── qms-process-templates.md
+      ├── scripts/ [KEY]
+        └── qms_audit_checklist.py
+    ├── ra-qm-skills/
+      └── CLAUDE.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── final-complete-skills-collection.md
+    ├── rag-architect/
+      └── SKILL.md
+      └── chunking_optimizer.py
+      └── rag_pipeline_designer.py
+      └── retrieval_evaluator.py
+      ├── references/
+        └── chunking_strategies_comparison.md
+        └── embedding_model_benchmark.md
+        └── rag_evaluation_framework.md
+    ├── red-team/
+      └── SKILL.md
+      ├── references/
+        └── attack-path-methodology.md
+      ├── scripts/ [KEY]
+        └── engagement_planner.py
+    ├── referral-program/
+      └── SKILL.md
+      ├── references/
+        └── measurement-framework.md
+        └── program-mechanics.md
+      ├── scripts/ [KEY]
+        └── referral_roi_calculator.py
+    ├── regulatory-affairs-head/
+      └── SKILL.md
+      ├── references/
+        └── eu-mdr-submission-guide.md
+        └── fda-submission-guide.md
+        └── global-regulatory-pathways.md
+        └── iso-regulatory-requirements.md
+      ├── scripts/ [KEY]
+        └── regulatory_pathway_analyzer.py
+        └── regulatory_tracker.py
+    ├── release-manager/
+      └── README.md [KEY]
+      └── SKILL.md
+      └── changelog_generator.py
+      └── release_planner.py
+      └── version_bumper.py
+      ├── assets/
+        └── sample_commits.json
+        └── sample_git_log.txt
+        └── sample_git_log_full.txt
+        └── sample_release_plan.json
+      ├── expected_outputs/
+        └── changelog_example.md
+        └── release_readiness_example.txt
+        └── version_bump_example.txt
+      ├── references/
+        └── conventional-commits-guide.md
+        └── hotfix-procedures.md
+        └── release-workflow-comparison.md
+    ├── remember/
+      └── SKILL.md
+    ├── report/
+      └── SKILL.md
+    ├── research-summarizer/
+      └── SKILL.md
+      ├── references/
+        └── citation-formats.md
+        └── summary-templates.md
+      ├── scripts/ [KEY]
+        └── extract_citations.py
+        └── format_summary.py
+    ├── resume/
+      └── SKILL.md
+    ├── revenue-operations/
+      └── SKILL.md
+      ├── assets/
+        └── expected_output.json
+        └── forecast_report_template.md
+        └── gtm_dashboard_template.md
+        └── pipeline_review_template.md
+        └── sample_forecast_data.json
+        └── sample_gtm_data.json
+        └── sample_pipeline_data.json
+      ├── references/
+        └── gtm-efficiency-benchmarks.md
+        └── pipeline-management-framework.md
+        └── revops-metrics-guide.md
+      ├── scripts/ [KEY]
+        └── forecast_accuracy_tracker.py
+        └── gtm_efficiency_calculator.py
+        └── pipeline_analyzer.py
+    ├── review/
+      └── SKILL.md
+      └── anti-patterns.md
+    ├── risk-management-specialist/
+      └── SKILL.md
+      ├── references/
+        └── iso14971-implementation-guide.md
+        └── risk-analysis-methods.md
+        └── risk-assessment-templates.md
+      ├── scripts/ [KEY]
+        └── fmea_analyzer.py
+        └── risk_matrix_calculator.py
+    ├── roadmap-communicator/
+      └── SKILL.md
+      ├── references/
+        └── communication-templates.md
+        └── roadmap-templates.md
+      ├── scripts/ [KEY]
+        └── changelog_generator.py
+    ├── run/
+      └── SKILL.md
+    ├── runbook-generator/
+      └── SKILL.md
+      ├── references/
+        └── runbook-templates.md
+      ├── scripts/ [KEY]
+        └── runbook_generator.py
+    ├── saas-metrics-coach/
+      └── SKILL.md
+      ├── assets/
+        └── input-template.md
+      ├── references/
+        └── benchmarks.md
+        └── formulas.md
+      ├── scripts/ [KEY]
+        └── metrics_calculator.py
+        └── quick_ratio_calculator.py
+        └── unit_economics_simulator.py
+    ├── saas-scaffolder/
+      └── SKILL.md
+      ├── references/
+        └── architecture-patterns.md
+        └── auth-billing-guide.md
+        └── saas-architecture-patterns.md
+        └── tech-stack-comparison.md
+      ├── scripts/ [KEY]
+        └── project_bootstrapper.py
+    ├── sales-engineer/
+      └── SKILL.md
+      ├── assets/
+        └── demo_script_template.md
+        └── expected_output.json
+        └── poc_scorecard_template.md
+        └── sample_rfp_data.json
+        └── technical_proposal_template.md
+      ├── references/
+        └── competitive-positioning-framework.md
+        └── poc-best-practices.md
+        └── rfp-response-guide.md
+      ├── scripts/ [KEY]
+        └── competitive_matrix_builder.py
+        └── poc_planner.py
+        └── rfp_response_analyzer.py
+    ├── schema-markup/
+      └── SKILL.md
+      ├── references/
+        └── implementation-patterns.md
+        └── schema-types-guide.md
+      ├── scripts/ [KEY]
+        └── schema_validator.py
+    ├── scrum-master/
+      └── SKILL.md
+      ├── assets/
+        └── expected_output.json
+        └── expected_velocity_output.json
+        └── sample_sprint_data.json
+        └── sprint_report_template.md
+        └── team_health_check_template.md
+      ├── references/
+        └── retro-formats.md
+        └── team-dynamics-framework.md
+        └── velocity-forecasting-guide.md
+      ├── scripts/ [KEY]
+        └── retrospective_analyzer.py
+        └── sprint_health_scorer.py
+        └── velocity_analyzer.py
+    ├── secrets-vault-manager/
+      └── SKILL.md
+      ├── references/
+        └── cloud_secret_stores.md
+        └── emergency_procedures.md
+        └── vault_patterns.md
+      ├── scripts/ [KEY]
+        └── audit_log_analyzer.py
+        └── rotation_planner.py
+        └── vault_config_generator.py
+    ├── security-pen-testing/
+      └── SKILL.md
+      ├── references/
+        └── attack_patterns.md
+        └── owasp_top_10_checklist.md
+        └── responsible_disclosure.md
+      ├── scripts/ [KEY]
+        └── dependency_auditor.py
+        └── pentest_report_generator.py
+        └── vulnerability_scanner.py
+    ├── self-eval/
+      └── SKILL.md
+    ├── self-improving-agent/
+      └── CLAUDE.md [KEY]
+      └── LICENSE
+      └── README.md [KEY]
+      └── SKILL.md
+      └── settings.json
+      ├── agents/
+        └── memory-analyst.md
+        └── skill-extractor.md
+      ├── hooks/
+        └── error-capture.sh
+        └── hooks.json
+      ├── reference/
+        └── memory-architecture.md
+        └── promotion-rules.md
+        └── rules-directory-patterns.md
+      ├── skills/
+        ├── extract/
+          └── SKILL.md
+        ├── promote/
+          └── SKILL.md
+        ├── remember/
+          └── SKILL.md
+        ├── review/
+          └── SKILL.md
+        ├── status/
+          └── SKILL.md
+      ├── templates/
+        └── rule-template.md
+        └── skill-template.md
+    ├── senior-architect/
+      └── SKILL.md
+      ├── references/
+        └── architecture_patterns.md
+        └── system_design_workflows.md
+        └── tech_decision_guide.md
+      ├── scripts/ [KEY]
+        └── architecture_diagram_generator.py
+        └── dependency_analyzer.py
+        └── project_architect.py
+    ├── senior-backend/
+      └── SKILL.md
+      ├── references/
+        └── api_design_patterns.md
+        └── backend_security_practices.md
+        └── database_optimization_guide.md
+      ├── scripts/ [KEY]
+        └── api_load_tester.py
+        └── api_scaffolder.py
+        └── database_migration_tool.py
+    ├── senior-computer-vision/
+      └── SKILL.md
+      ├── references/
+        └── computer_vision_architectures.md
+        └── object_detection_optimization.md
+        └── production_vision_systems.md
+        └── reference-docs-and-commands.md
+      ├── scripts/ [KEY]
+        └── dataset_pipeline_builder.py
+        └── inference_optimizer.py
+        └── vision_model_trainer.py
+    ├── senior-data-engineer/
+      └── SKILL.md
+      ├── references/
+        └── data_modeling_patterns.md
+        └── data_pipeline_architecture.md
+        └── dataops_best_practices.md
+        └── troubleshooting.md
+        └── workflows.md
+      ├── scripts/ [KEY]
+        └── data_quality_validator.py
+        └── etl_performance_optimizer.py
+        └── pipeline_orchestrator.py
+    ├── senior-data-scientist/
+      └── SKILL.md
+      ├── references/
+        └── experiment_design_frameworks.md
+        └── feature_engineering_patterns.md
+        └── statistical_methods_advanced.md
+      ├── scripts/ [KEY]
+        └── experiment_designer.py
+        └── feature_engineering_pipeline.py
+        └── model_evaluation_suite.py
+    ├── senior-devops/
+      └── SKILL.md
+      ├── references/
+        └── cicd_pipeline_guide.md
+        └── deployment_strategies.md
+        └── infrastructure_as_code.md
+      ├── scripts/ [KEY]
+        └── deployment_manager.py
+        └── pipeline_generator.py
+        └── terraform_scaffolder.py
+    ├── senior-frontend/
+      └── SKILL.md
+      ├── references/
+        └── frontend_best_practices.md
+        └── nextjs_optimization_guide.md
+        └── react_patterns.md
+      ├── scripts/ [KEY]
+        └── bundle_analyzer.py
+        └── component_generator.py
+        └── frontend_scaffolder.py
+    ├── senior-fullstack/
+      └── SKILL.md
+      ├── references/
+        └── architecture_patterns.md
+        └── development_workflows.md
+        └── tech_stack_guide.md
+      ├── scripts/ [KEY]
+        └── code_quality_analyzer.py
+        └── project_scaffolder.py
+    ├── senior-ml-engineer/
+      └── SKILL.md
+      ├── references/
+        └── llm_integration_guide.md
+        └── mlops_production_patterns.md
+        └── rag_system_architecture.md
+      ├── scripts/ [KEY]
+        └── ml_monitoring_suite.py
+        └── model_deployment_pipeline.py
+        └── rag_system_builder.py
+    ├── senior-pm/
+      └── SKILL.md
+      ├── assets/
+        └── executive_report_template.md
+        └── expected_output.json
+        └── project_charter_template.md
+        └── raci_matrix_template.md
+        └── sample_project_data.json
+      ├── references/
+        └── portfolio-kpis.md
+        └── portfolio-prioritization-models.md
+        └── risk-management-framework.md
+      ├── scripts/ [KEY]
+        └── project_health_dashboard.py
+        └── resource_capacity_planner.py
+        └── risk_matrix_analyzer.py
+    ├── senior-prompt-engineer/
+      └── SKILL.md
+      ├── references/
+        └── agentic_system_design.md
+        └── llm_evaluation_frameworks.md
+        └── prompt_engineering_patterns.md
+      ├── scripts/ [KEY]
+        └── agent_orchestrator.py
+        └── prompt_optimizer.py
+        └── rag_evaluator.py
+    ├── senior-qa/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── qa_best_practices.md
+        └── test_automation_patterns.md
+        └── testing_strategies.md
+      ├── scripts/ [KEY]
+        └── coverage_analyzer.py
+        └── e2e_test_scaffolder.py
+        └── test_suite_generator.py
+    ├── senior-secops/
+      └── SKILL.md
+      ├── references/
+        └── compliance_requirements.md
+        └── security_standards.md
+        └── vulnerability_management_guide.md
+      ├── scripts/ [KEY]
+        └── compliance_checker.py
+        └── security_scanner.py
+        └── vulnerability_assessor.py
+    ├── senior-security/
+      └── SKILL.md
+      ├── references/
+        └── cryptography-implementation.md
+        └── security-architecture-patterns.md
+        └── threat-modeling-guide.md
+      ├── scripts/ [KEY]
+        └── secret_scanner.py
+        └── threat_modeler.py
+    ├── seo-audit/
+      └── SKILL.md
+      ├── references/
+        └── seo-audit-reference.md
+      ├── scripts/ [KEY]
+        └── seo_checker.py
+    ├── setup/
+      └── SKILL.md
+    ├── signup-flow-cro/
+      └── SKILL.md
+      ├── references/
+        └── signup-cro-playbook.md
+      ├── scripts/ [KEY]
+        └── funnel_drop_analyzer.py
+    ├── site-architecture/
+      └── SKILL.md
+      ├── references/
+        └── internal-linking-playbook.md
+        └── url-design-guide.md
+      ├── scripts/ [KEY]
+        └── sitemap_analyzer.py
+    ├── skill-security-auditor/
+      └── SKILL.md
+      ├── references/
+        └── threat-model.md
+      ├── scripts/ [KEY]
+        └── skill_security_auditor.py
+    ├── skill-tester/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        ├── sample-skill/
+          └── README.md [KEY]
+          └── SKILL.md
+          ├── assets/
+            └── sample_text.txt
+            └── test_data.csv
+          ├── expected_outputs/
+            └── sample_text_analysis.json
+          ├── references/
+            └── api-reference.md
+          ├── scripts/ [KEY]
+            └── text_processor.py
+      ├── expected_outputs/
+        └── sample_validation_report.json
+      ├── references/
+        └── quality-scoring-rubric.md
+        └── skill-structure-specification.md
+        └── tier-requirements-matrix.md
+      ├── scripts/ [KEY]
+        └── quality_scorer.py
+        └── script_tester.py
+        └── security_scorer.py
+        └── skill_validator.py
+      ├── tests/ [KEY]
+        └── test_security_scorer.py
+    ├── snowflake-development/
+      └── SKILL.md
+      ├── references/
+        └── cortex_ai_and_agents.md
+        └── snowflake_sql_and_pipelines.md
+        └── troubleshooting.md
+      ├── scripts/ [KEY]
+        └── snowflake_query_helper.py
+    ├── soc2-compliance/
+      └── SKILL.md
+      ├── references/
+        └── evidence_collection_guide.md
+        └── trust_service_criteria.md
+        └── type1_vs_type2.md
+      ├── scripts/ [KEY]
+        └── control_matrix_builder.py
+        └── evidence_tracker.py
+        └── gap_analyzer.py
+    ├── social-content/
+      └── SKILL.md
+      ├── references/
+        └── platforms.md
+        └── post-templates.md
+        └── reverse-engineering.md
+    ├── social-media-analyzer/
+      └── HOW_TO_USE.md
+      └── SKILL.md
+      ├── assets/
+        └── expected_output.json
+        └── sample_input.json
+      ├── references/
+        └── platform-benchmarks.md
+      ├── scripts/ [KEY]
+        └── analyze_performance.py
+        └── calculate_metrics.py
+    ├── social-media-manager/
+      └── SKILL.md
+      ├── scripts/ [KEY]
+        └── social_calendar_generator.py
+    ├── spawn/
+      └── SKILL.md
+    ├── spec-driven-workflow/
+      └── SKILL.md
+      ├── references/
+        └── acceptance_criteria_patterns.md
+        └── bounded_autonomy_rules.md
+        └── spec_format_guide.md
+      ├── scripts/ [KEY]
+        └── spec_generator.py
+        └── spec_validator.py
+        └── test_extractor.py
+    ├── spec-to-repo/
+      └── SKILL.md
+      ├── references/
+        └── spec-parsing-guide.md
+        └── stack-templates.md
+      ├── scripts/ [KEY]
+        └── validate_project.py
+    ├── sql-database-assistant/
+      └── SKILL.md
+      ├── references/
+        └── optimization_guide.md
+        └── orm_patterns.md
+        └── query_patterns.md
+      ├── scripts/ [KEY]
+        └── migration_generator.py
+        └── query_optimizer.py
+        └── schema_explorer.py
+    ├── statistical-analyst/
+      └── SKILL.md
+      ├── references/
+        └── statistical-testing-concepts.md
+      ├── scripts/ [KEY]
+        └── confidence_interval.py
+        └── hypothesis_tester.py
+        └── sample_size_calculator.py
+    ├── status/
+      └── SKILL.md
+    ├── stress-test/
+      └── SKILL.md
+    ├── stripe-integration-expert/
+      └── SKILL.md
+    ├── tc-tracker/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── references/
+        └── handoff-format.md
+        └── lifecycle.md
+        └── tc-schema.md
+      ├── scripts/ [KEY]
+        └── tc_create.py
+        └── tc_init.py
+        └── tc_status.py
+        └── tc_update.py
+        └── tc_validator.py
+    ├── tdd-guide/
+      └── HOW_TO_USE.md
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        └── expected_output.json
+        └── sample_coverage_report.lcov
+        └── sample_input_python.json
+        └── sample_input_typescript.json
+      ├── references/
+        └── ci-integration.md
+        └── framework-guide.md
+        └── tdd-best-practices.md
+      ├── scripts/ [KEY]
+        └── coverage_analyzer.py
+        └── fixture_generator.py
+        └── format_detector.py
+        └── framework_adapter.py
+        └── metrics_calculator.py
+        └── output_formatter.py
+        └── tdd_workflow.py
+        └── test_generator.py
+    ├── team-communications/
+      └── SKILL.md
+      ├── references/
+        └── 3p-updates.md
+        └── company-newsletter.md
+        └── faq-answers.md
+        └── general-comms.md
+    ├── tech-debt-tracker/
+      └── README.md [KEY]
+      └── SKILL.md
+      ├── assets/
+        └── historical_debt_2024-01-15.json
+        └── historical_debt_2024-02-01.json
+        └── sample_debt_inventory.json
+        ├── sample_codebase/
+          ├── src/
+            └── frontend.js
+            └── payment_processor.py
+            └── user_service.py
+      ├── expected_outputs/
+        └── sample_dashboard_output.json
+        └── sample_prioritization_output.json
+        └── sample_scan_output.json
+      ├── references/
+        └── debt-classification-taxonomy.md
+        └── debt-frameworks.md
+        └── prioritization-framework.md
+        └── stakeholder-communication-templates.md
+      ├── scripts/ [KEY]
+        └── debt_dashboard.py
+        └── debt_prioritizer.py
+        └── debt_scanner.py
+    ├── tech-stack-evaluator/
+      └── SKILL.md
+      ├── assets/
+        └── expected_output_comparison.json
+        └── sample_input_structured.json
+        └── sample_input_tco.json
+        └── sample_input_text.json
+      ├── references/
+        └── examples.md
+        └── metrics.md
+        └── workflows.md
+      ├── scripts/ [KEY]
+        └── ecosystem_analyzer.py
+        └── format_detector.py
+        └── migration_analyzer.py
+        └── report_generator.py
+        └── security_assessor.py
+        └── stack_comparator.py
+        └── tco_calculator.py
+    ├── terraform-patterns/
+      └── SKILL.md
+      ├── references/
+        └── module-patterns.md
+        └── state-management.md
+      ├── scripts/ [KEY]
+        └── tf_module_analyzer.py
+        └── tf_security_scanner.py
+    ├── testrail/
+      └── SKILL.md
+    ├── threat-detection/
+      └── SKILL.md
+      ├── references/
+        └── hunt-playbooks.md
+      ├── scripts/ [KEY]
+        └── threat_signal_analyzer.py
+    ├── ui-design-system/
+      └── SKILL.md
+      ├── assets/
+        └── design_system_doc_template.md
+      ├── references/
+        └── component-architecture.md
+        └── developer-handoff.md
+        └── responsive-calculations.md
+        └── token-generation.md
+      ├── scripts/ [KEY]
+        └── design_token_generator.py
+    ├── ux-researcher-designer/
+      └── SKILL.md
+      ├── assets/
+        └── research_plan_template.md
+      ├── references/
+        └── example-personas.md
+        └── journey-mapping-guide.md
+        └── persona-methodology.md
+        └── usability-testing-frameworks.md
+      ├── scripts/ [KEY]
+        └── persona_generator.py
+    ├── vercel-cli-with-tokens/
+      └── SKILL.md
+    ├── vercel-composition-patterns/
+      └── AGENTS.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── metadata.json
+      ├── rules/
+        └── _sections.md
+        └── _template.md
+        └── architecture-avoid-boolean-props.md
+        └── architecture-compound-components.md
+        └── patterns-children-over-render-props.md
+        └── patterns-explicit-variants.md
+        └── react19-no-forwardref.md
+        └── state-context-interface.md
+        └── state-decouple-implementation.md
+        └── state-lift-state.md
+    ├── vercel-react-best-practices/
+      └── AGENTS.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── metadata.json
+      ├── rules/
+        └── _sections.md
+        └── _template.md
+        └── advanced-effect-event-deps.md
+        └── advanced-event-handler-refs.md
+        └── advanced-init-once.md
+        └── advanced-use-latest.md
+        └── async-api-routes.md
+        └── async-cheap-condition-before-await.md
+        └── async-defer-await.md
+        └── async-dependencies.md
+        └── async-parallel.md
+        └── async-suspense-boundaries.md
+        └── bundle-analyzable-paths.md
+        └── bundle-barrel-imports.md
+        └── bundle-conditional.md
+        └── bundle-defer-third-party.md
+        └── bundle-dynamic-imports.md
+        └── bundle-preload.md
+        └── client-event-listeners.md
+        └── client-localstorage-schema.md
+        └── client-passive-event-listeners.md
+        └── client-swr-dedup.md
+        └── js-batch-dom-css.md
+        └── js-cache-function-results.md
+        └── js-cache-property-access.md
+        └── js-cache-storage.md
+        └── js-combine-iterations.md
+        └── js-early-exit.md
+        └── js-flatmap-filter.md
+        └── js-hoist-regexp.md
+        └── js-index-maps.md
+        └── js-length-check-first.md
+        └── js-min-max-loop.md
+        └── js-request-idle-callback.md
+        └── js-set-map-lookups.md
+        └── js-tosorted-immutable.md
+        └── rendering-activity.md
+        └── rendering-animate-svg-wrapper.md
+        └── rendering-conditional-render.md
+        └── rendering-content-visibility.md
+        └── rendering-hoist-jsx.md
+        └── rendering-hydration-no-flicker.md
+        └── rendering-hydration-suppress-warning.md
+        └── rendering-resource-hints.md
+        └── rendering-script-defer-async.md
+        └── rendering-svg-precision.md
+        └── rendering-usetransition-loading.md
+        └── rerender-defer-reads.md
+        └── rerender-dependencies.md
+        └── rerender-derived-state-no-effect.md
+        └── rerender-derived-state.md
+        └── rerender-functional-setstate.md
+        └── rerender-lazy-state-init.md
+        └── rerender-memo-with-default-value.md
+        └── rerender-memo.md
+        └── rerender-move-effect-to-event.md
+        └── rerender-no-inline-components.md
+        └── rerender-simple-expression-in-memo.md
+        └── rerender-split-combined-hooks.md
+        └── rerender-transitions.md
+        └── rerender-use-deferred-value.md
+        └── rerender-use-ref-transient-values.md
+        └── server-after-nonblocking.md
+        └── server-auth-actions.md
+        └── server-cache-lru.md
+        └── server-cache-react.md
+        └── server-dedup-props.md
+        └── server-hoist-static-io.md
+        └── server-no-shared-module-state.md
+        └── server-parallel-fetching.md
+        └── server-parallel-nested-fetching.md
+        └── server-serialization.md
+    ├── vercel-react-native-skills/
+      └── AGENTS.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── metadata.json
+      ├── rules/
+        └── _sections.md
+        └── _template.md
+        └── animation-derived-value.md
+        └── animation-gesture-detector-press.md
+        └── animation-gpu-properties.md
+        └── design-system-compound-components.md
+        └── fonts-config-plugin.md
+        └── imports-design-system-folder.md
+        └── js-hoist-intl.md
+        └── list-performance-callbacks.md
+        └── list-performance-function-references.md
+        └── list-performance-images.md
+        └── list-performance-inline-objects.md
+        └── list-performance-item-expensive.md
+        └── list-performance-item-memo.md
+        └── list-performance-item-types.md
+        └── list-performance-virtualize.md
+        └── monorepo-native-deps-in-app.md
+        └── monorepo-single-dependency-versions.md
+        └── navigation-native-navigators.md
+        └── react-compiler-destructure-functions.md
+        └── react-compiler-reanimated-shared-values.md
+        └── react-state-dispatcher.md
+        └── react-state-fallback.md
+        └── react-state-minimize.md
+        └── rendering-no-falsy-and.md
+        └── rendering-text-in-text-component.md
+        └── scroll-position-no-state.md
+        └── state-ground-truth.md
+        └── ui-expo-image.md
+        └── ui-image-gallery.md
+        └── ui-measure-views.md
+        └── ui-menus.md
+        └── ui-native-modals.md
+        └── ui-pressable.md
+        └── ui-safe-area-scroll.md
+        └── ui-scrollview-content-inset.md
+        └── ui-styling.md
+    ├── vercel-react-view-transitions/
+      └── AGENTS.md [KEY]
+      └── README.md [KEY]
+      └── SKILL.md
+      └── metadata.json
+      ├── references/
+        └── css-recipes.md
+        └── implementation.md
+        └── nextjs.md
+        └── patterns.md
+    ├── vertex-ai-api-dev/
+      └── SKILL.md
+      ├── references/
+        └── advanced_features.md
+        └── bounding_box.md
+        └── embeddings.md
+        └── live_api.md
+        └── media_generation.md
+        └── model_tuning.md
+        └── safety.md
+        └── structured_and_tools.md
+        └── text_and_multimodal.md
+    ├── video-content-strategist/
+      └── SKILL.md
+    ├── web-design-guidelines/
+      └── SKILL.md
+    ├── x-twitter-growth/
+      └── SKILL.md
+      ├── references/
+        └── algorithm-signals.md
+      ├── scripts/ [KEY]
+        └── competitor_analyzer.py
+        └── content_planner.py
+        └── growth_tracker.py
+        └── profile_auditor.py
+        └── tweet_composer.py
+├── .claude/
+  └── scheduled_tasks.lock
+├── .github/
+  ├── workflows/
+    └── deploy-staging.yml
+    └── deploy.yml
+├── .vale/
+  ├── styles/
+    ├── Galantes/
+      └── BrandTerms.yml
+      └── Tone.yml
+├── app/ [KEY]
+  └── favicon.ico
+  └── globals.css
+  └── layout.tsx
+  └── not-found.tsx
+  └── page.tsx
+  ├── about/
+    └── page.tsx
+  ├── account/
+    └── layout.tsx
+    └── page.tsx
+    ├── addresses/
+      └── page.tsx
+    ├── invoices/
+      └── page.tsx
+    ├── orders/
+      └── page.tsx
+      ├── [id]/
+        └── page.tsx
+    ├── settings/
+      └── page.tsx
+      └── page.tsx.bak.
+  ├── admin/
+    └── page.tsx
+    ├── dashboard/
+      └── page.tsx
+    ├── login/
+      └── page.tsx
+  ├── api/
+    ├── account/
+      ├── addresses/
+        └── route.ts
+      ├── orders/
+        ├── [id]/
+          └── route.ts
+      ├── profile/
+        └── route.ts
+    ├── admin/
+      ├── appointments/
+        └── route.ts
+      ├── auth/
+        └── route.ts
+        ├── logout/
+          └── route.ts
+      ├── content/
+        └── route.ts
+      ├── google/
+        ├── oauth/
+          └── route.ts
+          ├── callback/
+            └── route.ts
+          ├── start/
+            └── route.ts
+      ├── integrations/
+        └── route.ts
+        ├── google-json/
+          └── route.ts
+        ├── service-account-json/
+          └── route.ts
+        ├── test/
+          └── route.ts
+      ├── session/
+        └── route.ts
+      ├── upload/
+        └── route.ts
+      ├── verify-calendar/
+        └── route.ts
+    ├── auth/
+      ├── customer/
+        ├── login/
+          └── route.ts
+        ├── register/
+          └── route.ts
+      ├── google/
+        ├── callback/
+          └── route.ts
+        ├── config/
+          └── route.ts
+        ├── start/
+          └── route.ts
+    ├── cart/
+      ├── summary/
+        └── route.ts
+    ├── checkout/
+      ├── status/
+        └── route.ts
+      ├── stripe/
+        └── route.ts
+    ├── contact/
+      └── route.ts
+      ├── availability/
+        └── route.ts
+    ├── health/
+      └── route.ts
+    ├── image/
+      └── route.ts
+    ├── integrations/
+      ├── meta/
+        ├── sync/
+          └── route.ts
+    ├── products/
+      ├── image/
+        └── route.ts
+    ├── shipping/
+      ├── config/
+        └── route.ts
+      ├── rates/
+        └── route.ts
+    ├── v1/
+      ├── appointments/
+        └── route.ts
+    ├── webhooks/
+      ├── stripe/
+        └── route.ts
+  ├── auth/
+    ├── google/
+      ├── callback/
+        └── route.ts
+    ├── login/
+      └── page.tsx
+    ├── logout/
+      └── route.ts
+      └── route.ts.bak.
+    ├── verify-email/
+      └── route.ts
+  ├── bridal/
+    └── page.tsx
+  ├── cart/
+    └── page.tsx
+  ├── checkout/
+    └── page.tsx
+    ├── success/
+      └── page.tsx
+  ├── collections/
+    └── page.tsx
+  ├── contact/
+    └── page.tsx
+  ├── journal/
+    └── page.tsx
+  ├── privacy-policy/
+    └── page.tsx
+  ├── repairs/
+    └── page.tsx
+  ├── shop/
+    └── error.tsx
+    └── loading.tsx
+    └── page.tsx
+    ├── [slug]/
+      └── loading.tsx
+      └── page.tsx
+  ├── terms-of-service/
+    └── page.tsx
+├── backups/
+  ├── pre-qa-fix-2026-04-25_09-57/
+    └── appointments.json
+    └── cms.json
+    └── cms_master.json
+    └── integrations.json
+  ├── predeploy/
+    ├── 20260430_125946/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_130022/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_131353/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_131806/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_143935/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_171751/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260430_172345/
+      └── .env.prod
+      └── galantes_db.sql
+    ├── 20260501_023843/
+      └── app-data.tgz
+      └── docker-compose.gcp.yml
+      └── docker-images.txt
+      └── docker-ps.txt
+      └── git-head.txt
+      └── git-status.txt
+      └── nginx.conf
+    ├── 20260501_023858/
+      └── app-data.tgz
+      └── docker-compose.gcp.yml
+      └── docker-images.txt
+      └── docker-ps.txt
+      └── galantes_db-inspect.json
+      └── galantes_db.log
+      └── galantes_db.sql
+      └── galantes_nginx-inspect.json
+      └── galantes_nginx.log
+      └── galantes_odoo-inspect.json
+      └── galantes_odoo.log
+      └── git-head.txt
+      └── git-status.txt
+      └── nginx.conf
+    ├── 20260501_023923/
+      └── app-data.tgz
+      └── docker-compose.gcp.yml
+      └── docker-images.txt
+      └── docker-ps.txt
+      └── galantes_db-inspect.json
+      └── galantes_db.log
+      └── galantes_db.sql
+      └── galantes_nginx-inspect.json
+      └── galantes_nginx.log
+      └── galantes_odoo-inspect.json
+      └── galantes_odoo.log
+      └── git-head.txt
+      └── git-status.txt
+      └── nginx.conf
+      └── odoo-data.tgz
+      └── postgres-data.tgz
+    ├── local_smoke_backup/
+      └── app-data.tgz
+      └── docker-compose.production.yml [KEY]
+      └── docker-images.txt
+      └── docker-ps.txt
+      └── git-head.txt
+      └── git-status.txt
+      └── nginx.conf
+├── components/ [KEY]
+  └── ConditionalFooter.tsx
+  └── ConditionalNavbar.tsx
+  └── ContactForm.tsx
+  └── ContactFormShell.tsx
+  └── FeaturedCarousel.tsx
+  └── Navbar.tsx
+  └── SafeEmailLink.tsx
+  ├── account/
+    └── AddressBook.tsx
+    └── ProfileForm.tsx
+  ├── admin/
+    └── AppointmentsPanel.tsx
+    └── ImageUploader.tsx
+    └── IntegrationsPanel.tsx
+  ├── checkout/
+    └── CheckoutForm.tsx
+    └── ShippingSelector.tsx
+  ├── shop/
+    └── Pagination.tsx
+    └── ProductCTA.tsx
+    └── ProductCard.tsx
+    └── ProductGallery.tsx
+    └── ProductGrid.tsx
+    └── ShopControls.tsx
+├── context/
+  ├── brand/
+    └── brand_book.md
+    └── voice_and_tone.md
+  ├── business/
+    └── kpis.json
+    └── strategy_summary.md
+  ├── conversations/
+    └── README.md [KEY]
+  ├── customers/
+    └── README.md [KEY]
+  ├── memory/
+    └── store.schema.json
+  ├── operations/
+    └── android_cloudflare_oauth_environment.md
+    └── appointments_calendar_gmail_setup.md
+    └── deployment_notes.md
+    └── google_oauth_galantes_setup.md
+    └── testing_selenium_rules.md
+  ├── prompts/
+    └── customer_service_prompt.md
+    └── system_prompt.md
+  ├── shop/
+    └── CartContext.tsx
+├── controllers/
+  └── appointmentController.js
+├── data/
+  └── appointments.json
+  └── cms.json
+  └── cms_master.json
+  └── customer-auth.json
+  └── integrations.json
+  └── integrations.json.before_oauth_reconnect_
+  └── integrations.json.before_oauth_reconnect_20260428T195622Z
+  ├── blobs/
+    └── favicon-1776722808533-favicon-32x32.png
+    └── favicon-1776865631366-favicon-32x32.png
+    └── favicon-1776868864999-favicon-32x32.png
+    └── favicon-1776868883765-favicon-32x32.png
+    └── favicon-1777064992477-favicon-32x32.png
+    └── favicon-1777568433462-favicon-16x16.png
+    └── favicon-1777568720071-favicon-32x32.png
+    └── favicon-1777766605984-favicon-32x32.png
+    └── favicon-1777769886443-favicon-32x32.png
+    └── image-1776389489819-gemini-generated-image-lhsxpvlhsxpvlhsx.webp
+    └── image-1776722792843-logo.webp
+    └── image-1776722850605-logo.webp
+    └── image-1776722958482-logo.webp
+    └── image-1776807862957-logo.webp
+    └── image-1776807990378-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776820263263-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776820691145-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776820700280-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776820839576-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776865533990-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776865615315-gemini-generated-image-w0a5ndw0a5ndw0a5-modified.webp
+    └── image-1776865702396-logo.webp
+    └── image-1776866696039-logo.webp
+    └── image-1776868751104-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776868821314-logo.webp
+    └── image-1776868894956-logo.webp
+    └── image-1776868904486-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776958952703-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776959000444-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776959050826-portada.webp
+    └── image-1776959077816-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776959193622-gemini-generated-image-w0a5ndw0a5ndw0a5-photoroom.webp
+    └── image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp
+    └── image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp
+    └── image-1776960214904-chatgpt-image-apr-23-2026-11-59-05-am.webp
+    └── image-1777414627403-chatgpt-image-apr-23-2026-11-58-48-am.webp
+    └── image-1777414640316-chatgpt-image-apr-23-2026-11-58-56-am.webp
+    └── image-1777414652822-chatgpt-image-apr-23-2026-11-59-05-am.webp
+    └── image-1777568294850-logo.webp
+    └── image-1777568323204-chatgpt-image-apr-23-2026-11-58-48-am.webp
+    └── image-1777568336029-chatgpt-image-apr-23-2026-11-58-56-am.webp
+    └── image-1777568346647-chatgpt-image-apr-23-2026-11-59-05-am.webp
+    └── image-1777636828216-chatgpt-image-apr-23-2026-11-58-48-am.webp
+    └── image-1777636846151-chatgpt-image-apr-23-2026-11-58-56-am.webp
+    └── image-1777636857156-chatgpt-image-apr-23-2026-11-59-05-am.webp
+    └── image-1777727800385-chatgpt-image-apr-23-2026-11-58-48-am.webp
+    └── image-1777727819077-chatgpt-image-apr-23-2026-11-58-56-am.webp
+    └── image-1777727826073-chatgpt-image-apr-23-2026-11-59-05-am.webp
+    ├── product_images/
+      └── 12.png
+      └── 13.png
+      └── 14.png
+      └── 15.png
+      └── 16.png
+      └── 17.png
+      └── 18.png
+      └── 19.png
+      └── 21.png
+      └── 22.png
+      └── 23.png
+      └── 24.png
+      └── 25.png
+      └── 28.png
+      └── 30.png
+      └── 31.png
+      └── 33.png
+      └── 34.png
+      └── 35.png
+      └── 53.png
+      └── 56.png
+      └── 57.png
+      └── 58.png
+      └── 59.png
+├── docs/
+  └── ARCHITECTURE.md
+  └── IMPLEMENTATION_PLAN_ECOMMERCE_ODOO.md
+  └── MEMORY.md
+  └── NETWORK_TOPOLOGY.md
+  └── SESSION_SUMMARY.md
+  └── agent-state.md
+  └── decision-log.md
+  └── deployment-checklist.md
+  └── deployment-notes.md
+  └── handoff.md
+  └── implementation-log.md
+  └── meta-capabilities.md
+  └── meta-setup.md
+  └── open-questions.md
+  └── shop-cms-boundary.md
+  └── shop-integration-plan.md
+  └── timeline.md
+  ├── catalog/
+    └── FALLBACK_PRODUCT_CATALOG.md
+  ├── deployment/
+    └── GCP_AUTODEPLOY_AND_GOOGLE_PAY.md
+    └── GCP_MIGRATION_GUIDE.md
+    └── GOOGLE_CUSTOMER_LOGIN_SETUP.md
+    └── PRODUCTION_SYNC_AND_SECRETS.md
+    └── SECRETS_CHECKLIST.md
+├── infra/ [KEY]
+  ├── cloudflare/
+    └── api_setup.sh
+    └── config.json
+    └── config.yml
+    └── config_prod.yml
+    └── setup.sh
+  ├── nginx/
+    └── default_rescue.conf
+    └── galantes.conf
+    └── nginx.conf
+    └── nginx.conf.bak
+    └── nginx.conf.bak-20260502-odoo-routing
+    └── nginx_final.conf
+    └── nginx_master.conf
+    └── nginx_rescue.conf
+    └── nginx_rescue_ip.conf
+    └── nginx_ultra_rescue.conf
+    ├── conf.d/
+      └── galantes.conf
+    ├── conf.d-gcp/
+      └── galantes.conf
+      └── galantes_tunnel.conf
+    ├── conf.d-gcp-bootstrap/
+      └── galantes.conf
+  ├── postgres/
+    └── pg_hba_rescue.conf
+├── integration-contracts/
+  └── publication-flow.v1.md
+  └── shop-product.v1.ts
+├── lib/ [KEY]
+  └── appointment-flow.ts
+  └── appointment-schedule.ts
+  └── appointment-test-mode.ts
+  └── appointments.ts
+  └── auth.ts
+  └── cart-storage.ts
+  └── context-reader.ts
+  └── customer-auth.ts
+  └── customer-email-verification.ts
+  └── customer-navigation.ts
+  └── db.ts
+  └── google-calendar.ts
+  └── google-login.ts
+  └── google-oauth.ts
+  └── integration-types.ts
+  └── integrations.ts
+  └── mailer.ts
+  └── odoo-cms-sync.ts
+  └── odoo-sync.ts
+  └── product-image.ts
+  └── rate-limit.ts
+  └── runtime-paths.ts
+  └── secure-settings.ts
+  └── shipping-settings.ts
+  └── storage.ts
+  └── with-timeout-fallback.ts
+  ├── integrations/
+    └── meta.ts
+  ├── odoo/ [KEY]
+    └── client.ts
+    └── services.ts
+  ├── shipping/
+    └── engine.ts
+    └── fedex.ts
+    └── types.ts
+├── marketing-output/
+  └── strategy.md
+├── memory/
+  ├── current/
+    └── active-contracts.md
+    └── active-risks.md
+    └── blockers.md
+    └── google_oauth_flow_map.md
+    └── next-actions.md
+    └── now.md
+    └── operations-checkpoint-2026-04-23.md
+├── odoo/ [KEY]
+  └── .env.example [KEY]
+  └── Dockerfile
+  └── README.md [KEY]
+  └── docker-compose.yml [KEY]
+  └── entrypoint.sh
+  └── initial_modules.txt
+  ├── addons/
+    └── generate_key.py
+    ├── galantes_jewelry/
+      └── __init__.py
+      └── __manifest__.py
+      └── product_gallery.py
+      ├── controllers/
+        └── __init__.py
+        └── product_api.py
+      ├── data/
+        └── product_category.xml
+        └── product_data.xml
+      ├── models/
+        └── __init__.py
+        └── account_move.py
+        └── appointment.py
+        └── cms_settings.py
+        └── product_extension.py
+        └── product_gallery.py
+        └── product_template.py
+        └── res_partner.py
+        └── sale_order.py
+        └── utils.py
+      ├── security/
+        └── ir.model.access.csv
+      ├── views/
+        └── account_move_views.xml
+        └── product_gallery_views.xml
+        └── product_template_views.xml
+        └── res_partner_views.xml
+  ├── config/
+    └── odoo.conf
+├── project-memory/
+  └── 00-project-overview.md
+  └── 01-repo-map.md
+  └── 02-dependency-audit.md
+  └── 03-admin-audit.md
+  └── 04-root-cause.md
+  └── 05-change-log.md
+  └── 06-image-upload-architecture.md
+  └── 07-session-architecture.md
+  └── 08-docker-architecture.md
+  └── 09-android-deployment-strategy.md
+  └── 10-selenium-strategy.md
+  └── 11-chrome-profile-strategy.md
+  └── 12-env-template.md
+  └── 13-open-questions.md
+  └── 14-next-steps.md
+  └── MEMORY_RULES.md
+  ├── conversations/
+    └── 2026-03-25_agent-session_001.md
+    └── 2026-03-25_agent-session_002.md
+    └── 2026-03-25_agent-session_003.md
+    └── 2026-03-29_agent-session_004.md
+    └── 2026-04-13_agent-session_005.md
+  ├── decisions/
+    └── DEC-001-file-backed-storage-and-managed-images.md
+    └── DEC-002-jwt-cookie-session-and-dual-guard.md
+    └── DEC-003-standalone-data-root-and-docker-volume.md
+    └── DEC-004-android-remote-docker-first.md
+  ├── evidence/
+    └── android-cloudflare-recovery-2026-03-25.md
+    └── android-deployment-2026-03-25.md
+    └── github-actions-android-deploy-2026-03-29.md
+    └── screenshots-index.md
+    └── test-runs-index.md
+  ├── templates/
+    └── change-entry-template.md
+    └── conversation-template.md
+    └── decision-template.md
+    └── test-run-template.md
+├── public/
+  └── file.svg
+  └── globe.svg
+  └── next.svg
+  └── vercel.svg
+  └── window.svg
+  ├── assets/
+    ├── branding/
+      └── logo-transparent.png
+      └── logo.png
+    ├── images/
+      └── cta-background.png
+      └── featured-bridal.png
+      └── featured-nautical.png
+      └── featured-repairs.png
+      └── hero-alt.jpg
+      └── hero.webp
+      └── logo-square.png
+      └── philosophy.png
+      └── section-bridal.png
+      └── section-collections.png
+      └── testimonials.png
+    ├── products/
+      └── anchor-soul-bracelet.png
+      └── coastal-tide-ring.png
+      └── compass-rose-pendant.png
+      └── keys-azure-drop-earrings.png
+      └── lighthouse-guardian-charm.png
+      └── mariners-bond-band.png
+      └── navigators-chrono-link.png
+      └── sirens-pearl-necklace.png
+      └── the-islamorada-solitaire.png
+      └── tritons-trident-tie-bar.png
+├── scratch/
+  └── check_integrations.py
+  └── gen_cf_token.py
+  └── gen_cf_token_alt.py
+  └── inspect_integrations.py
+  └── patch_integrations.py
+  └── sync_integrations.py
+  └── sync_integrations_secure.js
+  └── sync_integrations_v3.js
+├── scripts/ [KEY]
+  └── bootstrap_remote.sh
+  └── check-images.py
+  └── cleanup_skills.py
+  └── deploy-prod.ps1
+  └── deploy-prod.sh
+  └── deploy-test.sh
+  └── deploy_android.sh
+  └── deploy_remote.sh
+  └── diagnose-google-calendar.js
+  └── diagnose-google-calendar.mjs
+  └── full-flow-test.bat
+  └── full-flow-test.sh
+  └── functional_test.py
+  └── generate_product_svgs.py
+  └── harden-deploy.sh
+  └── live_test_appointment.py
+  └── populate_odoo_images.py
+  └── qa_audit_1500.py
+  └── seed-test-product.js
+  └── seed_jewelry_products.py
+  └── seed_odoo_products.py
+  └── start-standalone.mjs
+  └── start_app.sh
+  └── test-appointments-flow.mjs
+  └── test-localhost.bat
+  └── test-localhost.sh
+  └── test_category_sync.py
+  └── update_repo_map.py
+  └── verify_account_navbar_profile9.py
+  └── verify_admin_branding_host_profile9.py
+  └── verify_admin_company_contact_sync_profile9.py
+  └── verify_admin_schedule_profile9.py
+  └── verify_checkout_success_profile9.py
+  └── verify_customer_login_return_to_profile9.py
+  └── verify_customer_portal_orders_invoices_profile9.py
+  └── verify_customer_register_profile9.py
+  └── verify_navbar_social_profile9.py
+  └── verify_odoo_e2e.py
+  └── verify_production_appointment_calendar_profile9.py
+  └── verify_production_appointments.py
+  └── verify_production_profile9.py
+  ├── backup/
+    └── predeploy-backup.sh
+    └── predeploy-restore.sh
+  ├── gcp/
+    └── 01-bootstrap-vm.sh
+    └── 02-push-to-vm.sh
+    └── 03-issue-certs.sh
+    └── 04-start-stack.sh
+    └── 05-cutover-dns.sh
+    └── 07-validate.sh
+    └── create-instance.ps1
+    └── deploy-gcp-budget.ps1
+    └── deploy.sh
+    └── vm-startup.sh
+    ├── lib/ [KEY]
+      └── common.sh
+  ├── odoo/ [KEY]
+    └── enable_google_pay.py
+├── server/
+  └── express-app.js
+├── src/
+  ├── config/
+    └── odooClient.js
+    └── odooClient.js.bak.
+├── task-ledger/
+  └── execution-log.ndjson
+  └── tasks.json
+  └── tasks.md
+├── tests/ [KEY]
+  └── __init__.py
+  ├── e2e/
+    └── README.md [KEY]
+    └── admin_google_oauth_smoke.py
+    └── admin_image_session_flow.py
+    └── admin_test.py
+    └── appointment_frontend_flow.py
+    └── checkout_shipping_flow.py
+    └── oauth_test.py
+    └── prod_full_verification.py
+    └── production_appointment_calendar_gmail_flow.py
+    └── profile_manager.py
+    └── profile_runtime.py
+    └── public_smoke.py
+    └── qa_diag.py
+    └── qa_functional_validation.py
+    └── requirements.txt
+    └── test_shipping_official.py
+    └── verify_prod_live.py
+  ├── functional/
+    └── __init__.py
+    └── test_sales_flow.py
+  ├── playwright/
+    └── shop-e2e.spec.ts
+    └── smoke.spec.ts
+  ├── unit/
+    └── ShopPageLayout.test.ts
+    └── __init__.py
+    └── odoo-flow.test.ts
+    └── setup.ts
+    └── test_product_api.py
+    └── test_product_template.py
+    ├── app/ [KEY]
+      └── layout-metadata.test.ts
+      ├── account/
+        └── account-layout.test.ts
+        └── account-pages.test.ts
+      ├── api/
+        └── checkout-status-route.test.ts
+        └── checkout-stripe-route.test.ts
+        └── contact-availability-route.test.ts
+        └── stripe-webhook-route.test.ts
+    ├── components/ [KEY]
+      └── AppointmentsPanel.test.tsx
+      └── ContactForm.test.tsx
+      └── FeaturedCarousel.test.tsx
+      └── ShopProductCard.test.tsx
+    ├── lib/ [KEY]
+      └── appointment-schedule.test.ts
+      └── customer-auth.test.ts
+      └── customer-navigation.test.ts
+      └── db.test.ts
+      └── google-calendar.test.ts
+      └── google-login.test.ts
+      └── integrations.test.ts
+      └── odoo-services.test.ts
+      └── odoo-sync.test.ts
+      └── shipping-settings.test.ts
+      └── with-timeout-fallback.test.ts
+    ├── src/
+      ├── config/
+        └── odooClient.test.ts
+├── tmp_sync_placeholder/
+  └── appointment-test-mode.ts
+  └── integrations.ts
+  └── route.ts
+```
+
+## 🤖 End Of Map

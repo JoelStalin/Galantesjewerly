@@ -63,36 +63,4 @@
         </field>
     </record>
 
-    <!-- Search filters -->
-    <record id="product_template_search_view_galantes" model="ir.ui.view">
-        <field name="name">product.template.search (galantes_jewelry)</field>
-        <field name="model">product.template</field>
-        <field name="inherit_id" ref="product.product_template_search_view"/>
-        <field name="arch" type="xml">
-            <xpath expr="//search" position="inside">
-                <filter name="available_website" string="Available on Website"
-                        domain="[('available_on_website', '=', True)]"/>
-                <filter name="is_featured" string="Featured"
-                        domain="[('is_featured', '=', True)]"/>
-                <separator/>
-                <filter name="material_gold" string="Gold"
-                        domain="[('material', 'in', ['gold','gold_14k','gold_18k','gold_24k'])]"/>
-                <filter name="material_rose_gold" string="Rose Gold"
-                        domain="[('material', 'in', ['rose_gold','rose_gold_14k'])]"/>
-                <filter name="material_white_gold" string="White Gold"
-                        domain="[('material', 'in', ['white_gold','white_gold_14k'])]"/>
-                <filter name="material_silver" string="Silver"
-                        domain="[('material', 'in', ['silver','silver_925'])]"/>
-                <filter name="material_platinum" string="Platinum"
-                        domain="[('material', '=', 'platinum')]"/>
-                <separator/>
-                <group expand="0" string="Group By">
-                    <filter name="group_material" string="Material"
-                            context="{'group_by': 'material'}"/>
-                    <filter name="group_category" string="Category"
-                            context="{'group_by': 'categ_id'}"/>
-                </group>
-            </xpath>
-        </field>
-    </record>
 </odoo>

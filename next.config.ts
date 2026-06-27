@@ -12,6 +12,31 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(self)',
+          },
+        ],
+      },
+    ];
+  },
   serverExternalPackages: [
     "googleapis",
     "google-auth-library",
@@ -38,10 +63,8 @@ const nextConfig: NextConfig = {
       { protocol: 'http', hostname: 'localhost', port: '8069', pathname: '/web/image/**' },
       { protocol: 'http', hostname: 'odoo', port: '8069', pathname: '/web/image/**' },
       // Odoo production subdomain
-      { protocol: 'https', hostname: 'shop.galantesjewelry.com', pathname: '/**' },
-      { protocol: 'https', hostname: 'odoo.galantesjewelry.com', pathname: '/**' },
-      // Odoo Cloudflare tunnel (if applicable)
-      { protocol: 'https', hostname: '*.galantesjewelry.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'shop.galantesjewelry.com', pathname: '/web/image/**' },
+      { protocol: 'https', hostname: 'odoo.galantesjewelry.com', pathname: '/web/image/**' },
       // External placeholders
       { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
       { protocol: 'https', hostname: 'images.pexels.com', pathname: '/**' },

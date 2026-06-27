@@ -90,6 +90,25 @@ export interface OdooClientConfig {
   cacheTTL?: number;
 }
 
+type PaginationInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+type FetchResponse<T> = {
+  data?: T;
+  pagination?: Partial<PaginationInfo>;
+};
+
+type FetchOptions = {
+  query?: Record<string, string | number | boolean | null | undefined>;
+  headers?: Record<string, string>;
+};
+
 // ---------------------------------------------------------------------------
 // OdooClient class
 // ---------------------------------------------------------------------------
@@ -97,8 +116,7 @@ export interface OdooClientConfig {
 class OdooClient {
   private baseUrl: string;
   private timeout: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private cache: Map<string, { data: any; timestamp: number }>;
+  private cache: Map<string, { data: unknown; timestamp: number }>;
   private cacheTTL: number;
 
   constructor(config: OdooClientConfig = {}) {
@@ -124,29 +142,35 @@ class OdooClient {
     const cacheKey = `products-${JSON.stringify(params)}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey)!.data;
+      return this.cache.get(cacheKey)!.data as PaginatedResponse<ShopProduct>;
     }
 
     try {
-      const response = await this.fetch('/api/products', { query: params });
-      // Normalise pagination: API may not have hasNext/hasPrev on older builds
-      if (response.pagination && response.pagination.hasNext === undefined) {
-        const p = response.pagination;
-        p.hasNext = p.page < p.pages;
-        p.hasPrev = p.page > 1;
-        p.pages = p.pages || Math.max(1, Math.ceil(p.total / p.pageSize));
-      }
-      
-      // Transform image URLs to use local proxy
-      if (response.data && Array.isArray(response.data)) {
-        response.data = response.data.map((product: ShopProduct) => ({
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products', { query: params });
+      const data = (response.data || []).map((product) => ({
           ...product,
-          imageUrl: `/api/products/image?id=${product.id}`
+          imageUrl: `/api/products/image?id=${product.id}`,
         }));
-      }
 
-      this.cache.set(cacheKey, { data: response, timestamp: Date.now() });
-      return response;
+      const incomingPagination = response.pagination || {};
+      const page = incomingPagination.page ?? (typeof params.page === 'number' ? params.page : 1);
+      const pageSize = incomingPagination.pageSize ?? (typeof params.page_size === 'number' ? params.page_size : 24);
+      const total = incomingPagination.total ?? data.length;
+      const pages = incomingPagination.pages ?? Math.max(1, Math.ceil(total / pageSize));
+      const paginatedResponse: PaginatedResponse<ShopProduct> = {
+        data,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          pages,
+          hasNext: incomingPagination.hasNext ?? page < pages,
+          hasPrev: incomingPagination.hasPrev ?? page > 1,
+        },
+      };
+
+      this.cache.set(cacheKey, { data: paginatedResponse, timestamp: Date.now() });
+      return paginatedResponse;
     } catch (error) {
       console.warn('Odoo API unreachable, serving luxury masterpiece collection fallback.', error);
       
@@ -172,11 +196,11 @@ class OdooClient {
     const cacheKey = `product-${slug}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey)!.data;
+      return this.cache.get(cacheKey)!.data as ShopProduct | null;
     }
 
     try {
-      const response = await this.fetch(`/api/products/${slug}`);
+      const response = await this.fetch<FetchResponse<ShopProduct>>(`/api/products/${slug}`);
       if (!response.data) return null;
       
       // Proxy image
@@ -186,7 +210,7 @@ class OdooClient {
 
       this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
       return response.data;
-    } catch (error) {
+    } catch {
       console.warn(`Product slug ${slug} not found in Odoo, checking fallback collection...`);
       return LUXURY_FALLBACK_PRODUCTS.find(p => p.slug === slug) || null;
     }
@@ -200,19 +224,19 @@ class OdooClient {
     const cacheKey = `related-${slug}-${limit}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey)!.data;
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
     }
 
     try {
-      const response = await this.fetch(`/api/products/${slug}/related`, {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>(`/api/products/${slug}/related`, {
         query: { limit },
       });
       let data = response.data || [];
       
       // Proxy images
-      data = data.map((p: any) => ({
+      data = data.map((p) => ({
         ...p,
-        imageUrl: `/api/products/image?id=${p.id}`
+        imageUrl: `/api/products/image?id=${p.id}`,
       }));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -228,11 +252,11 @@ class OdooClient {
     const cacheKey = 'categories';
 
     if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey)!.data;
+      return this.cache.get(cacheKey)!.data as CategoryData[];
     }
 
     try {
-      const response = await this.fetch('/api/categories');
+      const response = await this.fetch<FetchResponse<CategoryData[]>>('/api/categories');
       const data: CategoryData[] = response.data || [];
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
@@ -247,19 +271,19 @@ class OdooClient {
     const cacheKey = `featured-${limit}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.cache.get(cacheKey)!.data;
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
     }
 
     try {
-      const response = await this.fetch('/api/products/featured', {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products/featured', {
         query: { limit },
       });
       let data = response.data || [];
       
       // Proxy images
-      data = data.map((p: any) => ({
+      data = data.map((p) => ({
         ...p,
-        imageUrl: `/api/products/image?id=${p.id}`
+        imageUrl: `/api/products/image?id=${p.id}`,
       }));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -317,15 +341,10 @@ class OdooClient {
     return params;
   }
 
-  private async fetch(
+  private async fetch<T>(
     endpoint: string,
-    options: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      query?: Record<string, any>;
-      headers?: Record<string, string>;
-    } = {},
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
+    options: FetchOptions = {},
+  ): Promise<T> {
     const url = new URL(endpoint, this.baseUrl);
 
     if (options.query) {
@@ -518,5 +537,19 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     imageUrl: '/api/products/image?id=10',
     category: 'Coastal',
     buyUrl: '#'
+  },
+  {
+    id: '11',
+    slug: 'shipping-calculation-demo-pendant',
+    name: 'Shipping Calculation Demo Pendant',
+    shortDescription: 'Ready-to-ship demo pendant for previewing shipping totals',
+    longDescription: 'A ready-to-ship gold pendant published specifically for customer portal testing. Add it to the cart to preview live shipping totals before checkout.',
+    price: 1250,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: '/api/products/image?id=11',
+    category: 'Ready to Ship',
+    buyUrl: '#',
+    isFeatured: true
   }
 ];

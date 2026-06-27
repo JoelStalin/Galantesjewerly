@@ -17,8 +17,8 @@ class ProductGallery(models.Model):
     image = fields.Image(
         string='Image',
         required=True,
-        max_width=1024,
-        max_height=1024
+        max_width=4096,
+        max_height=4096
     )
 
     sequence = fields.Integer(

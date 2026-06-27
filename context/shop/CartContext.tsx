@@ -1,9 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  buildCartCookieAttributes,
+  buildCartCookieValue,
+  CART_COOKIE_KEY,
+  CART_STORAGE_KEY,
+  parseCartItems,
+  readCartCookie,
+  serializeCartItems,
+} from '@/lib/cart-storage';
 
 export type CartItem = {
   id: string;
+  product_id?: string | number;
   slug: string;
   name: string;
   price: number;
@@ -29,13 +39,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Load cart from localStorage on init
   useEffect(() => {
-    const savedCart = localStorage.getItem('galantes_cart');
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (e) {
-        console.error('Failed to parse cart', e);
-      }
+    const savedLocalCart = localStorage.getItem(CART_STORAGE_KEY);
+    const savedCookieCart = readCartCookie(document.cookie);
+    const localItems = parseCartItems(savedLocalCart);
+    const cookieItems = parseCartItems(savedCookieCart);
+    const hydratedItems = localItems.length > 0 ? localItems : cookieItems;
+
+    if (hydratedItems.length > 0) {
+      setItems(hydratedItems);
     }
     setHasHydrated(true);
   }, []);
@@ -45,7 +56,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!hasHydrated) {
       return;
     }
-    localStorage.setItem('galantes_cart', JSON.stringify(items));
+    const serialized = serializeCartItems(items);
+    localStorage.setItem(CART_STORAGE_KEY, serialized);
+
+    if (typeof document !== 'undefined') {
+      document.cookie = `${CART_COOKIE_KEY}=${buildCartCookieValue(items)}; ${buildCartCookieAttributes()}`;
+    }
   }, [hasHydrated, items]);
 
   const addItem = (newItem: CartItem) => {

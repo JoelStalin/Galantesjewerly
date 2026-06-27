@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 import { OdooService } from '@/lib/odoo/services';
 import { ShippingEngine } from '@/lib/shipping/engine';
+import type { ShippingRate } from '@/lib/shipping/types';
 import { getSettings } from '@/lib/db';
 import { validateShippingCity } from '@/lib/shipping-settings';
 
@@ -24,16 +25,26 @@ const checkoutSchema = z.object({
     name: z.string().min(1),
     email: z.string().email(),
     phone: z.string().optional(),
-    street: z.string().min(1),
-    city: z.string().min(1),
+    street: z.string().optional().default(''),
+    city: z.string().optional().default(''),
     state: z.string().optional().default(''),
-    zip: z.string().min(1),
+    zip: z.string().optional().default(''),
     country: z.string().optional().default('United States'),
   }),
+  deliveryMethod: z.enum(['ship', 'pickup']).optional().default('ship'),
   shippingRate: shippingRateSelectionSchema.optional(),
 });
 
 const SHIPPING_PRODUCT_DEFAULT_CODE = 'GJ-SHP-001';
+const SHIPPING_PRODUCT_VARIANT_ID = Number.parseInt(process.env.ODOO_SHIPPING_PRODUCT_VARIANT_ID || '0', 10);
+const PICKUP_RATE = {
+  carrier: 'pickup' as const,
+  serviceName: 'Boutique Pick-up (Islamorada)',
+  price: 0,
+  currency: 'USD',
+  estimatedDays: 0,
+  insuranceIncluded: true,
+};
 
 async function getShippingSettingsWithFallback(timeoutMs = 1200) {
   try {
@@ -74,9 +85,14 @@ function parseProductId(value: string | number | undefined): number | null {
 export async function POST(request: Request) {
   try {
     const payload = checkoutSchema.parse(await request.json());
-    const { items, customerData, shippingRate } = payload;
+    const { items, customerData, deliveryMethod, shippingRate } = payload;
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    if (deliveryMethod === 'ship' && shippingRate?.carrier === 'pickup') {
+      return NextResponse.json({ error: 'Pickup must be selected as the fulfillment method.' }, { status: 400 });
+    }
+
+    const isPickup = deliveryMethod === 'pickup';
     const shippingAddress = {
       street: customerData.street,
       city: customerData.city,
@@ -85,19 +101,36 @@ export async function POST(request: Request) {
       country: customerData.country,
     };
 
-    const settings = await getShippingSettingsWithFallback();
-    const cityCheck = validateShippingCity(settings, shippingAddress.city);
-    if (!cityCheck.valid) {
-      return NextResponse.json({ error: cityCheck.message || 'Shipping is not available for the selected city.' }, { status: 400 });
+    if (!isPickup && (!shippingAddress.street || !shippingAddress.city || !shippingAddress.zip)) {
+      return NextResponse.json({ error: 'Shipping address is required for delivery orders.' }, { status: 400 });
     }
 
-    const availableRates = await ShippingEngine.getRates(shippingAddress, {
-      weightLbs: 1,
-      value: subtotal,
-    });
-    const selectedRate = shippingRate
-      ? availableRates.find((rate) => rate.carrier === shippingRate.carrier && rate.serviceName === shippingRate.serviceName)
-      : availableRates.find((rate) => rate.carrier !== 'pickup') || availableRates[0];
+    let selectedRate: ShippingRate = {
+      ...PICKUP_RATE,
+      insuranceValue: subtotal,
+    };
+
+    if (!isPickup) {
+      const settings = await getShippingSettingsWithFallback();
+      const cityCheck = validateShippingCity(settings, shippingAddress.city);
+      if (!cityCheck.valid) {
+        return NextResponse.json({ error: cityCheck.message || 'Shipping is not available for the selected city.' }, { status: 400 });
+      }
+
+      const availableRates = await ShippingEngine.getRates(shippingAddress, {
+        weightLbs: 1,
+        value: subtotal,
+      });
+      const matchedRate = shippingRate
+        ? availableRates.find((rate) => rate.carrier === shippingRate.carrier && rate.serviceName === shippingRate.serviceName)
+        : availableRates.find((rate) => rate.carrier !== 'pickup') || availableRates[0];
+
+      if (!matchedRate) {
+        return NextResponse.json({ error: 'Selected shipping method is not available for this address.' }, { status: 400 });
+      }
+
+      selectedRate = matchedRate;
+    }
 
     if (!selectedRate) {
       return NextResponse.json({ error: 'Selected shipping method is not available for this address.' }, { status: 400 });
@@ -107,7 +140,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Selected shipping method does not meet jewelry insurance requirements.' }, { status: 400 });
     }
 
-    const shippingProductId = await OdooService.getProductVariantIdByDefaultCode(SHIPPING_PRODUCT_DEFAULT_CODE);
+    const shippingProductId = await OdooService.getProductVariantIdByDefaultCode(SHIPPING_PRODUCT_DEFAULT_CODE)
+      || (Number.isFinite(SHIPPING_PRODUCT_VARIANT_ID) && SHIPPING_PRODUCT_VARIANT_ID > 0
+        ? SHIPPING_PRODUCT_VARIANT_ID
+        : null);
     if (!shippingProductId) {
       return NextResponse.json({ error: 'Secure shipping product is not configured in Odoo.' }, { status: 500 });
     }
@@ -116,9 +152,11 @@ export async function POST(request: Request) {
       name: customerData.name,
       email: customerData.email,
       phone: customerData.phone,
-      street: customerData.street,
-      city: customerData.city,
-      zip: customerData.zip,
+      street: isPickup ? undefined : customerData.street,
+      city: isPickup ? undefined : customerData.city,
+      zip: isPickup ? undefined : customerData.zip,
+      country: customerData.country,
+      state: customerData.state,
     });
     if (!partnerId) {
       return NextResponse.json({ error: 'Unable to create or locate the Odoo customer record.' }, { status: 500 });
@@ -161,6 +199,7 @@ export async function POST(request: Request) {
       currency: 'usd',
       automatic_payment_methods: {
         enabled: true,
+        allow_redirects: 'never',
       },
       metadata: {
         odoo_partner_id: partnerId.toString(),
@@ -169,6 +208,7 @@ export async function POST(request: Request) {
         shipping_carrier: selectedRate.carrier,
         shipping_service_name: selectedRate.serviceName,
         shipping_amount: selectedRate.price.toFixed(2),
+        delivery_method: isPickup ? 'pickup' : 'ship',
       },
     });
 

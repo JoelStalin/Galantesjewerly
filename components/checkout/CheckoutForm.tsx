@@ -44,7 +44,15 @@ export function CheckoutForm({ customerData }: CheckoutFormProps) {
 
   return (
     <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement id="payment-element" options={{ layout: 'tabs' }} />
+      <PaymentElement
+        id="payment-element"
+        options={{
+          layout: 'tabs',
+          wallets: {
+            googlePay: 'never',
+          },
+        }}
+      />
 
       <button
         disabled={isLoading || !stripe || !elements}

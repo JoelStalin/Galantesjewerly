@@ -66,5 +66,32 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": {
+        "brace-expansion": "5.0.5"
+      }
+    },
+    "eslint": {
+      "minimatch": {
+        "brace-expansion": "1.1.13"
+      }
+    },
+    "micromatch": {
+      "picomatch": "2.3.2"
+    },
+    "tinyglobby": {
+      "picomatch": "4.0.4"
+    },
+    "fdir": {
+      "picomatch": "4.0.4"
+    },
+    "@tailwindcss/postcss": {
+      "postcss": "8.5.10"
+    },
+    "vite": {
+      "postcss": "8.5.10"
+    }
   }
 }

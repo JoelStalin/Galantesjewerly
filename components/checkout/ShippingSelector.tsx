@@ -8,9 +8,10 @@ interface ShippingSelectorProps {
   address: ShippingAddress;
   orderValue: number;
   onRateSelect: (rate: ShippingRate) => void;
+  excludePickup?: boolean;
 }
 
-export function ShippingSelector({ address, orderValue, onRateSelect }: ShippingSelectorProps) {
+export function ShippingSelector({ address, orderValue, onRateSelect, excludePickup = false }: ShippingSelectorProps) {
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,8 +32,11 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
         });
         const data = await res.json();
         if (data.success) {
-          setRates(data.rates);
-          const defaultRate = data.rates.find((rate: ShippingRate) => rate.carrier !== 'pickup') || data.rates[0] || null;
+          const nextRates = excludePickup
+            ? data.rates.filter((rate: ShippingRate) => rate.carrier !== 'pickup')
+            : data.rates;
+          setRates(nextRates);
+          const defaultRate = nextRates.find((rate: ShippingRate) => rate.carrier !== 'pickup') || nextRates[0] || null;
           if (defaultRate) {
             setSelectedRate(defaultRate);
             onRateSelect(defaultRate);
@@ -55,7 +59,7 @@ export function ShippingSelector({ address, orderValue, onRateSelect }: Shipping
     if (address.zip && address.city) {
       fetchRates();
     }
-  }, [address.zip, address.city, orderValue, onRateSelect]);
+  }, [address, orderValue, onRateSelect, excludePickup]);
 
   const handleSelect = (rate: ShippingRate) => {
     setSelectedRate(rate);

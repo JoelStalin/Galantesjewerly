@@ -51,6 +51,7 @@ services:
       - ODOO_USERNAME=${ODOO_USERNAME:-admin}
       - ODOO_PASSWORD=${ODOO_PASSWORD}
       - ODOO_API_KEY=${ODOO_API_KEY}
+      - ODOO_SHIPPING_PRODUCT_VARIANT_ID=${ODOO_SHIPPING_PRODUCT_VARIANT_ID:-26}
       - ODOO_SYNC_ON_APPOINTMENT_VALIDATED=${ODOO_SYNC_ON_APPOINTMENT_VALIDATED:-true}
       # Google OAuth / Calendar
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
@@ -72,6 +73,9 @@ services:
       - GMAIL_SMTP_USER=${GMAIL_SMTP_USER}
       - GMAIL_SMTP_PASS=${GMAIL_SMTP_PASS}
       - GMAIL_NOTIFICATION_TO=${GMAIL_NOTIFICATION_TO}
+      # Stripe
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
       # Meta
       - META_APP_ID=${META_APP_ID}
       - META_APP_SECRET=${META_APP_SECRET}
@@ -116,7 +120,7 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      - HOST=postgres
+      - DB_HOST=galantes_db
       - PORT=5432
       - USER=${POSTGRES_USER:-odoo}
       - PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
@@ -147,11 +151,11 @@ services:
     networks:
       - galante-net
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
   # ========== POSTGRESQL DATABASE ==========
-  postgres:
+  db:
     image: postgres:15-alpine
     container_name: galantes_db
     restart: always

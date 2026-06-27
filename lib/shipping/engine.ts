@@ -1,4 +1,13 @@
-import { ShippingRate, ShippingAddress, PackageDetails, CarrierType } from './types';
+import { ShippingRate, ShippingAddress, PackageDetails } from './types';
+import { getFedExRates } from './fedex';
+
+const DEFAULT_ORIGIN: ShippingAddress = {
+  street: '82681 Overseas Highway',
+  city: 'Islamorada',
+  state: 'FL',
+  zip: '33036',
+  country: 'United States',
+};
 
 /**
  * Galante's Jewelry Shipping Engine
@@ -7,6 +16,7 @@ import { ShippingRate, ShippingAddress, PackageDetails, CarrierType } from './ty
 export class ShippingEngine {
   
   static async getRates(address: ShippingAddress, pkg: PackageDetails): Promise<ShippingRate[]> {
+    const insurancePremium = pkg.value * 0.015; // 1.5% of value for high-value shipping insurance
     const rates: ShippingRate[] = [];
 
     // 1. Local Pick-up (Always Free, Always available for Islamorada/Florida)
@@ -20,20 +30,19 @@ export class ShippingEngine {
       insuranceValue: pkg.value
     });
 
-    // 2. Carrier API Logic (Simulated for this stage, ready for real API Keys)
-    // For Jewelry, we apply a security insurance multiplier
-    const insurancePremium = pkg.value * 0.015; // 1.5% of value for high-value shipping insurance
-
-    // USPS Integration
+    // 2. Carrier options are shown as individual selectable rates.
+    // USPS and UPS remain deterministic fallbacks while FedEx can now use the live API.
     rates.push(await this.fetchUSPS(address, pkg, insurancePremium));
-    
-    // UPS Integration
     rates.push(await this.fetchUPS(address, pkg, insurancePremium));
+    rates.push(...await this.fetchFedEx(address, pkg, insurancePremium));
 
-    // FedEx Integration
-    rates.push(await this.fetchFedEx(address, pkg, insurancePremium));
+    return rates.sort((left, right) => {
+      if (left.price !== right.price) {
+        return left.price - right.price;
+      }
 
-    return rates;
+      return left.serviceName.localeCompare(right.serviceName);
+    });
   }
 
   private static async fetchUSPS(address: ShippingAddress, pkg: PackageDetails, insurance: number): Promise<ShippingRate> {
@@ -62,16 +71,7 @@ export class ShippingEngine {
     };
   }
 
-  private static async fetchFedEx(address: ShippingAddress, pkg: PackageDetails, insurance: number): Promise<ShippingRate> {
-    // Placeholder for FedEx Rates API call
-    return {
-      carrier: 'fedex',
-      serviceName: 'FedEx Priority Overnight (Signature Req.)',
-      price: 62.00 + insurance,
-      currency: 'USD',
-      estimatedDays: 1,
-      insuranceIncluded: true,
-      insuranceValue: pkg.value
-    };
+  private static async fetchFedEx(address: ShippingAddress, pkg: PackageDetails, insurance: number): Promise<ShippingRate[]> {
+    return getFedExRates(address || DEFAULT_ORIGIN, pkg, insurance);
   }
 }

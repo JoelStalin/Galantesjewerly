@@ -60,7 +60,7 @@ const dbFile = path.join(dataDir, 'cms.json');
 const INITIAL_DATA: DBData = {
   settings: {
     favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
-    logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
+    logo_url: '/assets/branding/logo-transparent.png',
     brand_name: "Galante's Jewelry",
     brand_tagline: 'By The Sea',
     site_title: "Galante's Jewelry by the Sea ",
@@ -155,58 +155,58 @@ const INITIAL_DATA: DBData = {
   ]
 };
 
+function sanitizeLogoUrl(logoUrl?: string | null) {
+  const trimmedLogoUrl = logoUrl?.trim();
+  if (!trimmedLogoUrl || /photoroom|error/i.test(trimmedLogoUrl)) {
+    return INITIAL_DATA.settings.logo_url;
+  }
+  return trimmedLogoUrl;
+}
+
 let memCache: DBData | null = null;
 let memCacheMtimeMs: number | null = null;
 let initPromise: Promise<void> | null = null;
+
+function hydrateCmsData(parsed: Partial<DBData>) {
+  let needsUpdate = false;
+
+  if (!parsed.settings) {
+    parsed.settings = INITIAL_DATA.settings;
+    needsUpdate = true;
+  } else {
+    parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
+  }
+
+  if (!parsed.sections) {
+    parsed.sections = INITIAL_DATA.sections;
+    needsUpdate = true;
+  }
+
+  if (!parsed.featured_items) {
+    parsed.featured_items = INITIAL_DATA.featured_items;
+    parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
+    needsUpdate = true;
+  }
+
+  return {
+    data: {
+      settings: parsed.settings ?? INITIAL_DATA.settings,
+      sections: parsed.sections ?? INITIAL_DATA.sections,
+      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
+    },
+    needsUpdate,
+  };
+}
 
 async function performInit() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
   } catch {}
 
-  const odooSnapshot = await loadCmsSnapshotFromOdoo();
-  if (odooSnapshot) {
-    const hydratedData: DBData = {
-      settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
-      sections: odooSnapshot.sections,
-      featured_items: odooSnapshot.featured_items,
-    };
-
-    await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
-    memCache = hydratedData;
-    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
-    return;
-  }
-
   try {
     const fileContent = await fs.readFile(dbFile, 'utf-8');
     const parsed = JSON.parse(fileContent) as Partial<DBData>;
-
-    // Migration logic moved here to run only once per process
-    let needsUpdate = false;
-    if (!parsed.settings) {
-      parsed.settings = INITIAL_DATA.settings;
-      needsUpdate = true;
-    } else {
-      parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
-    }
-
-    if (!parsed.sections) {
-      parsed.sections = INITIAL_DATA.sections;
-      needsUpdate = true;
-    }
-
-    if (!parsed.featured_items) {
-      parsed.featured_items = INITIAL_DATA.featured_items;
-      parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
-      needsUpdate = true;
-    }
-
-    const hydratedData: DBData = {
-      settings: parsed.settings ?? INITIAL_DATA.settings,
-      sections: parsed.sections ?? INITIAL_DATA.sections,
-      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
-    };
+    const { data: hydratedData, needsUpdate } = hydrateCmsData(parsed);
 
     if (needsUpdate) {
       await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
@@ -214,8 +214,17 @@ async function performInit() {
     memCache = hydratedData;
     memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   } catch {
-    await fs.writeFile(dbFile, JSON.stringify(INITIAL_DATA, null, 2), 'utf-8');
-    memCache = INITIAL_DATA;
+    const odooSnapshot = await loadCmsSnapshotFromOdoo();
+    const fallbackData: DBData = odooSnapshot
+      ? {
+          settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
+          sections: odooSnapshot.sections,
+          featured_items: odooSnapshot.featured_items,
+        }
+      : INITIAL_DATA;
+
+    await fs.writeFile(dbFile, JSON.stringify(fallbackData, null, 2), 'utf-8');
+    memCache = fallbackData;
     memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
   }
 }
@@ -273,7 +282,11 @@ async function cleanupRemovedManagedImages(previousUrls: string[], currentData: 
 export async function getSettings(): Promise<SiteSettings> {
   try {
     const data = await readDB();
-    return { ...INITIAL_DATA.settings, ...data.settings };
+    return {
+      ...INITIAL_DATA.settings,
+      ...data.settings,
+      logo_url: sanitizeLogoUrl(data.settings?.logo_url),
+    };
   } catch {
     return INITIAL_DATA.settings;
   }
@@ -282,7 +295,11 @@ export async function getSettings(): Promise<SiteSettings> {
 export async function updateSettings(updates: Partial<SiteSettings>): Promise<SiteSettings> {
   const data = await readDB();
   const previousUrls = [data.settings?.favicon_url, data.settings?.logo_url].filter((value): value is string => Boolean(value));
-  data.settings = { ...data.settings, ...updates };
+  data.settings = {
+    ...data.settings,
+    ...updates,
+    logo_url: sanitizeLogoUrl(updates.logo_url ?? data.settings?.logo_url),
+  };
   await syncCmsSnapshotToOdoo(data);
   await writeDB(data);
   await cleanupRemovedManagedImages(previousUrls, data);

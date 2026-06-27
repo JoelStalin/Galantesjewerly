@@ -44,17 +44,16 @@ class ProductAPIController(http.Controller):
 
     def _serialize_product(self, product, base_url):
         """Build the customer-facing product payload for the frontend."""
+        db = request.env.cr.dbname
+        
+        # Always provide the primary image URL - Odoo handles the fallback to placeholder
+        image_url = f"{base_url}/web/image/product.template/{product.id}/image_1920?db={db}"
+
+        # Gallery images
         gallery = []
         for img in product.gallery_ids:
-            if img.image:
-                gallery.append(
-                    f"{base_url}/web/image/galantes.product.gallery/{img.id}/image"
-                )
-
-        image_url = None
-        if product.image_1920:
-            image_url = (
-                f"{base_url}/web/image/product.template/{product.id}/image_1920"
+            gallery.append(
+                f"{base_url}/web/image/galantes.product.gallery/{img.id}/image?db={db}"
             )
 
         # Storefront copy with fallback chain – never expose internal ERP notes
