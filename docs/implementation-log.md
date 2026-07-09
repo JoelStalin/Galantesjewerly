@@ -370,3 +370,121 @@ None. Nginx configuration is static; Docker Compose is buildable.
 
 ### Next Step
 Critical: Add Odoo API routes to expose `/api/products` endpoint, which unblocks shop pages from loading real product data.
+
+---
+
+## Session 4 - Product Gallery Enrichment
+
+### Goal
+Expose Odoo product gallery metadata end-to-end and render a richer product detail gallery on the storefront without breaking the existing `gallery` contract.
+
+### Actions Taken
+1. **Extended Odoo gallery model**
+   - Added `name` for internal description.
+   - Added `active` to hide images without deleting them.
+   - Tightened ordering with `_order = 'sequence, id'`.
+
+2. **Improved Odoo product serializer**
+   - Added a helper that sorts gallery images by `sequence, id`.
+   - Filters inactive gallery records when `active` exists.
+   - Emits both `gallery` and enriched `galleryImages` payloads.
+   - Fixed image URL DB handling so URLs remain stable in multi-db deployments.
+
+3. **Upgraded storefront contract and client**
+   - Added `ProductGalleryImage` / `galleryImages` to the TypeScript contract.
+   - Updated the Odoo client type surface to match the API response.
+   - Added a reusable gallery builder utility for the PDP.
+
+4. **Refined storefront gallery UI**
+   - Product detail gallery now supports metadata-aware thumbnails.
+   - Preserves compatibility with legacy `gallery` arrays.
+   - Page passes `galleryImages` through to the gallery component.
+
+5. **Improved Odoo form UX**
+   - Added gallery tab fields for `name`, `active`, `sequence`, and `alt_text`.
+   - Made the standalone gallery list more operator-friendly.
+
+6. **Added tests**
+   - Python unit coverage for gallery ordering/filtering on the Odoo serializer.
+   - Vitest coverage for the gallery builder utility.
+
+### Files Changed
+- `odoo/addons/galantes_jewelry/models/product_gallery.py`
+- `odoo/addons/galantes_jewelry/views/product_gallery_views.xml`
+- `odoo/addons/galantes_jewelry/views/product_template_views.xml`
+- `odoo/addons/galantes_jewelry/controllers/product_api.py`
+- `Galantesjewelry/integration-contracts/shop-product.v1.ts`
+- `Galantesjewelry/lib/odoo/client.ts`
+- `Galantesjewelry/lib/products/build-product-gallery.ts`
+- `Galantesjewelry/components/shop/ProductGallery.tsx`
+- `Galantesjewelry/app/shop/[slug]/page.tsx`
+- `tests/unit/test_product_api.py`
+- `tests/unit/lib/build-product-gallery.test.ts`
+
+### Outcome
+- Odoo now has a richer, operator-facing gallery model and form.
+- API payloads carry ordered, metadata-rich gallery data.
+- Storefront gallery rendering is compatible with both old and new data shapes.
+- Backend Odoo serializer tests passed locally.
+
+### Verification
+- Targeted Python tests passed:
+  - `test_serialize_product_defaults_to_other_when_uncategorized`
+  - `test_serialize_product_includes_sorted_gallery_images`
+
+### Notes / Risks
+- Full local `npm run build` and `vitest` are not reliable in this workspace layout because the app root is nested differently than the package root.
+- The production VM should be used as the final runtime verification target for the Next.js side.
+
+---
+
+## Session 5 - Odoo XML-RPC Publication Transport
+
+### What Changed
+- Added a transport-aware Odoo client that supports both JSON-2 and XML-RPC.
+- Added a minimal Python XML-RPC bridge used by the product publication workflow.
+- Added regression coverage for the XML-RPC path and preserved the JSON-2 test suite.
+
+### Why
+- Production Odoo authentication was working through XML-RPC, but the publication workflow could only talk JSON-2.
+- That left the product sync workflow unable to run against the real production database without an API key.
+
+### Verification
+- Targeted Vitest passed.
+- Python bridge compiled successfully.
+- Live read-only Odoo probe succeeded through the new client transport.
+- The Drive publication workflow dry-run still rejected the timestamp-only sample cluster instead of inventing a product name.
+- The workflow contract test passed.
+- `npm run build` at the package root still fails because the Next app source lives in the nested `Galantesjewelry/` directory, not the package root.
+- Gemini classification on the local sample fixture produced `18K Gold Pave Knot Ring` with `0.95` confidence and cleared `requiresReview`.
+
+### Outcome
+- The repo now has a working, production-safe transport path for the Google Drive product publication workflow.
+
+---
+
+## Session 6 - Production-Safe Image Publication Hardening
+
+### What Changed
+- Added deterministic Odoo image fallback payloads for product and gallery image routes.
+- Updated frontend image-route expectations so missing Odoo product images return a stable placeholder instead of 404.
+- Hardened `scripts/gdrive-publish-products.mjs` so existing `galantes.product.gallery` rows are archived with `active=false` instead of deleted with `unlink`.
+- Added regression coverage proving the Drive publication script does not delete existing Odoo gallery images.
+- Logged DEC-002 to make image preservation mandatory for Drive publication.
+
+### Verification
+- `npx vitest run tests/unit/automation/google-drive-product-publication-workflow.test.ts tests/unit/app/api/product-image-route.test.ts tests/unit/lib/product-image.test.ts tests/unit/lib/gdrive-product-import.test.ts`
+- `python tests\unit\test_product_api.py`
+- `node --check scripts\gdrive-publish-products.mjs`
+- `node --check scripts\backfill-managed-images-to-odoo.mjs`
+- `bash -n scripts/backup/predeploy-backup.sh scripts/production/postdeploy-validate.sh scripts/gcp/08-backfill-managed-images.sh`
+- YAML parse check for `.github/workflows/*.yml`
+
+### Outcome
+- Product image routes now have a deterministic no-broken-image fallback.
+- Drive publication preserves prior Odoo gallery image rows instead of deleting them.
+- No production deployment, GCP command, Docker command, or Cloudflare tunnel operation was executed.
+
+### Notes / Risks
+- Full `npm run ci:test` still has unrelated workspace failures in legacy unit tests outside this image-publication scope.
+- Any production run must go through GitHub Actions with the required backup gate.

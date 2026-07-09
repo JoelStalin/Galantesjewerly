@@ -677,6 +677,40 @@ export const OdooService = {
     }
   },
 
+  /**
+   * Fetch the primary product image as base64 for the storefront image proxy.
+   */
+  async getProductImage(templateId: number): Promise<string | null> {
+    if (!Number.isSafeInteger(templateId) || templateId <= 0) {
+      return null;
+    }
+
+    try {
+      const products = await client.call('product.template', 'search_read', {
+        domain: [['id', '=', templateId]],
+        fields: ['image_1920', 'image_1024', 'image_512'],
+        limit: 1,
+      }) as Array<Record<string, unknown>>;
+
+      const product = products?.[0];
+      if (!product) {
+        return null;
+      }
+
+      for (const field of ['image_1920', 'image_1024', 'image_512']) {
+        const value = product[field];
+        if (typeof value === 'string' && value.length > 0) {
+          return value;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Odoo Product Image Fetch Error:', error);
+      return null;
+    }
+  },
+
   mapOrderState(state: string, invoiceStatus: string): string {
     const states: Record<string, string> = {
       'draft': 'Quotation',

@@ -28,3 +28,26 @@
   - ✗ Requires Odoo instance (WS-B dependency) before shop can launch
 
 - **Supersedes**: None
+
+## DEC-002 — Product Image Preservation During Drive Publication
+
+- **Date**: 2026-07-09
+- **Status**: accepted
+- **Context**:
+  - The Google Drive publication workflow imports product photos into Odoo.
+  - Existing production rules require that no product image, gallery, or media record be lost during inventory cleanup or synchronization.
+  - Replacing a gallery by deleting existing rows creates avoidable data-loss risk.
+
+- **Decision**:
+  Drive publication must not call `unlink` on `galantes.product.gallery` records.
+  - Existing gallery rows are archived with `active = false`.
+  - Newly published Drive photos are created as new gallery rows.
+  - Odoo API serializers expose only active gallery rows to storefront clients.
+
+- **Consequences**:
+  - ✓ No historical gallery image is deleted by the importer.
+  - ✓ Storefront remains clean because inactive rows are filtered out.
+  - ✓ Operators can recover or audit older imported images.
+  - ✗ Storage usage can grow until an explicitly approved retention policy is added.
+
+- **Supersedes**: None

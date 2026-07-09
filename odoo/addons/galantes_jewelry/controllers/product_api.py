@@ -21,10 +21,16 @@ which breaks lib/odoo/client.ts that reads response.data directly.
 import re
 import json
 import logging
+import base64
 from odoo import http
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
+
+DEFAULT_CATEGORY_NAME = 'Other'
+DEFAULT_CATEGORY_SLUG = 'other'
+DEFAULT_CATEGORY_ID = 0
+FALLBACK_IMAGE_SVG = b'''<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-labelledby="title desc"><title id="title">Galante's Jewelry product image placeholder</title><desc id="desc">Fallback image used when a product photo is unavailable.</desc><rect width="1200" height="1200" fill="#f7f1e8"/><circle cx="600" cy="520" r="210" fill="none" stroke="#b88a44" stroke-width="22"/><path d="M470 520h260M600 390v260" stroke="#b88a44" stroke-width="20" stroke-linecap="round"/><text x="600" y="820" text-anchor="middle" font-family="Georgia, serif" font-size="72" fill="#2f2a24">Galante's Jewelry</text><text x="600" y="895" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#756856">Image coming soon</text></svg>'''
 
 
 class ProductAPIController(http.Controller):
@@ -35,23 +41,94 @@ class ProductAPIController(http.Controller):
     def _resolve_base_url(self):
         base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
         if base_url:
-            return base_url.rstrip('/')
-        return request.httprequest.host_url.rstrip('/')
+            base_url = base_url.rstrip('/')
+        else:
+            base_url = request.httprequest.host_url.rstrip('/')
+
+        forwarded_proto = request.httprequest.headers.get('X-Forwarded-Proto') if getattr(request.httprequest, 'headers', None) else None
+        if forwarded_proto and base_url.startswith('http://'):
+            base_url = f"{forwarded_proto}://{base_url.split('://', 1)[1]}"
+
+        if base_url.startswith('http://') and base_url.endswith('.galantesjewelry.com'):
+            base_url = f"https://{base_url.split('://', 1)[1]}"
+
+        return base_url
+
+    def _resolve_db_name(self):
+        db_name = getattr(getattr(request, 'session', None), 'db', None)
+        if db_name:
+            return db_name
+
+        env_db = getattr(getattr(request.env, 'cr', None), 'dbname', None)
+        if env_db:
+            return env_db
+
+        return request.env['ir.config_parameter'].sudo().get_param('web.database') or ''
+
+    def _with_db_param(self, url, db_name):
+        if not db_name:
+            return url
+        separator = '&' if '?' in url else '?'
+        return f"{url}{separator}db={db_name}"
+
+    def _detect_mimetype(self, content):
+        if content.startswith(b'\xff\xd8\xff'):
+            return 'image/jpeg'
+        if content.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'image/png'
+        if content.startswith(b'GIF87a') or content.startswith(b'GIF89a'):
+            return 'image/gif'
+        if len(content) > 12 and content[4:8] == b'ftyp' and content[8:12] in {b'heic', b'heix', b'hevc', b'hevx', b'mif1', b'msf1'}:
+            return 'image/heic'
+        if len(content) > 12 and content[8:12] == b'WEBP':
+            return 'image/webp'
+        return 'application/octet-stream'
+
+    def _fallback_image_payload(self):
+        return {
+            'content': FALLBACK_IMAGE_SVG,
+            'mimetype': 'image/svg+xml; charset=utf-8',
+        }
+
+    def _get_gallery_records(self, product):
+        gallery = product.gallery_ids
+
+        records = [img for img in gallery if getattr(img, 'active', True)]
+        return sorted(
+            records,
+            key=lambda img: (
+                getattr(img, 'sequence', 0) or 0,
+                getattr(img, 'id', 0) or 0,
+            ),
+        )
+
+    def _serialize_gallery(self, product, base_url, db_name):
+        gallery = []
+        gallery_images = []
+
+        for img in self._get_gallery_records(product):
+            url = self._with_db_param(
+                f"{base_url}/api/products/gallery-image/{img.id}",
+                db_name,
+            )
+            gallery.append(url)
+            gallery_images.append({
+                'id': img.id,
+                'url': url,
+                'altText': img.alt_text or product.name or '',
+                'sequence': img.sequence or 0,
+            })
+
+        return gallery, gallery_images
 
     def _serialize_product(self, product, base_url):
         """Build the customer-facing product payload for the frontend."""
-        gallery = []
-        for img in product.gallery_ids:
-            if img.image:
-                gallery.append(
-                    f"{base_url}/web/image/galantes.product.gallery/{img.id}/image"
-                )
-
-        image_url = None
-        if product.image_1920:
-            image_url = (
-                f"{base_url}/web/image/product.template/{product.id}/image_1920"
-            )
+        db_name = self._resolve_db_name()
+        image_url = self._with_db_param(
+            f"{base_url}/api/products/image/{product.id}",
+            db_name,
+        )
+        gallery, gallery_images = self._serialize_gallery(product, base_url, db_name)
 
         # Storefront copy with fallback chain – never expose internal ERP notes
         short_desc = (
@@ -80,48 +157,62 @@ class ProductAPIController(http.Controller):
             'availability': product.availability_status,
             'imageUrl': image_url,
             'gallery': gallery,
+            'galleryImages': gallery_images,
             'sku': product.default_code or '',
             'material': product.get_material_display(),
             'materialCode': product.material or '',
-            'category': product.categ_id.name if product.categ_id else '',
-            'categoryId': product.categ_id.id if product.categ_id else None,
+            'category': product.categ_id.name if product.categ_id else DEFAULT_CATEGORY_NAME,
+            'categoryId': product.categ_id.id if product.categ_id else DEFAULT_CATEGORY_ID,
             'buyUrl': product.buy_url,
             'publicUrl': product.public_url,
             'isFeatured': product.is_featured,
         }
 
-    def _get_best_seller_products(self, Product, limit):
-        """Return published products ordered by confirmed sales volume."""
-        if limit <= 0:
-            return Product.browse([])
+    def _load_product_image_payload(self, template_id):
+        product = request.env['product.template'].sudo().browse(template_id)
+        if not product.exists():
+            return None
 
-        SaleOrderLine = request.env['sale.order.line'].sudo()
-        groups = SaleOrderLine.read_group(
-            domain=[
-                ('order_id.state', 'in', ['sale', 'done']),
-                ('product_template_id', '!=', False),
-                ('product_template_id.available_on_website', '=', True),
-            ],
-            fields=['product_template_id', 'product_uom_qty:sum'],
-            groupby=['product_template_id'],
-            lazy=False,
-        )
+        Attachment = request.env['ir.attachment'].sudo()
+        attachment = Attachment.search([
+            ('res_model', '=', 'product.template'),
+            ('res_id', '=', product.id),
+            ('name', 'in', ['image_1920', 'image_1024', 'image_512', 'image_256', 'image_128']),
+            ('type', '=', 'binary'),
+        ], order='file_size desc, id asc', limit=1)
 
-        sorted_groups = sorted(
-            groups,
-            key=lambda row: row.get('product_uom_qty', 0),
-            reverse=True,
-        )
+        if attachment and attachment.datas:
+            return {
+                'content': base64.b64decode(attachment.datas),
+                'mimetype': attachment.mimetype or 'image/png',
+            }
 
-        product_ids = []
-        for row in sorted_groups:
-            product_ref = row.get('product_template_id')
-            if product_ref and product_ref[0] not in product_ids:
-                product_ids.append(product_ref[0])
-            if len(product_ids) >= limit:
-                break
+        image_fields = ['image_1920', 'image_1024', 'image_512', 'image_256', 'image_128']
+        for field_name in image_fields:
+            value = getattr(product, field_name, False)
+            if value:
+                return {
+                    'content': base64.b64decode(value),
+                    'mimetype': 'image/png',
+                }
 
-        return Product.browse(product_ids).exists()
+        return None
+
+    def _load_gallery_image_payload(self, gallery_id):
+        gallery = request.env['galantes.product.gallery'].sudo().browse(gallery_id)
+        if not gallery.exists():
+            return None
+
+        image_data = getattr(gallery, 'image', None)
+        if not image_data:
+            return None
+
+        content = base64.b64decode(image_data)
+        mimetype = self._detect_mimetype(content)
+        return {
+            'content': content,
+            'mimetype': mimetype,
+        }
 
     # ── Sort mapping ──────────────────────────────────────────────────────────
 
@@ -180,7 +271,11 @@ class ProductAPIController(http.Controller):
                 ]
 
             if category:
-                domain.append(('categ_id.name', 'ilike', category))
+                normalized_category = str(category).strip().lower()
+                if normalized_category == DEFAULT_CATEGORY_SLUG:
+                    domain.append(('categ_id', '=', False))
+                else:
+                    domain.append(('categ_id.name', 'ilike', category))
             if material:
                 domain.append(('material', '=', material))
             if min_price:
@@ -258,55 +353,46 @@ class ProductAPIController(http.Controller):
                 'data': [],
             }, status=500)
 
-    @http.route('/api/products/collections', auth='public', methods=['GET'], type='http', csrf=False)
-    def get_collection_products(self, limit=12, **kwargs):
-        """Collection listing: best sellers first, then featured favorites."""
+    @http.route('/api/products/image/<int:template_id>', auth='public', methods=['GET'], type='http', csrf=False)
+    def get_product_image(self, template_id, **kwargs):
         try:
-            limit = min(48, max(1, int(limit)))
-            Product = request.env['product.template'].sudo()
-            base_url = self._resolve_base_url()
+            payload = self._load_product_image_payload(template_id)
+            if not payload:
+                payload = self._fallback_image_payload()
 
-            best_seller_limit = max(1, limit // 2)
-            best_sellers = self._get_best_seller_products(Product, best_seller_limit)
-            used_ids = set(best_sellers.ids)
-
-            featured_limit = max(0, limit - len(best_sellers))
-            featured = Product.search(
-                [
-                    ('available_on_website', '=', True),
-                    ('is_featured', '=', True),
-                    ('id', 'not in', list(used_ids)),
+            return request.make_response(
+                payload['content'],
+                headers=[
+                    ('Content-Type', payload['mimetype']),
+                    ('Cache-Control', 'public, max-age=86400, stale-while-revalidate=43200'),
                 ],
-                limit=featured_limit,
-                order='sequence asc, write_date desc',
             )
-            used_ids.update(featured.ids)
-
-            filler_limit = max(0, limit - len(best_sellers) - len(featured))
-            filler = Product.browse([])
-            if filler_limit:
-                filler = Product.search(
-                    [
-                        ('available_on_website', '=', True),
-                        ('id', 'not in', list(used_ids)),
-                    ],
-                    limit=filler_limit,
-                    order='write_date desc',
-                )
-
-            ordered_ids = best_sellers.ids + featured.ids + filler.ids
-            products = Product.browse(ordered_ids).exists()
-
-            return request.make_json_response({
-                'success': True,
-                'data': [self._serialize_product(p, base_url) for p in products[:limit]],
-            })
         except Exception as e:
-            _logger.exception('Error in get_collection_products')
+            _logger.exception('Error in get_product_image')
             return request.make_json_response({
                 'success': False,
                 'error': str(e),
-                'data': [],
+            }, status=500)
+
+    @http.route('/api/products/gallery-image/<int:gallery_id>', auth='public', methods=['GET'], type='http', csrf=False)
+    def get_gallery_image(self, gallery_id, **kwargs):
+        try:
+            payload = self._load_gallery_image_payload(gallery_id)
+            if not payload:
+                payload = self._fallback_image_payload()
+
+            return request.make_response(
+                payload['content'],
+                headers=[
+                    ('Content-Type', payload['mimetype']),
+                    ('Cache-Control', 'public, max-age=86400, stale-while-revalidate=43200'),
+                ],
+            )
+        except Exception as e:
+            _logger.exception('Error in get_gallery_image')
+            return request.make_json_response({
+                'success': False,
+                'error': str(e),
             }, status=500)
 
     @http.route(
@@ -429,12 +515,12 @@ class ProductAPIController(http.Controller):
 
             published = Product.search([('available_on_website', '=', True)])
             counts = {}
+            uncategorized_count = 0
             for p in published:
                 if p.categ_id:
                     counts[p.categ_id.id] = counts.get(p.categ_id.id, 0) + 1
-
-            if not counts:
-                return request.make_json_response({'success': True, 'data': []})
+                else:
+                    uncategorized_count += 1
 
             categories = Category.search([('id', 'in', list(counts.keys()))])
             data = []
@@ -447,6 +533,17 @@ class ProductAPIController(http.Controller):
                     'count': counts.get(cat.id, 0),
                     'parentId': cat.parent_id.id if cat.parent_id else None,
                 })
+
+            if uncategorized_count > 0:
+                data.append({
+                    'id': DEFAULT_CATEGORY_ID,
+                    'name': DEFAULT_CATEGORY_NAME,
+                    'slug': DEFAULT_CATEGORY_SLUG,
+                    'count': uncategorized_count,
+                    'parentId': None,
+                })
+
+            data = sorted(data, key=lambda item: item['name'].lower())
 
             return request.make_json_response({'success': True, 'data': data})
 

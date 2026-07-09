@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+*.log
+.env*
+artifacts/
+tmp/

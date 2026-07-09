@@ -6,11 +6,12 @@
 - **CURRENT_TASK**: All core tasks done. Ready for deployment with Odoo backend running.
 - **STATUS**: ✅ S0–S2, S4, S0-E, S5-E2E COMPLETE | S3 OPTIONAL (Meta features) | S5-SSL OPTIONAL
 - **LAST_COMPLETED**: Shop E2E tests + TypeScript validation + deployment checklist
-- **NEXT_TASK**: Deploy with `docker-compose -f docker-compose.production.yml up -d`
+- **NEXT_TASK**: Open PR / GitHub Actions validation for Drive publication and image fallback hardening before any GCP production deployment
 - **BLOCKERS**: None
 
 ## Changes
 - **DECISIONS**: DEC-001 (Odoo native checkout)
+  - DEC-002 (Drive publication archives old gallery images instead of deleting them)
 - **FILES_CREATED**:
   - docs/* (13 files: S0 8 + S2 1 + S4 2 + S0-E 2)
   - odoo/* (S1: custom addon + config + Dockerfile + docker-compose + README)
@@ -27,7 +28,8 @@
   - tests/playwright/shop-e2e.spec.ts (S5: full shop E2E flow)
   - tests/functional/test_sales_flow.py (S5: expanded functional tests)
 - **FILES_MODIFIED**:
-  - odoo/addons/galantes_jewelry/controllers/product_api.py (S5: added /api/products/featured, normalized URLs)
+  - odoo/addons/galantes_jewelry/controllers/product_api.py (S5: added /api/products/featured, normalized URLs; 2026-07-09: deterministic image fallback payloads)
+  - scripts/gdrive-publish-products.mjs (2026-07-09: archive existing gallery rows with active=false instead of unlink/delete)
   - app/layout.tsx (S2: shop button added)
   - app/collections/page.tsx (S2: wired to Odoo featured)
   - app/page.tsx (S2: homepage featured section)

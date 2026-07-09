@@ -143,6 +143,35 @@ function normalizeProductImages(product: ShopProduct): ShopProduct {
   };
 }
 
+function canUseFallbackProducts(): boolean {
+  if (process.env.GALANTES_ALLOW_FALLBACK_PRODUCTS === '1') {
+    return true;
+  }
+
+  if (process.env.GALANTES_ALLOW_FALLBACK_PRODUCTS === '0') {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== 'production';
+}
+
+function emptyProductPage(params: Record<string, string | number | boolean | null | undefined>): PaginatedResponse<ShopProduct> {
+  const page = typeof params.page === 'number' ? params.page : 1;
+  const pageSize = typeof params.page_size === 'number' ? params.page_size : 24;
+
+  return {
+    data: [],
+    pagination: {
+      page,
+      pageSize,
+      total: 0,
+      pages: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
+  };
+}
+
 type FetchResponse<T> = {
   data?: T;
   pagination?: Partial<PaginationInfo>;
@@ -213,6 +242,11 @@ class OdooClient {
       this.cache.set(cacheKey, { data: paginatedResponse, timestamp: Date.now() });
       return paginatedResponse;
     } catch (error) {
+      if (!canUseFallbackProducts()) {
+        console.error('Odoo API unreachable and fallback products are disabled.', error);
+        return emptyProductPage(params);
+      }
+
       console.warn('Odoo API unreachable, serving luxury masterpiece collection fallback.', error);
       
       const pageNum = typeof params.page === 'number' ? params.page : 1;
@@ -248,6 +282,11 @@ class OdooClient {
       this.cache.set(cacheKey, { data: normalized, timestamp: Date.now() });
       return normalized;
     } catch {
+      if (!canUseFallbackProducts()) {
+        console.warn(`Product slug ${slug} not found in Odoo and fallback products are disabled.`);
+        return null;
+      }
+
       console.warn(`Product slug ${slug} not found in Odoo, checking fallback collection...`);
       return LUXURY_FALLBACK_PRODUCTS.find(p => p.slug === slug) || null;
     }

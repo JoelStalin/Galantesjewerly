@@ -1,0 +1,159 @@
+{
+  "name": "Galantes Jewelry Google Drive Product Publication",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 260]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 440]
+    },
+    {
+      "parameters": {
+        "command": "cd C:\\Users\\yoeli\\Documents\\GetUpSoft_Workspace\\06_E_Commerce_Lux\\Galantesjewelry && node scripts/gdrive-publish-products.mjs --mode scan --folder \"{{$json.folderId}}\" --source-path \"{{$json.sourcePath}}\" --out \"{{$json.scanOut}}\""
+      },
+      "id": "scan-drive-folder",
+      "name": "Scan Drive Folder",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [560, 350]
+    },
+    {
+      "parameters": {
+        "command": "cd C:\\Users\\yoeli\\Documents\\GetUpSoft_Workspace\\06_E_Commerce_Lux\\Galantesjewelry && node scripts/gdrive-publish-products.mjs --mode build-manifest --scan-report \"{{$json.scanOut}}\" --out \"{{$json.manifestOut}}\""
+      },
+      "id": "build-manifest",
+      "name": "Build Manifest",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [820, 350]
+    },
+    {
+      "parameters": {
+        "command": "cd C:\\Users\\yoeli\\Documents\\GetUpSoft_Workspace\\06_E_Commerce_Lux\\Galantesjewelry && node scripts/gemini-classify-drive-clusters.mjs --manifest \"{{$json.manifestOut}}\" --out \"{{$json.classifiedManifestOut}}\""
+      },
+      "id": "gemini-classification",
+      "name": "Gemini Classification",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1040, 350]
+    },
+    {
+      "parameters": {
+        "command": "cd C:\\Users\\yoeli\\Documents\\GetUpSoft_Workspace\\06_E_Commerce_Lux\\Galantesjewelry && node scripts/gdrive-publish-products.mjs --mode publish --folder \"{{$json.folderId}}\" --source-path \"{{$json.sourcePath}}\" --manifest \"{{$json.classifiedManifestOut}}\" {{$json.publishArgs}} --enhance-command \"{{$json.enhancerCommand}}\""
+      },
+      "id": "publish-products",
+      "name": "Publish via Nano Banana",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1280, 350]
+    },
+    {
+      "parameters": {
+        "command": "node -e \"console.log(JSON.stringify({status:'ok', generatedAt:new Date().toISOString(), workflow:'galantes-drive-publication'}))\""
+      },
+      "id": "final-evidence",
+      "name": "Final Evidence",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1340, 350]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Scan Drive Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Scan Drive Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan Drive Folder": {
+      "main": [
+        [
+          {
+            "node": "Build Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Manifest": {
+      "main": [
+        [
+          {
+            "node": "Gemini Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Classification": {
+      "main": [
+        [
+          {
+            "node": "Publish via Nano Banana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish via Nano Banana": {
+      "main": [
+        [
+          {
+            "node": "Final Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Evidence": {
+      "main": []
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "galantes-drive-product-publication-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "galantes-drive-product-publication"
+}
