@@ -1,0 +1,54 @@
+@import "tailwindcss" source(none);
+
+@source "./";
+@source "../components";
+
+@theme {
+  --color-primary: #0f2d46;
+  --color-primary-dark: #091b2b;
+  --color-accent: #c7a35d;
+  --color-accent-light: #e6c98e;
+  --color-background: #f7f3ee;
+  --color-surface: #fffdf9;
+  --color-foreground: #141414;
+
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+:root {
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-primary);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+section {
+  position: relative;
+}

@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "description": "Configuración Cloudflare Zero Trust para Galante's Jewelry",
+    "version": "1.0",
+    "environments": {
+      "TEST": "Termux Android",
+      "PROD": "Docker Local"
+    }
+  },
+  "networks": {
+    "TEST": {
+      "tunnel_name": "galantes-test",
+      "tunnel_url": "https://one.dash.cloudflare.com/networks/tunnels",
+      "description": "Túnel para Termux Android (rama TEST)",
+      "public_hostnames": [
+        {
+          "domain": "test.galantesjewelry.com",
+          "service": "http://127.0.0.1:3000",
+          "description": "Next.js Frontend (Termux)",
+          "path": "/"
+        },
+        {
+          "domain": "test-shop.galantesjewelry.com",
+          "service": "http://127.0.0.1:8069",
+          "description": "Odoo Shop (Termux)",
+          "path": "/"
+        },
+        {
+          "domain": "test-odoo.galantesjewelry.com",
+          "service": "http://127.0.0.1:8069",
+          "description": "Odoo Backend/Admin (Termux)",
+          "path": "/"
+        }
+      ]
+    },
+    "PROD": {
+      "tunnel_name": "galantes-prod",
+      "tunnel_url": "https://one.dash.cloudflare.com/networks/tunnels",
+      "description": "Túnel para Docker Local (rama PROD)",
+      "public_hostnames": [
+        {
+          "domain": "galantesjewelry.com",
+          "service": "http://nginx:80",
+          "description": "Sitio principal - Apex domain",
+          "path": "/",
+          "dns_cname": "galantes-prod.cfargotunnel.com"
+        },
+        {
+          "domain": "www.galantesjewelry.com",
+          "service": "http://nginx:80",
+          "description": "Sitio principal - WWW subdomain",
+          "path": "/",
+          "dns_cname": "galantes-prod.cfargotunnel.com"
+        },
+        {
+          "domain": "shop.galantesjewelry.com",
+          "service": "http://nginx:80",
+          "description": "Tienda Odoo",
+          "path": "/",
+          "dns_cname": "galantes-prod.cfargotunnel.com"
+        },
+        {
+          "domain": "odoo.galantesjewelry.com",
+          "service": "http://nginx:80",
+          "description": "Panel de admin Odoo",
+          "path": "/",
+          "dns_cname": "galantes-prod.cfargotunnel.com"
+        }
+      ]
+    }
+  },
+  "security_policies": {
+    "access_policies": [
+      {
+        "domain": "odoo.galantesjewelry.com",
+        "policy": "admin_only",
+        "requires_auth": true,
+        "allowed_emails": [
+          "admin@galantesjewelry.com",
+          "ceo@galantesjewelry.com"
+        ],
+        "description": "Solo administradores pueden acceder al panel Odoo"
+      },
+      {
+        "domain": "test.galantesjewelry.com",
+        "policy": "internal_test",
+        "requires_auth": false,
+        "ip_whitelist": [
+          "0.0.0.0/0"
+        ],
+        "description": "Servidor de testing - público (pero no indexado por buscadores)"
+      },
+      {
+        "domain": "galantesjewelry.com",
+        "policy": "public",
+        "requires_auth": false,
+        "description": "Sitio público - sin restricciones"
+      },
+      {
+        "domain": "shop.galantesjewelry.com",
+        "policy": "public",
+        "requires_auth": false,
+        "description": "Tienda pública - sin restricciones"
+      }
+    ]
+  },
+  "waf_rules": {
+    "PROD": [
+      {
+        "name": "Block Bad Bots",
+        "expression": "(cf.bot_management.score < 30)",
+        "action": "challenge"
+      },
+      {
+        "name": "Rate Limit - API",
+        "expression": "(http.request.uri.path contains \"/api/\")",
+        "action": "rate_limit",
+        "threshold": 100,
+        "period": 60
+      },
+      {
+        "name": "Block SQL Injection",
+        "expression": "(cf.threat_score > 50)",
+        "action": "log"
+      }
+    ]
+  },
+  "analytics": {
+    "enable_bot_management": true,
+    "enable_http_flood_protection": true,
+    "enable_origin_error_page": true,
+    "log_push_enabled": true
+  },
+  "caching": {
+    "rules": [
+      {
+        "path": "/api/*",
+        "cache_ttl": 0,
+        "description": "No cachear API responses"
+      },
+      {
+        "path": "/_next/static/*",
+        "cache_ttl": 86400,
+        "description": "Cachear assets estáticos 24h"
+      },
+      {
+        "path": "/web/static/*",
+        "cache_ttl": 86400,
+        "description": "Cachear Odoo static assets 24h"
+      },
+      {
+        "path": "/web/image/*",
+        "cache_ttl": 2592000,
+        "description": "Cachear imágenes 30 días"
+      }
+    ]
+  },
+  "dns_records": {
+    "note": "Si usas Cloudflare Tunnel, estos registros son OPCIONALES (Tunnel maneja el routing)",
+    "optional_cnames": [
+      {
+        "name": "galantesjewelry.com",
+        "type": "CNAME",
+        "content": "galantes-prod.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "www",
+        "type": "CNAME",
+        "content": "galantes-prod.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "shop",
+        "type": "CNAME",
+        "content": "galantes-prod.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "odoo",
+        "type": "CNAME",
+        "content": "galantes-prod.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "test",
+        "type": "CNAME",
+        "content": "galantes-test.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "test-shop",
+        "type": "CNAME",
+        "content": "galantes-test.cfargotunnel.com",
+        "proxied": true
+      },
+      {
+        "name": "test-odoo",
+        "type": "CNAME",
+        "content": "galantes-test.cfargotunnel.com",
+        "proxied": true
+      }
+    ]
+  },
+  "ssl_tls": {
+    "minimum_tls_version": "1.2",
+    "opportunistic_encryption": true,
+    "universal_ssl": true,
+    "ssl_mode": "flexible",
+    "note": "Cloudflare proporciona SSL/TLS automático para todos los dominios"
+  },
+  "deployment_steps": {
+    "1_prerequisites": [
+      "Nameservers de Cloudflare configurados en registrador de dominios",
+      ".env.prod completado con CF_API_TOKEN, CF_ACCOUNT_ID, CF_ZONE_ID",
+      "Acceso a Cloudflare Zero Trust Dashboard"
+    ],
+    "2_create_tunnels": [
+      "Dashboard → Zero Trust → Networks → Tunnels → Create a tunnel",
+      "Crear túnel 'galantes-test' (salvar token en CF_TUNNEL_TOKEN_TEST)",
+      "Crear túnel 'galantes-prod' (salvar token en CF_TUNNEL_TOKEN_PROD)"
+    ],
+    "3_configure_public_hostnames": [
+      "Para cada túnel, ir a Public Hostname tab",
+      "Crear entradas según la configuración en este archivo"
+    ],
+    "4_start_services": [
+      "Docker (PROD): docker-compose -f docker-compose.production.yml up -d",
+      "Termux (TEST): npm run dev (con CF_TUNNEL_TOKEN_TEST)"
+    ],
+    "5_validate": [
+      "Curl o navegar a https://galantesjewelry.com",
+      "Curl o navegar a https://test.galantesjewelry.com",
+      "Verificar que ambos sirven contenido correcto"
+    ]
+  },
+  "troubleshooting": {
+    "error_1016": {
+      "cause": "Tunnel pointing to wrong IP/hostname",
+      "fix": "Verificar que Public Hostname apunta a IP correcta (127.0.0.1 para local, nginx:80 para Docker)"
+    },
+    "nxdomain": {
+      "cause": "DNS records no configurados correctamente",
+      "fix": "Crear CNAME records en Cloudflare DNS tab, o confiar en Tunnel (Public Hostnames)"
+    },
+    "connection_refused": {
+      "cause": "Servicio backend no está corriendo",
+      "fix": "Verificar que Next.js/Odoo están escuchando en los puertos correctos"
+    }
+  }
+}

@@ -1,0 +1,388 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { deleteManagedImage } from '@/lib/storage';
+import { getDataRoot } from '@/lib/runtime-paths';
+import { loadCmsSnapshotFromOdoo, syncCmsSnapshotToOdoo } from '@/lib/odoo-cms-sync';
+
+export interface PageSection {
+  id: string;
+  section_identifier: string;
+  title: string;
+  subtitle?: string;
+  content_text: string;
+  image_url: string;
+  action_link?: string;
+  action_text?: string;
+  is_active: boolean;
+}
+
+export interface SiteSettings {
+  favicon_url: string;
+  logo_url: string;
+  hero_image_url: string;
+  shop_hero_image_url: string;
+  brand_name: string;
+  brand_tagline: string;
+  site_title: string;
+  site_description: string;
+  instagram_url?: string;
+  facebook_url?: string;
+  whatsapp_number?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  contact_address?: string;
+  appointment_email?: string;
+  navigation_links: { label: string; href: string }[];
+  shipping_cities?: string[] | null;
+  restricted_shipping_cities?: string[] | null;
+}
+
+export interface FeaturedItem {
+  id: string;
+  title: string;
+  content_text: string;
+  image_url: string;
+  action_text: string;
+  action_link: string;
+  is_active: boolean;
+  order_index: number;
+}
+
+interface DBData {
+  settings: SiteSettings;
+  sections: PageSection[];
+  featured_items: FeaturedItem[];
+}
+
+const dataDir = getDataRoot();
+const dbFile = path.join(dataDir, 'cms.json');
+
+const LEGACY_IMAGE_URL_MAP: Record<string, string> = {
+  '/assets/images/section-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
+  '/assets/images/featured-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
+  '/assets/images/section-collections.png': '/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp',
+  '/assets/images/featured-nautical.png': '/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp',
+  '/assets/images/featured-repairs.png': '/api/image?id=image-1776960214904-chatgpt-image-apr-23-2026-11-59-05-am.webp',
+};
+
+const INITIAL_DATA: DBData = {
+  settings: {
+    favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
+    logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
+    brand_name: "Galante's Jewelry",
+    brand_tagline: 'By The Sea',
+    site_title: "Galante's Jewelry by the Sea ",
+    site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
+    instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
+    facebook_url: 'https://www.facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
+    whatsapp_number: '16464965879',
+    contact_email: 'concierge@galantesjewelry.com',
+    contact_phone: '(305) 555-0199',
+    contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
+    appointment_email: 'ceo@galantesjewelry.com',
+    hero_image_url: '/api/image?id=image-1776959050826-portada.webp',
+    shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
+    navigation_links: [
+      { href: '/about', label: 'Heritage' },
+      { href: '/collections', label: 'Collections' },
+      { href: '/bridal', label: 'Bridal' },
+      { href: '/repairs', label: 'Repairs' },
+      { href: '/contact', label: 'Contact' },
+    ]
+  },
+  sections: [
+    {
+      id: '1',
+      section_identifier: 'hero',
+      title: "Galante's Jewelry by the Sea",
+      content_text: "The Coastal Concierge",
+      image_url: "https://images.unsplash.com/photo-1516912481808-3406841bd33c?q=80&w=2844&auto=format&fit=crop",
+      action_text: "Book Appointment",
+      action_link: "/contact",
+      is_active: true
+    },
+    {
+      id: '2',
+      section_identifier: 'philosophy',
+      title: "Barefoot Luxury in Islamorada",
+      content_text: "We curate and craft fine nautical jewelry designed to celebrate the spirit of the Florida Keys. Whether you're marking an anniversary, planning a destination wedding, or restoring an heirloom timepiece, our concierge service ensures every detail is attended to with master craftsmanship.",
+      image_url: "",
+      is_active: true
+    },
+    {
+      id: '6',
+      section_identifier: 'review',
+      title: "Client Testimonials",
+      content_text: "\"Galante's created the most breathtaking engagement ring for my fiancé. Their attention to detail and personal concierge service made our Islamorada trip truly unforgettable.\"",
+      subtitle: "— Sarah & James, Florida",
+      image_url: "",
+      is_active: true
+    },
+    {
+      id: '7',
+      section_identifier: 'cta',
+      title: "Begin Your Story",
+      content_text: "Whether you are visiting the Florida Keys or are a local resident, we invite you to experience jewelry curation as it should be.",
+      action_text: "Schedule Your Consultation",
+      action_link: "/contact",
+      image_url: "",
+      is_active: true
+    }
+  ],
+  featured_items: [
+    {
+      id: 'f1',
+      title: "Destination Weddings",
+      content_text: "Bespoke engagement rings and wedding bands designed to capture your moment by the sea.",
+      image_url: "/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp",
+      action_text: "Discover Bridal",
+      action_link: "/bridal",
+      is_active: true,
+      order_index: 0
+    },
+    {
+      id: 'f2',
+      title: "Nautical Gold & Silver",
+      content_text: "Signature pieces honoring our coastal heritage, from mariner links to compass pendants.",
+      image_url: "/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp",
+      action_text: "View Collections",
+      action_link: "/collections",
+      is_active: true,
+      order_index: 1
+    },
+    {
+      id: 'f3',
+      title: "Master Repair",
+      content_text: "Entrust your cherished watches and heirlooms to our master jewelers for restoration.",
+      image_url: "/api/image?id=image-1776960214904-chatgpt-image-apr-23-2026-11-59-05-am.webp",
+      action_text: "Service Details",
+      action_link: "/repairs",
+      is_active: true,
+      order_index: 2
+    }
+  ]
+};
+
+let memCache: DBData | null = null;
+let memCacheMtimeMs: number | null = null;
+let initPromise: Promise<void> | null = null;
+
+function hydrateCmsData(parsed: Partial<DBData>) {
+  let needsUpdate = false;
+
+  if (!parsed.settings) {
+    parsed.settings = INITIAL_DATA.settings;
+    needsUpdate = true;
+  } else {
+    parsed.settings = { ...INITIAL_DATA.settings, ...parsed.settings };
+  }
+
+  if (!parsed.sections) {
+    parsed.sections = INITIAL_DATA.sections;
+    needsUpdate = true;
+  }
+
+  if (!parsed.featured_items) {
+    parsed.featured_items = INITIAL_DATA.featured_items;
+    parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
+    needsUpdate = true;
+  }
+
+  parsed.sections = (parsed.sections || []).map((section) => {
+    const imageUrl = LEGACY_IMAGE_URL_MAP[section.image_url] || section.image_url;
+    if (imageUrl !== section.image_url) {
+      needsUpdate = true;
+      return { ...section, image_url: imageUrl };
+    }
+    return section;
+  });
+
+  parsed.featured_items = (parsed.featured_items || []).map((item) => {
+    const imageUrl = LEGACY_IMAGE_URL_MAP[item.image_url] || item.image_url;
+    if (imageUrl !== item.image_url) {
+      needsUpdate = true;
+      return { ...item, image_url: imageUrl };
+    }
+    return item;
+  });
+
+  return {
+    data: {
+      settings: parsed.settings ?? INITIAL_DATA.settings,
+      sections: parsed.sections ?? INITIAL_DATA.sections,
+      featured_items: parsed.featured_items ?? INITIAL_DATA.featured_items,
+    },
+    needsUpdate,
+  };
+}
+
+async function performInit() {
+  try {
+    await fs.mkdir(dataDir, { recursive: true });
+  } catch {}
+
+  try {
+    const fileContent = await fs.readFile(dbFile, 'utf-8');
+    const parsed = JSON.parse(fileContent) as Partial<DBData>;
+    const { data: hydratedData, needsUpdate } = hydrateCmsData(parsed);
+
+    if (needsUpdate) {
+      await fs.writeFile(dbFile, JSON.stringify(hydratedData, null, 2), 'utf-8');
+    }
+    memCache = hydratedData;
+    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
+  } catch {
+    const odooSnapshot = await loadCmsSnapshotFromOdoo();
+    const fallbackData: DBData = odooSnapshot
+      ? {
+          settings: { ...INITIAL_DATA.settings, ...odooSnapshot.settings },
+          sections: odooSnapshot.sections,
+          featured_items: odooSnapshot.featured_items,
+        }
+      : INITIAL_DATA;
+
+    await fs.writeFile(dbFile, JSON.stringify(fallbackData, null, 2), 'utf-8');
+    memCache = fallbackData;
+    memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
+  }
+}
+
+async function initDB() {
+  if (!initPromise) {
+    initPromise = performInit();
+  }
+  return initPromise;
+}
+
+async function readDB(): Promise<DBData> {
+  await initDB();
+  const fileStats = await fs.stat(dbFile);
+
+  if (memCache && memCacheMtimeMs === fileStats.mtimeMs) {
+    return memCache;
+  }
+
+  const fileContent = await fs.readFile(dbFile, 'utf-8');
+  const parsed = JSON.parse(fileContent) as DBData;
+  memCache = parsed;
+  memCacheMtimeMs = fileStats.mtimeMs;
+  return parsed;
+}
+
+async function writeDB(data: DBData) {
+  await fs.writeFile(dbFile, JSON.stringify(data, null, 2), 'utf-8');
+  memCache = data;
+  memCacheMtimeMs = (await fs.stat(dbFile)).mtimeMs;
+}
+
+function collectReferencedImages(data: DBData) {
+  return [
+    data.settings?.favicon_url,
+    data.settings?.logo_url,
+    ...(data.sections || []).map((section) => section.image_url),
+    ...(data.featured_items || []).map((item) => item.image_url),
+  ].filter((value): value is string => Boolean(value));
+}
+
+async function cleanupRemovedManagedImages(previousUrls: string[], currentData: DBData) {
+  const remainingUrls = new Set(collectReferencedImages(currentData));
+  const removedUrls = [...new Set(previousUrls.filter((url) => Boolean(url) && !remainingUrls.has(url)))];
+
+  for (const removedUrl of removedUrls) {
+    try {
+      await deleteManagedImage(removedUrl);
+    } catch (error) {
+      console.error('[DB] Failed to cleanup managed image:', removedUrl, error);
+    }
+  }
+}
+
+export async function getSettings(): Promise<SiteSettings> {
+  try {
+    const data = await readDB();
+    return { ...INITIAL_DATA.settings, ...data.settings };
+  } catch {
+    return INITIAL_DATA.settings;
+  }
+}
+
+export async function updateSettings(updates: Partial<SiteSettings>): Promise<SiteSettings> {
+  const data = await readDB();
+  const previousUrls = [data.settings?.favicon_url, data.settings?.logo_url].filter((value): value is string => Boolean(value));
+  data.settings = { ...data.settings, ...updates };
+  await syncCmsSnapshotToOdoo(data);
+  await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
+  return data.settings;
+}
+
+export async function getAllSections(): Promise<PageSection[]> {
+  try {
+    const data = await readDB();
+    return data.sections || INITIAL_DATA.sections;
+  } catch {
+    return INITIAL_DATA.sections;
+  }
+}
+
+export async function updateSection(id: string, updates: Partial<PageSection>): Promise<PageSection | null> {
+  const data = await readDB();
+  const index = data.sections.findIndex(s => s.id === id);
+  if (index === -1) return null;
+
+  const previousUrls = [data.sections[index].image_url].filter((value): value is string => Boolean(value));
+  data.sections[index] = { ...data.sections[index], ...updates };
+  await syncCmsSnapshotToOdoo(data);
+  await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
+  return data.sections[index];
+}
+
+export async function getFeaturedItems(): Promise<FeaturedItem[]> {
+  try {
+    const data = await readDB();
+    const items = data.featured_items || INITIAL_DATA.featured_items;
+    return items.sort((a, b) => a.order_index - b.order_index);
+  } catch {
+    return INITIAL_DATA.featured_items;
+  }
+}
+
+export async function addFeaturedItem(item: Omit<FeaturedItem, 'id'>): Promise<FeaturedItem> {
+  const data = await readDB();
+  const newItem = { ...item, id: 'f_' + Date.now().toString() };
+  data.featured_items.push(newItem);
+  await syncCmsSnapshotToOdoo(data);
+  await writeDB(data);
+  return newItem;
+}
+
+export async function updateFeaturedItem(id: string, updates: Partial<FeaturedItem>): Promise<FeaturedItem | null> {
+  const data = await readDB();
+  const index = data.featured_items.findIndex(s => s.id === id);
+  if (index === -1) return null;
+
+  const previousUrls = [data.featured_items[index].image_url].filter((value): value is string => Boolean(value));
+  data.featured_items[index] = { ...data.featured_items[index], ...updates };
+  await syncCmsSnapshotToOdoo(data);
+  await writeDB(data);
+  await cleanupRemovedManagedImages(previousUrls, data);
+  return data.featured_items[index];
+}
+
+export async function deleteFeaturedItem(id: string): Promise<boolean> {
+  const data = await readDB();
+  const initialLength = data.featured_items.length;
+  const previousUrls = data.featured_items
+    .filter(s => s.id === id)
+    .map((item) => item.image_url)
+    .filter((value): value is string => Boolean(value));
+  data.featured_items = data.featured_items.filter(s => s.id !== id);
+  if (data.featured_items.length !== initialLength) {
+    await syncCmsSnapshotToOdoo(data);
+    await writeDB(data);
+    await cleanupRemovedManagedImages(previousUrls, data);
+    return true;
+  }
+  return false;
+}

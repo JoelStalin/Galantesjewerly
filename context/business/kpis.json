@@ -1,0 +1,24 @@
+{
+  "kpis": [
+    {
+      "metric": "Monthly Appointment Bookings",
+      "target": 50,
+      "type": "conversion"
+    },
+    {
+      "metric": "Local SEO Ranking (Islamorada Jewelry)",
+      "target": "Top 3",
+      "type": "visibility"
+    },
+    {
+      "metric": "Mobile Page Speed Score",
+      "target": 90,
+      "type": "performance"
+    },
+    {
+      "metric": "Customer Review Rating",
+      "target": 4.8,
+      "type": "reputation"
+    }
+  ]
+}

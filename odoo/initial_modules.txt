@@ -1,0 +1,20 @@
+# Módulos a instalar automáticamente en Odoo 19
+# Flujo completo de ventas para Galante's Jewelry (Community-friendly)
+
+# ===== CORE - IMPRESCINDIBLES =====
+account
+sale
+stock
+website
+website_sale
+product
+
+# ===== CRM & CLIENTES =====
+crm
+
+# ===== PAGOS Y ENVÍOS =====
+payment
+delivery
+
+# ===== MÓDULO CUSTOM =====
+galantes_jewelry
