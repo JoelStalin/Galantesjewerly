@@ -1,23 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  buildCartCookieAttributes,
-  buildCartCookieValue,
-  CART_COOKIE_KEY,
-  CART_STORAGE_KEY,
-  parseCartItems,
-  readCartCookie,
-  serializeCartItems,
-} from '@/lib/cart-storage';
 
 export type CartItem = {
   id: string;
-  product_id?: string | number;
   slug: string;
   name: string;
   price: number;
   quantity: number;
+  product_id?: string;
   image_url?: string;
 };
 
@@ -28,41 +19,29 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   totalCount: number;
-  hasHydrated: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [hasHydrated, setHasHydrated] = useState(false);
 
   // Load cart from localStorage on init
   useEffect(() => {
-    const savedLocalCart = localStorage.getItem(CART_STORAGE_KEY);
-    const savedCookieCart = readCartCookie(document.cookie);
-    const localItems = parseCartItems(savedLocalCart);
-    const cookieItems = parseCartItems(savedCookieCart);
-    const hydratedItems = localItems.length > 0 ? localItems : cookieItems;
-
-    if (hydratedItems.length > 0) {
-      setItems(hydratedItems);
+    const savedCart = localStorage.getItem('galantes_cart');
+    if (savedCart) {
+      try {
+        setItems(JSON.parse(savedCart));
+      } catch (e) {
+        console.error('Failed to parse cart', e);
+      }
     }
-    setHasHydrated(true);
   }, []);
 
   // Save cart to localStorage on change
   useEffect(() => {
-    if (!hasHydrated) {
-      return;
-    }
-    const serialized = serializeCartItems(items);
-    localStorage.setItem(CART_STORAGE_KEY, serialized);
-
-    if (typeof document !== 'undefined') {
-      document.cookie = `${CART_COOKIE_KEY}=${buildCartCookieValue(items)}; ${buildCartCookieAttributes()}`;
-    }
-  }, [hasHydrated, items]);
+    localStorage.setItem('galantes_cart', JSON.stringify(items));
+  }, [items]);
 
   const addItem = (newItem: CartItem) => {
     setItems((prev) => {
@@ -95,7 +74,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalCount, hasHydrated }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalCount }}>
       {children}
     </CartContext.Provider>
   );

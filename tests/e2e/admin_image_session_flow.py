@@ -25,7 +25,7 @@ from profile_runtime import get_driver
 
 BASE_URL = os.getenv('E2E_BASE_URL', 'http://127.0.0.1:3000').rstrip('/')
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CHANGE_ME_LEGACY_ADMIN_PASSWORD')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'galantes2026')
 PROFILE_NAME = os.getenv('SELENIUM_PROFILE', 'Default')
 HEADLESS = os.getenv('SELENIUM_HEADLESS', '0') == '1'
 

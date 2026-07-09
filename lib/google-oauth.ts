@@ -1,4 +1,4 @@
-import { getDecryptedGoogleIntegration, getGoogleIntegrationForEnvironment } from '@/lib/integrations';
+import { getDecryptedGoogleIntegration } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
 import { getRequestUrl } from '@/lib/google-login';
 
@@ -32,18 +32,6 @@ type GoogleTokenResponse = {
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-function readStoredSecret(
-  stored: Awaited<ReturnType<typeof getGoogleIntegrationForEnvironment>> | Awaited<ReturnType<typeof getDecryptedGoogleIntegration>>,
-  field: 'googleClientSecret' | 'refreshToken' | 'accessToken',
-) {
-  if (!('secrets' in stored) || !stored.secrets || typeof stored.secrets !== 'object') {
-    return '';
-  }
-
-  const value = stored.secrets[field];
-  return typeof value === 'string' ? value : '';
-}
-
 export function getAdminGoogleOAuthRedirectUri(request: Request) {
   return getRequestUrl('/api/admin/google/oauth/callback', request);
 }
@@ -51,21 +39,14 @@ export function getAdminGoogleOAuthRedirectUri(request: Request) {
 export async function getGoogleOAuthRuntimeConfig(
   environment: IntegrationEnvironment,
 ): Promise<GoogleOAuthRuntimeConfig> {
-  const rawStored = await getGoogleIntegrationForEnvironment(environment);
-  let stored = rawStored;
-
-  try {
-    stored = await getDecryptedGoogleIntegration(environment);
-  } catch (error) {
-    console.warn('[Google OAuth] Stored Google OAuth secrets could not be decrypted; using environment fallbacks.', error);
-  }
+  const stored = await getDecryptedGoogleIntegration(environment);
 
   return {
     environment,
     clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '',
-    clientSecret: readStoredSecret(stored, 'googleClientSecret') || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
-    refreshToken: readStoredSecret(stored, 'refreshToken') || process.env.GOOGLE_OAUTH_REFRESH_TOKEN || '',
-    accessToken: readStoredSecret(stored, 'accessToken') || '',
+    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
+    refreshToken: stored.secrets.refreshToken || process.env.GOOGLE_OAUTH_REFRESH_TOKEN || '',
+    accessToken: stored.secrets.accessToken || '',
     connectedGoogleEmail: stored.connectedGoogleEmail || '',
   };
 }

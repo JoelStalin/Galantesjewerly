@@ -10,7 +10,7 @@ Run: python -m pytest tests/functional/ -v
 Environment variables:
   E2E_BASE_URL   — server base URL (default: http://127.0.0.1:8069)
   ADMIN_USERNAME — admin user (default: admin)
-  ADMIN_PASSWORD — admin password (default: CHANGE_ME_LEGACY_ADMIN_PASSWORD)
+  ADMIN_PASSWORD — admin password (default: galantes2026)
 """
 
 import json
@@ -22,7 +22,7 @@ import urllib.request
 
 BASE_URL       = os.getenv('E2E_BASE_URL', 'http://127.0.0.1:8069').rstrip('/')
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CHANGE_ME_LEGACY_ADMIN_PASSWORD')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'galantes2026')
 TIMEOUT        = 10
 
 

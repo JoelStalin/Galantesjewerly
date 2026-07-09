@@ -26,7 +26,7 @@ from profile_runtime import get_driver
 PROFILE_NAME = os.getenv('SELENIUM_PROFILE', 'Default')
 HEADLESS = os.getenv('SELENIUM_HEADLESS', '0') == '1'
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CHANGE_ME_LEGACY_ADMIN_PASSWORD')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'galantes2026')
 START_SERVER = os.getenv('E2E_START_SERVER', '1') == '1'
 DEFAULT_PORT = int(os.getenv('E2E_APPOINTMENT_PORT', '3310'))
 

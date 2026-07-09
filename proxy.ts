@@ -4,18 +4,12 @@ import { ADMIN_COOKIE_NAME, getExpiredAdminCookieOptions, verifyToken } from '@/
 
 export default async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-current-url', `${url.pathname}${url.search}`);
-
   let { pathname } = url;
   const hostname = request.headers.get('host') || '';
-  if (hostname.startsWith('www.galantesjewelry.com')) {
-    const redirectUrl = new URL(`https://galantesjewelry.com${url.pathname}${url.search}`);
-    return NextResponse.redirect(redirectUrl);
-  }
   const isAdminSubdomain = hostname.startsWith('admin.galantesjewelry.com');
   let shouldRewrite = false;
 
+  // Logic for Subdomain Rewriting (Legacy from proxy.ts)
   if (isAdminSubdomain) {
     if (pathname === '/') {
       url.pathname = '/admin/dashboard';
@@ -32,6 +26,7 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
+  // Protection Logic
   const isAdminLoginRoute = pathname === '/admin/login';
   const isProtectedAdminRoute = pathname.startsWith('/admin') && !isAdminLoginRoute;
   const isProtectedApiRoute = pathname.startsWith('/api/admin') && !pathname.startsWith('/api/admin/auth');
@@ -66,18 +61,10 @@ export default async function proxy(request: NextRequest) {
   }
 
   if (shouldRewrite) {
-    return NextResponse.rewrite(url, {
-      request: {
-        headers: requestHeaders,
-      },
-    });
+    return NextResponse.rewrite(url);
   }
 
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  return NextResponse.next();
 }
 
 export const config = {

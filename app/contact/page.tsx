@@ -1,10 +1,12 @@
 import { getSettings } from "@/lib/db";
-import { ContactForm } from "@/components/ContactForm";
+import { SafeEmailLink } from "@/components/SafeEmailLink";
+import { ContactFormShell } from "@/components/ContactFormShell";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContactPage() {
   const settings = await getSettings();
+  const contactEmail = settings.contact_email || "concierge@galantesjewelry.com";
 
   return (
     <div className="max-w-4xl mx-auto py-24 px-6 flex flex-col items-center">
@@ -23,12 +25,12 @@ export default async function ContactPage() {
           <h3 className="text-2xl mb-4 font-serif mt-8">Direct Contact</h3>
           <p className="text-sm opacity-80 leading-relaxed">
             Phone: {settings.contact_phone || "(305) 555-0199"}<br />
-            Email: {settings.contact_email || "concierge@galantesjewelry.com"}
+            Email: <SafeEmailLink email={contactEmail} className="underline underline-offset-2" />
           </p>
         </div>
 
         <div>
-           <ContactForm />
+           <ContactFormShell />
         </div>
       </div>
     </div>

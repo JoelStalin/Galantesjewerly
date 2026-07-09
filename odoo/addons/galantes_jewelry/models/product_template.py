@@ -128,6 +128,12 @@ class GalantesProductTemplate(models.Model):
         help='Additional product images shown in the detail page gallery',
     )
 
+    gallery_ids_count = fields.Integer(
+        string='Gallery Image Count',
+        compute='_compute_gallery_ids_count',
+        help='Number of additional images linked to this product.',
+    )
+
     # ── Computed URLs ─────────────────────────────────────────────────────────
     buy_url = fields.Char(
         string='Storefront URL',
@@ -201,6 +207,11 @@ class GalantesProductTemplate(models.Model):
             url = f'{base}/shop/{slug}' if slug else base
             product.buy_url = url
             product.public_url = url
+
+    @api.depends('gallery_ids')
+    def _compute_gallery_ids_count(self):
+        for product in self:
+            product.gallery_ids_count = len(product.gallery_ids)
 
     @api.depends('qty_available', 'type', 'allow_out_of_stock_order')
     def _compute_availability(self):

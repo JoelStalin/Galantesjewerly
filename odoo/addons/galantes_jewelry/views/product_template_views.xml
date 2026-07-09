@@ -6,6 +6,19 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
+            <xpath expr="//div[contains(@class, 'oe_button_box')]" position="inside">
+                <button type="action"
+                        name="%(galantes_jewelry.product_gallery_upload_wizard_action)d"
+                        class="oe_stat_button"
+                        icon="fa-upload">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="gallery_ids_count" nolabel="1" readonly="1"/>
+                        </span>
+                        <span class="o_stat_text">Add photos</span>
+                    </div>
+                </button>
+            </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Storefront" name="jewelry_storefront">
                     <!-- Publication & Merchandising -->
@@ -17,6 +30,34 @@
                         <field name="availability_status" readonly="1"/>
                     </group>
 
+                    <group string="Additional Photos">
+                        <label for="gallery_ids" string="Product gallery"/>
+                        <div class="text-muted" style="margin-bottom: 8px;">
+                            Add multiple photos of the same product here. Use the button above if you prefer the full upload dialog.
+                        </div>
+                        <field name="gallery_ids">
+                            <list editable="bottom" default_order="sequence,id">
+                                <field name="sequence" widget="handle"/>
+                                <field name="active"/>
+                                <field name="image" widget="image" options="{'preview_image': 'image'}"/>
+                                <field name="name"/>
+                                <field name="alt_text"/>
+                            </list>
+                            <form string="Gallery Image">
+                                <sheet>
+                                    <group>
+                                        <field name="product_id" invisible="1"/>
+                                        <field name="image" widget="image"/>
+                                        <field name="sequence"/>
+                                        <field name="name"/>
+                                        <field name="alt_text"/>
+                                        <field name="active"/>
+                                    </group>
+                                </sheet>
+                            </form>
+                        </field>
+                    </group>
+
                     <!-- URL / SEO -->
                     <group string="URL &amp; SEO">
                         <field name="slug"
@@ -26,7 +67,7 @@
                     </group>
 
                     <!-- Storefront copy -->
-                    <group string="Storefront Copy (English only — shown to customers)">
+                    <group string="Storefront Copy (English only - shown to customers)">
                         <field name="tagline"
                                placeholder="e.g. Handcrafted in 14K gold with a timeless silhouette"
                                help="One-line value proposition shown on product cards (max ~100 chars)"/>
@@ -43,6 +84,7 @@
                                placeholder="Store in the provided jewelry box away from moisture.&#10;Complimentary gift packaging included.&#10;Free US shipping on orders over $200."
                                help="Shown in the 'Shipping &amp; Care' section on the detail page"/>
                     </group>
+
                 </page>
             </xpath>
         </field>

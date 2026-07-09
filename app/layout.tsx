@@ -6,7 +6,7 @@ import { Outfit } from 'next/font/google';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { CartProvider } from '@/context/shop/CartContext';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { ConditionalNavbar } from '@/components/ConditionalNavbar';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
 
@@ -17,55 +17,25 @@ const outfit = Outfit({
 });
 
 export const dynamic = 'force-dynamic';
-const ODOO_SETTINGS_CACHE_TTL_MS = 30 * 60 * 1000; // Increased to 30 mins
-const ODOO_SETTINGS_TIMEOUT_MS = 800; // Reduced to 800ms for faster first byte
-
-type CachedOdooSettings = {
-  value: Partial<SiteSettings>;
-  expiresAt: number;
-};
-
-let cachedOdooSettings: CachedOdooSettings | null = null;
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error(`Timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    promise
-      .then((value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      });
-  });
-}
 
 const FALLBACK_SETTINGS: SiteSettings = {
   brand_name: "Galante's Jewelry",
   brand_tagline: 'By The Sea',
-  site_title: "Galante's Jewelry by the Sea ",
-  site_description: 'Luxury jewelry boutique in Islamorada focused on bridal pieces, nautical collections, repairs, and private consultations.',
+  site_title: "Galante's Jewelry by the Sea",
+  site_description: 'Luxury jewelry boutique in Islamorada',
   favicon_url: '/favicon.ico',
-  logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
-  hero_image_url: '/api/image?id=image-1776959050826-portada.webp',
-  shop_hero_image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2844&auto=format&fit=crop',
+  logo_url: '/logo.png',
+  hero_image_url: '/hero-bg.jpg',
+  shop_hero_image_url: '/assets/images/hero.webp',
   instagram_url: 'https://www.instagram.com/galantesjewelrybythesea',
   facebook_url: 'https://www.facebook.com/people/Galantes-Jewelry-by-The-Sea/61574429843836',
   whatsapp_number: '16464965879',
-  contact_email: 'concierge@galantesjewelry.com',
-  contact_phone: '(305) 555-0199',
+  contact_phone: '(646) 496-5879',
   contact_address: '82681 Overseas Highway, Islamorada, FL 33036, United States',
-  appointment_email: 'ceo@galantesjewelry.com',
   navigation_links: [
-    { label: 'Heritage', href: '/about' },
-    { label: 'Collections', href: '/collections' },
-    { label: 'Bridal', href: '/bridal' },
-    { label: 'Repairs', href: '/repairs' },
+    { label: 'Home', href: '/' },
+    { label: 'Shop', href: '/shop' },
+    { label: 'Appointments', href: '/appointments' },
     { label: 'Contact', href: '/contact' },
   ]
 };
@@ -73,31 +43,13 @@ const FALLBACK_SETTINGS: SiteSettings = {
 async function loadSiteSettings(): Promise<SiteSettings> {
   try {
     const localSettings = await getSettings();
-    const now = Date.now();
-    let odooSettings: Partial<SiteSettings> = {};
-
-    if (cachedOdooSettings && cachedOdooSettings.expiresAt > now) {
-      odooSettings = cachedOdooSettings.value;
-    } else {
-      try {
-        odooSettings = await withTimeout(
-          OdooService.getCompanySettings(),
-          ODOO_SETTINGS_TIMEOUT_MS,
-        );
-        cachedOdooSettings = {
-          value: odooSettings,
-          expiresAt: Date.now() + ODOO_SETTINGS_CACHE_TTL_MS,
-        };
-      } catch (error) {
-        console.warn('[Layout] Odoo settings fetch timed out or failed; using local CMS data.', error instanceof Error ? error.message : error);
-      }
-    }
-
+    const odooSettings = await OdooService.getCompanySettings();
     const merged = {
       ...FALLBACK_SETTINGS, 
       ...(localSettings ?? {}),
       ...(odooSettings ?? {})
     };
+
     // Keep social buttons visible even if upstream systems return empty strings.
     return {
       ...merged,
@@ -112,16 +64,15 @@ async function loadSiteSettings(): Promise<SiteSettings> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await loadSiteSettings();
-  const brandName = settings.brand_name?.trim() || settings.site_title;
   return {
-    title: brandName,
+    title: settings.site_title,
     description: settings.site_description,
     icons: { icon: settings.favicon_url || FALLBACK_SETTINGS.favicon_url },
     openGraph: {
-      title: brandName,
+      title: settings.site_title,
       description: settings.site_description,
       url: 'https://galantesjewelry.com',
-      siteName: brandName,
+      siteName: "Galante's Jewelry",
       locale: 'en_US',
       type: 'website',
     },
@@ -131,18 +82,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const finalSettings = await loadSiteSettings();
   const cookieStore = await cookies();
-  const requestHeaders = await headers();
-  const currentUrl = requestHeaders.get('x-current-url') || '';
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
 
   return (
     <html lang="en" className={outfit.variable}>
       <head>
-        <meta name="version-id" content="v2026-04-27-hard-rebuild-001" />
+        <link rel="icon" href={finalSettings.favicon_url} sizes="any" />
       </head>
-      <body className={`${outfit.className} bg-background text-foreground flex min-h-screen flex-col`}>
+      <body className={`bg-background text-foreground flex min-h-screen flex-col font-sans`}>
         <CartProvider>
-          <ConditionalNavbar settings={finalSettings} user={user} currentUrl={currentUrl} />
+          <ConditionalNavbar settings={finalSettings} user={user} />
           <main className="flex-grow">{children}</main>
         </CartProvider>
         

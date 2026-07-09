@@ -37,6 +37,11 @@ export async function POST(request: Request) {
     const partnerId = parseInt(paymentIntent.metadata.odoo_partner_id);
     const orderId = parseInt(paymentIntent.metadata.odoo_order_id);
 
+    if (!Number.isFinite(partnerId) || !Number.isFinite(orderId)) {
+      console.error('Stripe webhook metadata is missing valid Odoo IDs.', paymentIntent.metadata);
+      return NextResponse.json({ received: true });
+    }
+
     console.log(`Payment successful for partner ${partnerId}, Order ${orderId}. Automating Odoo Billing...`);
 
     try {

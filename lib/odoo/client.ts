@@ -37,6 +37,7 @@ export type ShopProduct = {
   availability: 'in_stock' | 'out_of_stock' | 'preorder';
   imageUrl?: string;
   gallery?: string[];
+  galleryImages?: ProductGalleryImage[];
   sku?: string;
   /** Human-readable material label (e.g. '14K Gold') */
   material?: string;
@@ -47,6 +48,13 @@ export type ShopProduct = {
   buyUrl: string;
   publicUrl?: string;
   isFeatured?: boolean;
+};
+
+export type ProductGalleryImage = {
+  id: number;
+  url: string;
+  altText?: string;
+  sequence?: number;
 };
 
 export type CategoryData = {
@@ -99,6 +107,42 @@ type PaginationInfo = {
   hasPrev: boolean;
 };
 
+const PRODUCT_IMAGE_VERSION = '2';
+
+function buildProductImageProxyUrl(productId: string | number) {
+  return `/api/products/image?id=${productId}&v=${PRODUCT_IMAGE_VERSION}`;
+}
+
+function buildGalleryImageProxyUrl(galleryImageId: number) {
+  return `/api/products/gallery-image?id=${galleryImageId}&v=${PRODUCT_IMAGE_VERSION}`;
+}
+
+function normalizeGalleryImages(galleryImages?: ProductGalleryImage[]) {
+  return galleryImages?.map((image) => ({
+    ...image,
+    url: buildGalleryImageProxyUrl(image.id),
+  }));
+}
+
+function normalizeGalleryUrls(gallery?: string[], galleryImages?: ProductGalleryImage[]) {
+  if (galleryImages?.length) {
+    return galleryImages.map((image) => buildGalleryImageProxyUrl(image.id));
+  }
+
+  return gallery;
+}
+
+function normalizeProductImages(product: ShopProduct): ShopProduct {
+  const galleryImages = normalizeGalleryImages(product.galleryImages);
+
+  return {
+    ...product,
+    imageUrl: buildProductImageProxyUrl(product.id),
+    gallery: normalizeGalleryUrls(product.gallery, product.galleryImages),
+    galleryImages,
+  };
+}
+
 type FetchResponse<T> = {
   data?: T;
   pagination?: Partial<PaginationInfo>;
@@ -147,10 +191,7 @@ class OdooClient {
 
     try {
       const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products', { query: params });
-      const data = (response.data || []).map((product) => ({
-          ...product,
-          imageUrl: `/api/products/image?id=${product.id}`,
-        }));
+      const data = (response.data || []).map((product) => normalizeProductImages(product));
 
       const incomingPagination = response.pagination || {};
       const page = incomingPagination.page ?? (typeof params.page === 'number' ? params.page : 1);
@@ -202,14 +243,10 @@ class OdooClient {
     try {
       const response = await this.fetch<FetchResponse<ShopProduct>>(`/api/products/${slug}`);
       if (!response.data) return null;
-      
-      // Proxy image
-      if (response.data.imageUrl) {
-        response.data.imageUrl = `/api/products/image?id=${response.data.id}`;
-      }
 
-      this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
-      return response.data;
+      const normalized = normalizeProductImages(response.data);
+      this.cache.set(cacheKey, { data: normalized, timestamp: Date.now() });
+      return normalized;
     } catch {
       console.warn(`Product slug ${slug} not found in Odoo, checking fallback collection...`);
       return LUXURY_FALLBACK_PRODUCTS.find(p => p.slug === slug) || null;
@@ -234,10 +271,7 @@ class OdooClient {
       let data = response.data || [];
       
       // Proxy images
-      data = data.map((p) => ({
-        ...p,
-        imageUrl: `/api/products/image?id=${p.id}`,
-      }));
+      data = data.map((product) => normalizeProductImages(product));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
@@ -281,16 +315,37 @@ class OdooClient {
       let data = response.data || [];
       
       // Proxy images
-      data = data.map((p) => ({
-        ...p,
-        imageUrl: `/api/products/image?id=${p.id}`,
-      }));
+      data = data.map((product) => normalizeProductImages(product));
 
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
     } catch (error) {
       console.error('Failed to fetch featured products:', error);
       return [];
+    }
+  }
+
+  /** Collections page: best sellers first, then featured favorites. */
+  async getCollectionProducts(limit: number = 12): Promise<ShopProduct[]> {
+    const cacheKey = `collections-${limit}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products/collections', {
+        query: { limit },
+      });
+      let data = response.data || [];
+
+      data = data.map((product) => normalizeProductImages(product));
+
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch collection products:', error);
+      return this.getFeaturedProducts(limit);
     }
   }
 
@@ -414,7 +469,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 18500,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=1',
+    imageUrl: `/api/products/image?id=1&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Bridal',
     buyUrl: '#',
     isFeatured: true
@@ -428,7 +483,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 2400,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=2',
+    imageUrl: `/api/products/image?id=2&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Bridal',
     buyUrl: '#'
   },
@@ -441,7 +496,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 3200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=3',
+    imageUrl: `/api/products/image?id=3&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Nautical',
     buyUrl: '#',
     isFeatured: true
@@ -455,7 +510,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 5800,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=4',
+    imageUrl: `/api/products/image?id=4&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Coastal',
     buyUrl: '#'
   },
@@ -468,7 +523,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 8900,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=5',
+    imageUrl: `/api/products/image?id=5&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Nautical',
     buyUrl: '#',
     isFeatured: true
@@ -482,7 +537,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 4500,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=6',
+    imageUrl: `/api/products/image?id=6&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Coastal',
     buyUrl: '#'
   },
@@ -495,7 +550,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 7200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=7',
+    imageUrl: `/api/products/image?id=7&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Nautical',
     buyUrl: '#'
   },
@@ -508,7 +563,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 1800,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=8',
+    imageUrl: `/api/products/image?id=8&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Coastal',
     buyUrl: '#'
   },
@@ -521,7 +576,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 650,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=9',
+    imageUrl: `/api/products/image?id=9&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Nautical',
     buyUrl: '#'
   },
@@ -534,7 +589,7 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 1200,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=10',
+    imageUrl: `/api/products/image?id=10&v=${PRODUCT_IMAGE_VERSION}`,
     category: 'Coastal',
     buyUrl: '#'
   },
@@ -547,7 +602,12 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     price: 1250,
     currency: 'USD',
     availability: 'in_stock',
-    imageUrl: '/api/products/image?id=11',
+    imageUrl: `/api/products/image?id=11&v=${PRODUCT_IMAGE_VERSION}`,
+    gallery: [
+      '/assets/products/compass-rose-pendant.png',
+      '/assets/products/lighthouse-guardian-charm.png',
+      '/assets/products/sirens-pearl-necklace.png',
+    ],
     category: 'Ready to Ship',
     buyUrl: '#',
     isFeatured: true

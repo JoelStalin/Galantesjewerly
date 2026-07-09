@@ -26,10 +26,6 @@ from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
-DEFAULT_CATEGORY_NAME = 'Other'
-DEFAULT_CATEGORY_SLUG = 'other'
-DEFAULT_CATEGORY_ID = 0
-
 
 class ProductAPIController(http.Controller):
     """HTTP endpoints for product catalog access."""
@@ -44,16 +40,17 @@ class ProductAPIController(http.Controller):
 
     def _serialize_product(self, product, base_url):
         """Build the customer-facing product payload for the frontend."""
-        db = request.env.cr.dbname
-        
-        # Always provide the primary image URL - Odoo handles the fallback to placeholder
-        image_url = f"{base_url}/web/image/product.template/{product.id}/image_1920?db={db}"
-
-        # Gallery images
         gallery = []
         for img in product.gallery_ids:
-            gallery.append(
-                f"{base_url}/web/image/galantes.product.gallery/{img.id}/image?db={db}"
+            if img.image:
+                gallery.append(
+                    f"{base_url}/web/image/galantes.product.gallery/{img.id}/image"
+                )
+
+        image_url = None
+        if product.image_1920:
+            image_url = (
+                f"{base_url}/web/image/product.template/{product.id}/image_1920"
             )
 
         # Storefront copy with fallback chain – never expose internal ERP notes
@@ -86,12 +83,45 @@ class ProductAPIController(http.Controller):
             'sku': product.default_code or '',
             'material': product.get_material_display(),
             'materialCode': product.material or '',
-            'category': product.categ_id.name if product.categ_id else DEFAULT_CATEGORY_NAME,
-            'categoryId': product.categ_id.id if product.categ_id else DEFAULT_CATEGORY_ID,
+            'category': product.categ_id.name if product.categ_id else '',
+            'categoryId': product.categ_id.id if product.categ_id else None,
             'buyUrl': product.buy_url,
             'publicUrl': product.public_url,
             'isFeatured': product.is_featured,
         }
+
+    def _get_best_seller_products(self, Product, limit):
+        """Return published products ordered by confirmed sales volume."""
+        if limit <= 0:
+            return Product.browse([])
+
+        SaleOrderLine = request.env['sale.order.line'].sudo()
+        groups = SaleOrderLine.read_group(
+            domain=[
+                ('order_id.state', 'in', ['sale', 'done']),
+                ('product_template_id', '!=', False),
+                ('product_template_id.available_on_website', '=', True),
+            ],
+            fields=['product_template_id', 'product_uom_qty:sum'],
+            groupby=['product_template_id'],
+            lazy=False,
+        )
+
+        sorted_groups = sorted(
+            groups,
+            key=lambda row: row.get('product_uom_qty', 0),
+            reverse=True,
+        )
+
+        product_ids = []
+        for row in sorted_groups:
+            product_ref = row.get('product_template_id')
+            if product_ref and product_ref[0] not in product_ids:
+                product_ids.append(product_ref[0])
+            if len(product_ids) >= limit:
+                break
+
+        return Product.browse(product_ids).exists()
 
     # ── Sort mapping ──────────────────────────────────────────────────────────
 
@@ -150,11 +180,7 @@ class ProductAPIController(http.Controller):
                 ]
 
             if category:
-                normalized_category = str(category).strip().lower()
-                if normalized_category == DEFAULT_CATEGORY_SLUG:
-                    domain.append(('categ_id', '=', False))
-                else:
-                    domain.append(('categ_id.name', 'ilike', category))
+                domain.append(('categ_id.name', 'ilike', category))
             if material:
                 domain.append(('material', '=', material))
             if min_price:
@@ -226,6 +252,57 @@ class ProductAPIController(http.Controller):
             })
         except Exception as e:
             _logger.exception('Error in get_featured_products')
+            return request.make_json_response({
+                'success': False,
+                'error': str(e),
+                'data': [],
+            }, status=500)
+
+    @http.route('/api/products/collections', auth='public', methods=['GET'], type='http', csrf=False)
+    def get_collection_products(self, limit=12, **kwargs):
+        """Collection listing: best sellers first, then featured favorites."""
+        try:
+            limit = min(48, max(1, int(limit)))
+            Product = request.env['product.template'].sudo()
+            base_url = self._resolve_base_url()
+
+            best_seller_limit = max(1, limit // 2)
+            best_sellers = self._get_best_seller_products(Product, best_seller_limit)
+            used_ids = set(best_sellers.ids)
+
+            featured_limit = max(0, limit - len(best_sellers))
+            featured = Product.search(
+                [
+                    ('available_on_website', '=', True),
+                    ('is_featured', '=', True),
+                    ('id', 'not in', list(used_ids)),
+                ],
+                limit=featured_limit,
+                order='sequence asc, write_date desc',
+            )
+            used_ids.update(featured.ids)
+
+            filler_limit = max(0, limit - len(best_sellers) - len(featured))
+            filler = Product.browse([])
+            if filler_limit:
+                filler = Product.search(
+                    [
+                        ('available_on_website', '=', True),
+                        ('id', 'not in', list(used_ids)),
+                    ],
+                    limit=filler_limit,
+                    order='write_date desc',
+                )
+
+            ordered_ids = best_sellers.ids + featured.ids + filler.ids
+            products = Product.browse(ordered_ids).exists()
+
+            return request.make_json_response({
+                'success': True,
+                'data': [self._serialize_product(p, base_url) for p in products[:limit]],
+            })
+        except Exception as e:
+            _logger.exception('Error in get_collection_products')
             return request.make_json_response({
                 'success': False,
                 'error': str(e),
@@ -352,12 +429,12 @@ class ProductAPIController(http.Controller):
 
             published = Product.search([('available_on_website', '=', True)])
             counts = {}
-            uncategorized_count = 0
             for p in published:
                 if p.categ_id:
                     counts[p.categ_id.id] = counts.get(p.categ_id.id, 0) + 1
-                else:
-                    uncategorized_count += 1
+
+            if not counts:
+                return request.make_json_response({'success': True, 'data': []})
 
             categories = Category.search([('id', 'in', list(counts.keys()))])
             data = []
@@ -370,17 +447,6 @@ class ProductAPIController(http.Controller):
                     'count': counts.get(cat.id, 0),
                     'parentId': cat.parent_id.id if cat.parent_id else None,
                 })
-
-            if uncategorized_count > 0:
-                data.append({
-                    'id': DEFAULT_CATEGORY_ID,
-                    'name': DEFAULT_CATEGORY_NAME,
-                    'slug': DEFAULT_CATEGORY_SLUG,
-                    'count': uncategorized_count,
-                    'parentId': None,
-                })
-
-            data = sorted(data, key=lambda item: item['name'].lower())
 
             return request.make_json_response({'success': True, 'data': data})
 

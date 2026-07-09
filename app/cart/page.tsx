@@ -93,11 +93,11 @@ export default function CartPage() {
           <div className="space-y-4">
             <Link
               href="/checkout"
-              className="w-full bg-primary text-white py-4 uppercase tracking-widest text-xs font-bold hover:bg-primary-dark transition-colors text-center block"
+              className="block w-full bg-primary px-4 py-4 text-center text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-primary-dark"
             >
               Checkout with Stripe
             </Link>
-            <button className="w-full bg-black text-white py-4 flex items-center justify-center gap-2 rounded hover:opacity-90 transition-opacity">
+            <button type="button" className="w-full bg-black text-white py-4 flex items-center justify-center gap-2 rounded hover:opacity-90 transition-opacity">
               <span className="text-sm font-bold">Buy with</span>
               <span className="text-lg font-serif">Google Pay</span>
             </button>

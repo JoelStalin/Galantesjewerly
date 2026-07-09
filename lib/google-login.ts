@@ -1,14 +1,12 @@
-import crypto from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
-import { getDecryptedGoogleIntegration, getGoogleIntegrationForEnvironment } from '@/lib/integrations';
+import { getDecryptedGoogleIntegration } from '@/lib/integrations';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
 import { shouldUseSecureCookies } from '@/lib/auth';
 
 export const GOOGLE_OAUTH_STATE_COOKIE = 'google_oauth_state';
 export const GOOGLE_OAUTH_RETURN_COOKIE = 'google_oauth_return_to';
 export const GOOGLE_USER_COOKIE = 'google_user_session';
-// Keep the Google login session durable; it should only be cleared on logout.
-export const GOOGLE_USER_SESSION_MAX_AGE = 60 * 60 * 24 * 365 * 10;
+export const GOOGLE_USER_SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 export type GoogleUserSessionPayload = {
   sub: string;
@@ -33,8 +31,6 @@ type RequestLike = {
   headers: Headers;
   url?: string;
 };
-
-const localGoogleSessionSecret = crypto.randomBytes(32).toString('hex');
 
 function normalizeBaseUrl(value: string) {
   const normalizedValue = value.trim().replace(/\/+$/, '');
@@ -113,7 +109,7 @@ function getGoogleSessionKey() {
   const secret =
     process.env.GOOGLE_SESSION_SECRET ||
     process.env.ADMIN_SECRET_KEY ||
-    localGoogleSessionSecret;
+    'local_only_google_login_secret_for_development';
 
   return new TextEncoder().encode(secret);
 }
@@ -149,6 +145,7 @@ export function getPublicBaseUrl(request: RequestLike) {
 
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
   const host = normalizeHostWithPort(forwardedHost || request.headers.get('host') || '');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
 
   if (host) {
     const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
@@ -246,25 +243,15 @@ export function getGoogleUserCookieOptions(request: RequestLike) {
 
 export async function getGoogleLoginConfig(request: RequestLike): Promise<GoogleLoginConfig> {
   const environment = resolveGoogleEnvironmentFromHost(request.headers.get('host') || '');
-  const rawStored = await getGoogleIntegrationForEnvironment(environment);
+  const stored = await getDecryptedGoogleIntegration(environment);
   const publicBaseUrl = getPublicBaseUrl(request);
   const requestRedirectUri = getRequestUrl('/auth/google/callback', request);
-  let stored = rawStored;
-  let storedClientSecret = '';
-
-  try {
-    const decryptedStored = await getDecryptedGoogleIntegration(environment);
-    stored = decryptedStored;
-    storedClientSecret = decryptedStored.secrets.googleClientSecret || '';
-  } catch (error) {
-    console.warn('[Google OAuth] Stored Google secret could not be decrypted; using environment fallback.', error);
-  }
 
   return {
     environment,
     enabled: stored.enabled,
     clientId: stored.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.CLIENT_ID || '',
-    clientSecret: storedClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
+    clientSecret: stored.secrets.googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.CLIENT_SECRET || '',
     redirectUri: stored.redirectUri || process.env.GOOGLE_OAUTH_REDIRECT_URI || process.env.REDIRECT_URI || requestRedirectUri,
     javascriptOrigin: stored.javascriptOrigin || process.env.GOOGLE_OAUTH_JAVASCRIPT_ORIGIN || publicBaseUrl,
     scopes: stored.scopes.length > 0
@@ -289,6 +276,7 @@ export async function signGoogleUserSession(payload: Omit<GoogleUserSessionPaylo
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
+    .setExpirationTime('7d')
     .sign(getGoogleSessionKey());
 }
 

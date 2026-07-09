@@ -83,7 +83,7 @@ describe('odooClient config', () => {
       isReady: true,
     });
 
-    expect(headers.Authorization).toBe('bearer odoo-token');
+    expect(headers.Authorization).toBe('Bearer odoo-token');
     expect(headers['X-Odoo-Database']).toBe('galantes_prod');
     expect(headers['Content-Type']).toContain('application/json');
   });
@@ -100,7 +100,7 @@ describe('odooClient config', () => {
       isReady: true,
     });
 
-    expect(headers.Authorization).toBe('bearer admin-password');
+    expect(headers.Authorization).toBe('Bearer admin-password');
     expect(headers['X-Odoo-Database']).toBe('galantes_prod');
   });
 
@@ -176,7 +176,7 @@ describe('odooClient requests', () => {
     expect(fetchImpl.mock.calls[0][1]).toMatchObject({
       method: 'POST',
       headers: expect.objectContaining({
-        Authorization: 'bearer odoo-token',
+        Authorization: 'Bearer odoo-token',
         'X-Odoo-Database': 'galantes_prod',
       }),
     });

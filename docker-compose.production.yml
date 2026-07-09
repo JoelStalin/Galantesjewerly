@@ -10,7 +10,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -20,7 +20,6 @@ services:
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
       - ODOO_PASSWORD=${ODOO_PASSWORD}
       - ODOO_API_KEY=${ODOO_API_KEY}
-      - ODOO_SHIPPING_PRODUCT_VARIANT_ID=${ODOO_SHIPPING_PRODUCT_VARIANT_ID:-26}
       - ODOO_BASE_URL=http://odoo:8069
       - ODOO_DB=${ODOO_DB:-galantes_db}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
@@ -55,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 1.5G
     environment:
       - DB_HOST=galantes_db
       - POSTGRES_USER=${POSTGRES_USER:-odoo}
@@ -83,7 +82,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 512M
     environment:
       - POSTGRES_DB=${ODOO_DB:-galantes_db}
       - POSTGRES_USER=${POSTGRES_USER:-odoo}
@@ -113,15 +112,10 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: galantes_tunnel_prod
-    restart: always
+    restart: unless-stopped
     networks:
       - galante-net
     command: tunnel --no-autoupdate run --protocol http2 --token ${CF_TUNNEL_TOKEN_PROD}
-    healthcheck:
-      test: ["CMD", "cloudflared", "--version"]
-      interval: 1m
-      timeout: 10s
-      retries: 3
     logging:
       driver: "json-file"
       options:

@@ -13,9 +13,10 @@ interface ConditionalNavbarProps {
 export function ConditionalNavbar({ settings, user }: ConditionalNavbarProps) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
-  const isAccountArea = pathname?.startsWith('/account');
+  const isCustomerAuth = pathname?.startsWith('/auth/');
+  const isHome = pathname === '/';
 
   if (isAdmin) return null;
 
-  return <Navbar settings={settings} user={user} forceSolid={isAccountArea} isFixed={true} />;
+  return <Navbar settings={settings} user={user} forceSolid={Boolean(isCustomerAuth)} isFixed={!isHome} />;
 }

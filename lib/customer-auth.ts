@@ -49,7 +49,7 @@ type CustomerAuthStore = {
 };
 
 const customerAuthFile = path.join(getDataRoot(), 'customer-auth.json');
-const CUSTOMER_SESSION_FALLBACK_SECRET = crypto.randomBytes(32).toString('hex');
+const CUSTOMER_SESSION_FALLBACK_SECRET = 'local_customer_session_secret_for_development_only';
 
 function normalizeValue(value: string) {
   return value.trim().toLowerCase();
@@ -258,14 +258,6 @@ export async function verifyCustomerSession(token: string): Promise<Authenticate
   } catch {
     return null;
   }
-}
-
-export async function verifyCustomerEmailToken(token: string): Promise<AuthenticatedCustomer> {
-  const session = await verifyCustomerSession(token);
-  if (!session) {
-    throw new Error('Invalid or expired verification token');
-  }
-  return session;
 }
 
 export function getCustomerSessionCookieOptions(request: RequestLike) {

@@ -25,6 +25,7 @@ export function ProductCTA({ product }: ProductCTAProps) {
       name:      product.name,
       price:     product.price,
       quantity:  1,
+      product_id: product.id,
       image_url: product.imageUrl,
     });
   };

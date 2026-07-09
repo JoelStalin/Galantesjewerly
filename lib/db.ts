@@ -57,6 +57,14 @@ interface DBData {
 const dataDir = getDataRoot();
 const dbFile = path.join(dataDir, 'cms.json');
 
+const LEGACY_IMAGE_URL_MAP: Record<string, string> = {
+  '/assets/images/section-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
+  '/assets/images/featured-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
+  '/assets/images/section-collections.png': '/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp',
+  '/assets/images/featured-nautical.png': '/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp',
+  '/assets/images/featured-repairs.png': '/api/image?id=image-1776960214904-chatgpt-image-apr-23-2026-11-59-05-am.webp',
+};
+
 const INITIAL_DATA: DBData = {
   settings: {
     favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
@@ -126,7 +134,7 @@ const INITIAL_DATA: DBData = {
       id: 'f1',
       title: "Destination Weddings",
       content_text: "Bespoke engagement rings and wedding bands designed to capture your moment by the sea.",
-      image_url: "https://images.unsplash.com/photo-1599643478514-4a52023960c1?q=80&w=1471&auto=format&fit=crop",
+      image_url: "/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp",
       action_text: "Discover Bridal",
       action_link: "/bridal",
       is_active: true,
@@ -136,7 +144,7 @@ const INITIAL_DATA: DBData = {
       id: 'f2',
       title: "Nautical Gold & Silver",
       content_text: "Signature pieces honoring our coastal heritage, from mariner links to compass pendants.",
-      image_url: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1587&auto=format&fit=crop",
+      image_url: "/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp",
       action_text: "View Collections",
       action_link: "/collections",
       is_active: true,
@@ -146,7 +154,7 @@ const INITIAL_DATA: DBData = {
       id: 'f3',
       title: "Master Repair",
       content_text: "Entrust your cherished watches and heirlooms to our master jewelers for restoration.",
-      image_url: "https://images.unsplash.com/photo-1584811644165-4f367e1a3962?q=80&w=1626&auto=format&fit=crop",
+      image_url: "/api/image?id=image-1776960214904-chatgpt-image-apr-23-2026-11-59-05-am.webp",
       action_text: "Service Details",
       action_link: "/repairs",
       is_active: true,
@@ -179,6 +187,24 @@ function hydrateCmsData(parsed: Partial<DBData>) {
     parsed.sections = (parsed.sections || []).filter((s) => !s.section_identifier.startsWith('featured_'));
     needsUpdate = true;
   }
+
+  parsed.sections = (parsed.sections || []).map((section) => {
+    const imageUrl = LEGACY_IMAGE_URL_MAP[section.image_url] || section.image_url;
+    if (imageUrl !== section.image_url) {
+      needsUpdate = true;
+      return { ...section, image_url: imageUrl };
+    }
+    return section;
+  });
+
+  parsed.featured_items = (parsed.featured_items || []).map((item) => {
+    const imageUrl = LEGACY_IMAGE_URL_MAP[item.image_url] || item.image_url;
+    if (imageUrl !== item.image_url) {
+      needsUpdate = true;
+      return { ...item, image_url: imageUrl };
+    }
+    return item;
+  });
 
   return {
     data: {

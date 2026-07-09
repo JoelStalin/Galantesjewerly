@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
 
 export const ADMIN_COOKIE_NAME = 'admin_token';
@@ -13,8 +12,6 @@ export type AdminSessionPayload = {
 type RequestLike = {
   headers: Headers;
 };
-
-const localAdminSecret = crypto.randomBytes(32).toString('hex');
 
 function readCookieValue(cookieHeader: string | null, cookieName: string) {
   if (!cookieHeader) {
@@ -32,7 +29,7 @@ function readCookieValue(cookieHeader: string | null, cookieName: string) {
 }
 
 function getSecretKey() {
-  return new TextEncoder().encode(process.env.ADMIN_SECRET_KEY || localAdminSecret);
+  return new TextEncoder().encode(process.env.ADMIN_SECRET_KEY || 'default_secret_for_local_testing_only_galantes');
 }
 
 export function shouldUseSecureCookies(request?: RequestLike) {

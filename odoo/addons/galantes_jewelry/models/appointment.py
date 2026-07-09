@@ -1,5 +1,5 @@
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
 from .utils import _parse_api_datetime
 
 
@@ -93,10 +93,15 @@ class GalanteAppointment(models.Model):
         if not appointment_datetime:
             raise ValidationError('appointment_datetime is required.')
 
-        partner = self._get_or_create_partner_from_api(values)
+        try:
+            partner = self._get_or_create_partner_from_api(values)
+        except AccessError:
+            # Public/API users may not have write access to contacts; keep
+            # appointment creation functional even without partner linkage.
+            partner = self.env['res.partner'].browse()
         appointment_values = {
             'name': (values.get('name') or values.get('customer_name') or '').strip(),
-            'partner_id': partner.id,
+            'partner_id': partner.id if partner else False,
             'customer_name': (values.get('customer_name') or values.get('name') or '').strip(),
             'customer_email': (values.get('customer_email') or values.get('email') or '').strip().lower(),
             'customer_phone': (values.get('customer_phone') or values.get('phone') or '').strip(),
@@ -131,7 +136,7 @@ class GalanteAppointment(models.Model):
             created = True
 
         return {
-            'partner_id': partner.id,
+            'partner_id': partner.id if partner else False,
             'appointment_id': appointment.id,
             'created': created,
             'status': appointment.status,

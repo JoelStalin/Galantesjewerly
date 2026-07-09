@@ -1,117 +1,110 @@
-name: Deploy to Staging (Getupsoft)
+name: Deploy Staging
 
 on:
   push:
-    branches: [ develop ]
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: galantes-staging
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: Staging
+    environment:
+      name: staging
+      url: https://galantes.getupsoft.com.do
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: SSH and Deploy to Staging
-        uses: appleboy/ssh-action@master
+      - name: Deploy staging over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          TARGET_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          command_timeout: 45m
+          envs: TARGET_SHA
           script: |
             set -Eeuo pipefail
 
-            # Primer deploy: clonar repo
-            if [ ! -d ~/galantesjewelry_staging ]; then
-              git clone https://github.com/JoelStalin/Galantesjewerly.git ~/galantesjewelry_staging
+            REPO_DIR="${STAGING_REPO_DIR:-/home/yoeli/galantesjewelry_staging}"
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/JoelStalin/Galantesjewerly.git "$REPO_DIR"
             fi
-            cd ~/galantesjewelry_staging
+            cd "$REPO_DIR"
 
-            # Backup predeploy (solo staging — nunca toca DB producción)
-            TS=$(date +%Y%m%d_%H%M%S)
-            BK="backups/predeploy/stg_${TS}"
-            mkdir -p "$BK"
-            cp -f .env.staging "$BK/.env.staging" 2>/dev/null || true
-            sudo docker exec galantes_stg_db sh -lc \
-              "PGPASSWORD=\"\${POSTGRES_PASSWORD:-}\" pg_dump -U odoo -d galantes_staging_db --no-owner --no-privileges --clean --if-exists" \
-              > "$BK/galantes_staging_db.sql" 2>/dev/null || true
-            tar -czf "$BK/stg-data.tgz" data 2>/dev/null || true
-
-            # Preservar .env.staging durante el reset
-            [ -f .env.staging ] && cp -f .env.staging /tmp/stg_env_before_reset
+            git remote set-url origin https://github.com/JoelStalin/Galantesjewerly.git
             git fetch origin develop
-            CHANGES=$(git diff --name-only HEAD origin/develop 2>/dev/null || echo "all")
-            git reset --hard origin/develop
-            [ -f /tmp/stg_env_before_reset ] && cp -f /tmp/stg_env_before_reset .env.staging && rm -f /tmp/stg_env_before_reset
+            git checkout --detach "$TARGET_SHA"
 
-            # Escribir/actualizar variables staging
-            touch .env.staging
+            if [ ! -f .env.staging ]; then
+              touch .env.staging
+              chmod 600 .env.staging
+            fi
+
             update_env() {
-              key="$1"; value="$2"
+              key="$1"
+              value="$2"
               [ -z "$value" ] && return 0
-              if grep -q "^${key}=" .env.staging; then
-                sed -i "s|^${key}=.*|${key}=${value}|" .env.staging
-              else
-                echo "${key}=${value}" >> .env.staging
-              fi
+              sed -i "/^${key}=/d" .env.staging
+              printf '%s=%s\n' "$key" "$value" >> .env.staging
             }
 
-            update_env "ADMIN_PASSWORD"                       "${{ secrets.ADMIN_PASSWORD }}"
-            update_env "ADMIN_SECRET_KEY"                     "${{ secrets.ADMIN_SECRET_KEY }}"
-            update_env "POSTGRES_PASSWORD"                    "${{ secrets.POSTGRES_PASSWORD }}"
-            update_env "POSTGRES_USER"                        "odoo"
-            update_env "ODOO_DB"                              "galantes_staging_db"
-            update_env "ODOO_PASSWORD"                        "${{ secrets.ODOO_PASSWORD }}"
-            update_env "ODOO_API_KEY"                         "${{ secrets.ODOO_API_KEY }}"
-            update_env "STRIPE_SECRET_KEY"                    "${{ secrets.STRIPE_SECRET_KEY_STAGING }}"
-            update_env "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"   "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_STAGING }}"
-            update_env "GOOGLE_OAUTH_CLIENT_ID"               "${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
-            update_env "GOOGLE_OAUTH_CLIENT_SECRET"           "${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
-            update_env "GOOGLE_OAUTH_REFRESH_TOKEN"           "${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}"
-            update_env "GOOGLE_OAUTH_REDIRECT_URI"            "https://galantesadmin.getupsoft.com.do/api/admin/google/oauth/callback"
-            update_env "NEXT_PUBLIC_SITE_URL"                 "https://galantes.getupsoft.com.do"
-            update_env "NEXT_PUBLIC_ADMIN_URL"                "https://galantesadmin.getupsoft.com.do"
-            update_env "ODOO_BASE_URL"                        "https://galantes_odoo.getupsoft.com.do"
-            update_env "NEXT_PUBLIC_ODOO_URL"                 "https://galantes_odoo.getupsoft.com.do"
-            update_env "GOOGLE_CALENDAR_ID"                   "${{ secrets.GOOGLE_CALENDAR_ID }}"
-            update_env "GOOGLE_SERVICE_ACCOUNT_EMAIL"         "${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}"
-            update_env "GOOGLE_PRIVATE_KEY"                   "${{ secrets.GOOGLE_PRIVATE_KEY }}"
-            update_env "GMAIL_NOTIFICATION_TO"                "${{ secrets.GMAIL_NOTIFICATION_TO }}"
-            update_env "GMAIL_SMTP_USER"                      "${{ secrets.GMAIL_SMTP_USER }}"
-            update_env "GMAIL_SMTP_PASS"                      "${{ secrets.GMAIL_SMTP_PASS }}"
-            # Tunnel staging — nunca sobreescribir si ya existe activo
-            if ! grep -q "^CF_TUNNEL_TOKEN_STAGING=" .env.staging; then
-              update_env "CF_TUNNEL_TOKEN_STAGING" "${{ secrets.CF_TUNNEL_TOKEN_STAGING }}"
+            update_env ADMIN_PASSWORD '${{ secrets.ADMIN_PASSWORD }}'
+            update_env ADMIN_SECRET_KEY '${{ secrets.ADMIN_SECRET_KEY }}'
+            update_env POSTGRES_PASSWORD '${{ secrets.POSTGRES_PASSWORD }}'
+            update_env POSTGRES_USER odoo
+            update_env ODOO_DB galantes_staging_db
+            update_env ODOO_PASSWORD '${{ secrets.ODOO_PASSWORD }}'
+            update_env ODOO_API_KEY '${{ secrets.ODOO_API_KEY }}'
+            update_env STRIPE_SECRET_KEY '${{ secrets.STRIPE_SECRET_KEY_STAGING }}'
+            update_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY '${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_STAGING }}'
+            update_env NEXT_PUBLIC_SITE_URL https://galantes.getupsoft.com.do
+            update_env NEXT_PUBLIC_ADMIN_URL https://galantesadmin.getupsoft.com.do
+            update_env ODOO_BASE_URL https://galantes_odoo.getupsoft.com.do
+            update_env NEXT_PUBLIC_ODOO_URL https://galantes_odoo.getupsoft.com.do
+            update_env GOOGLE_OAUTH_CLIENT_ID '${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}'
+            update_env GOOGLE_OAUTH_CLIENT_SECRET '${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}'
+            update_env GOOGLE_OAUTH_REFRESH_TOKEN '${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}'
+            update_env GOOGLE_OAUTH_REDIRECT_URI https://galantesadmin.getupsoft.com.do/api/admin/google/oauth/callback
+            update_env GOOGLE_CALENDAR_ID '${{ secrets.GOOGLE_CALENDAR_ID }}'
+            update_env GOOGLE_SERVICE_ACCOUNT_EMAIL '${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}'
+            update_env GOOGLE_PRIVATE_KEY '${{ secrets.GOOGLE_PRIVATE_KEY }}'
+            update_env GMAIL_NOTIFICATION_TO '${{ secrets.GMAIL_NOTIFICATION_TO }}'
+            update_env GMAIL_SMTP_USER '${{ secrets.GMAIL_SMTP_USER }}'
+            update_env GMAIL_SMTP_PASS '${{ secrets.GMAIL_SMTP_PASS }}'
+            update_env APPOINTMENT_TEST_MODE true
+            if ! grep -q '^CF_TUNNEL_TOKEN_STAGING=' .env.staging; then
+              update_env CF_TUNNEL_TOKEN_STAGING '${{ secrets.CF_TUNNEL_TOKEN_STAGING }}'
             fi
-            update_env "APPOINTMENT_TEST_MODE" "true"
             chmod 600 .env.staging
 
-            # Rebuild solo si cambios relevantes
-            if echo "$CHANGES" | grep -qE "(app/|components/|lib/|src/|package.json|Dockerfile|docker-compose)"; then
-              echo "Reconstruyendo web staging..."
-              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml build web
-              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps web
-            else
-              echo "Sin cambios en app."
+            TS="$(date -u +%Y%m%dT%H%M%SZ)"
+            BK="backups/predeploy/staging-$TS-$TARGET_SHA"
+            mkdir -p "$BK"
+            cp .env.staging "$BK/.env.staging"
+            sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml exec -T db \
+              sh -lc 'pg_dump -U odoo -Fc galantes_staging_db' > "$BK/galantes_staging_db.dump"
+            test -s "$BK/galantes_staging_db.dump"
+
+            sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml build web
+            sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps web
+
+            if git diff --name-only HEAD~1 HEAD | grep -qE '^(odoo|docker-compose.staging.yml)'; then
+              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps odoo
             fi
 
-            if echo "$CHANGES" | grep -qE "(odoo/|docker-compose)"; then
-              echo "Actualizando Odoo staging..."
-              sudo docker compose -p galantes-staging --env-file .env.staging -f docker-compose.staging.yml up -d --force-recreate odoo
-            fi
-
-            # Health checks staging
-            wait_http() {
-              url="$1"; label="$2"; retries="${3:-18}"; delay="${4:-5}"
-              for i in $(seq 1 "$retries"); do
-                if curl -fsS --max-time 10 "$url" >/dev/null 2>&1; then echo "OK: $label"; return 0; fi
-                echo "Esperando $label ($i/$retries)..."; sleep "$delay"
-              done
-              echo "FAIL: $label" >&2; return 1
-            }
-            wait_http "http://127.0.0.1:3001/api/health" "web staging"
-            wait_http "http://127.0.0.1:8082/healthz"    "nginx staging"
-
-            sudo docker image prune -f
-            echo "Deploy staging OK."
+            curl -fsS --max-time 20 http://127.0.0.1:3001/api/health >/dev/null
+            curl -fsS --max-time 20 http://127.0.0.1:8082/healthz >/dev/null
+            sudo docker builder prune -af --filter until=72h || true
+            sudo docker image prune -af --filter until=168h || true

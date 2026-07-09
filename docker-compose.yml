@@ -16,8 +16,8 @@ services:
       - HOSTNAME=0.0.0.0
       - APP_DATA_DIR=/app/data
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-CHANGE_ME_LEGACY_ADMIN_PASSWORD}
-      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-CHANGE_ME_LOCAL_ADMIN_SECRET}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-galantes2026}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-galantes_secret_vault_2026}
     volumes:
       # Carpeta de datos persistente obligatoria
       - ./data:/app/data

@@ -1,6 +1,6 @@
 {
     'name': 'Galante\'s Jewelry',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Sales',
     'summary': 'Jewelry-specific product models, pricing, and web publication for Galante\'s Jewelry by the Sea',
     'author': 'Galante\'s Jewelry',
@@ -25,8 +25,11 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/product_gallery_upload_wizard_views.xml',
         'views/product_template_views.xml',
         'views/product_gallery_views.xml',
+        'views/res_partner_views.xml',
+        'views/account_move_views.xml',
         'data/product_category.xml',
         'data/product_data.xml',
     ],

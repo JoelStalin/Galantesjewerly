@@ -3,7 +3,7 @@
     <!-- noupdate="0": data reloads on every module upgrade (-u galantes_jewelry).
          Switch to noupdate="1" after initial client approval so manual Odoo edits
          survive future deploys. -->
-    <data noupdate="1">
+    <data noupdate="0">
 
         <!-- ══════════════════════════════════════════════════════════════
              RINGS
@@ -467,45 +467,6 @@
             <field name="storefront_long_description">This is the piece that started it all for Galante's. The Gold Anchor Charm Bracelet — a 7-inch 14K yellow gold cable bracelet with a 12mm polished anchor charm — was the first design we sold, and it remains the one piece every Galante's customer owns. Lightweight enough for everyday wear, meaningful enough to be someone's favorite piece for years. In stock in 7-inch length; 6.5 and 7.5 inch available on request. Order before 2 PM EST and it ships today.</field>
             <field name="product_details">Metal: 14K Yellow Gold · Cable Chain: 1.5 mm, 7 inches · Anchor Charm: 12 mm, polished · Clasp: Lobster claw · Hallmark: 585 · Weight: approx. 2.6 g</field>
             <field name="care_and_shipping">In stock — ships same day (orders before 2 PM EST) via USPS Priority Mail. Arrives in 2–3 business days. Gift boxing included. Most popular gift item at Galante's.</field>
-        </record>
-
-        <record id="product_shipping_calculation_demo_pendant" model="product.template">
-            <field name="name">Shipping Calculation Demo Pendant</field>
-            <field name="default_code">GJ-DEMO-001</field>
-            <field name="list_price">1250.0</field>
-            <field name="type">consu</field>
-            <field name="categ_id" ref="galantes_jewelry.product_category_ready_to_ship"/>
-            <field name="material">gold_14k</field>
-            <field name="available_on_website" eval="True"/>
-            <field name="is_featured" eval="True"/>
-            <field name="sequence">4</field>
-            <field name="slug">shipping-calculation-demo-pendant</field>
-            <field name="tagline">Ready-to-ship pendant for previewing live shipping rates</field>
-            <field name="storefront_short_description">Add this pendant to the cart to preview the live shipping calculation in the customer portal before you place the order.</field>
-            <field name="storefront_long_description">This limited-purpose demo pendant is intentionally published in the ready-to-ship collection so customers can test the full checkout flow and see live shipping totals in a realistic cart. It behaves like any other eligible item, which makes it ideal for validating FedEx, UPS, USPS, and boutique pickup options without disturbing the luxury catalog.</field>
-            <field name="product_details">Metal: 14K Yellow Gold · Pendant Size: 14 mm · Finish: High polish · Chain: Adjustable 16–18 in · Hallmark: 585 · Weight: approx. 3.1 g</field>
-            <field name="care_and_shipping">Designed as a storefront demo item for customer portal testing. Add to cart to preview live shipping calculations, then choose FedEx, UPS, USPS, or boutique pickup at checkout.</field>
-        </record>
-
-        <!-- ══════════════════════════════════════════════════════════════
-             SERVICES
-        ══════════════════════════════════════════════════════════════ -->
-
-        <record id="product_secure_shipping_service" model="product.template">
-            <field name="name">Galantes Secure Shipping</field>
-            <field name="default_code">GJ-SHP-001</field>
-            <field name="list_price">0.0</field>
-            <field name="type">service</field>
-            <field name="categ_id" ref="galantes_jewelry.product_category_services"/>
-            <field name="available_on_website" eval="False"/>
-            <field name="is_featured" eval="False"/>
-            <field name="sequence">99</field>
-            <field name="slug">galantes-secure-shipping</field>
-            <field name="tagline">Insured and signature-required shipping for high-value jewelry</field>
-            <field name="storefront_short_description">Internal shipping service used to record insured carrier charges for jewelry checkout.</field>
-            <field name="storefront_long_description">Protected shipping service used to synchronize the selected carrier, insurance coverage, and shipping charge into Odoo and Stripe for secure jewelry checkout.</field>
-            <field name="product_details">Service product used for insured shipping and carrier reconciliation.</field>
-            <field name="care_and_shipping">Internal service product. Not published on the storefront.</field>
         </record>
 
     </data>

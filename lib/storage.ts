@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { getDataRoot } from '@/lib/runtime-paths';
+import { deleteImageFromOdoo, saveImageToOdoo } from '@/lib/odoo-image-store';
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
@@ -132,6 +133,20 @@ export function isManagedImageUrl(url?: string | null) {
   return Boolean(getStorageIdFromUrl(url));
 }
 
+export function inferContentTypeFromStorageId(storageId: string) {
+  const extension = storageId.split('.').pop()?.toLowerCase();
+
+  if (extension === 'png') {
+    return 'image/png';
+  }
+
+  if (extension === 'jpg' || extension === 'jpeg') {
+    return 'image/jpeg';
+  }
+
+  return 'image/webp';
+}
+
 export async function ensureStorageDirectory() {
   if (!existsSync(STORAGE_BASE)) {
     await mkdir(STORAGE_BASE, { recursive: true });
@@ -198,6 +213,12 @@ export async function saveProcessedImage(file: File, options?: { isFavicon?: boo
 
   await writeFile(filePath, processedBuffer);
 
+  try {
+    await saveImageToOdoo(storageId, processedBuffer, contentType);
+  } catch (error) {
+    console.error('[Storage] Failed to mirror image into Odoo:', storageId, error);
+  }
+
   return {
     contentType,
     size: processedBuffer.length,
@@ -213,14 +234,25 @@ export async function deleteManagedImage(url?: string | null) {
     return false;
   }
 
+  let deleted = false;
+
   try {
     await unlink(getStorageFilePath(storageId));
-    return true;
+    deleted = true;
   } catch (error) {
     const fileError = error as NodeJS.ErrnoException;
 
-    if (fileError.code === 'ENOENT') {
-      return false;
+    if (fileError.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  try {
+    const deletedFromOdoo = await deleteImageFromOdoo(storageId);
+    return deleted || deletedFromOdoo;
+  } catch (error) {
+    if (deleted) {
+      return true;
     }
 
     throw error;

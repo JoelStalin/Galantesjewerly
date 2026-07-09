@@ -1,4 +1,4 @@
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 const {
   buildAuthUrl,
   exchangeCodeAndSaveToken,
@@ -99,22 +99,30 @@ function buildIcsAttachment(input) {
 }
 
 async function sendAppointmentEmail(payload, eventResult) {
-  const apiKey = process.env.SENDGRID_API_KEY || '';
-  const from = process.env.SENDGRID_FROM_EMAIL || process.env.GMAIL_SMTP_USER || '';
-  const adminTo = process.env.SENDGRID_ADMIN_TO || process.env.GMAIL_NOTIFICATION_TO || '';
+  const from = process.env.GMAIL_SMTP_USER || '';
+  const adminTo = process.env.GMAIL_NOTIFICATION_TO || '';
+  const smtpPass = process.env.GMAIL_SMTP_PASS || '';
 
-  if (!apiKey || !from) {
-    throw createHttpError(500, 'SendGrid is not configured.');
+  if (!from || !smtpPass) {
+    throw createHttpError(500, 'Gmail SMTP is not configured.');
   }
 
-  sgMail.setApiKey(apiKey);
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: from,
+      pass: smtpPass,
+    },
+  });
 
-  await sgMail.send({
+  await transporter.sendMail({
     to: payload.email,
     bcc: adminTo ? [adminTo] : undefined,
     from,
     replyTo: adminTo || from,
-    subject: process.env.SENDGRID_APPOINTMENT_SUBJECT || 'Appointment confirmation',
+    subject: 'Appointment confirmation',
     text: [
       `Your appointment request was created.`,
       `Name: ${payload.name}`,

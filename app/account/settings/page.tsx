@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { getAuthenticatedCustomerFromCookies } from '@/lib/customer-auth';
 import { OdooService } from '@/lib/odoo/services';
 import { ProfileForm } from '@/components/account/ProfileForm';
@@ -7,9 +6,7 @@ import { ProfileForm } from '@/components/account/ProfileForm';
 export default async function SettingsPage() {
   const cookieStore = await cookies();
   const user = await getAuthenticatedCustomerFromCookies(cookieStore);
-  if (!user) {
-    redirect('/auth/login?returnTo=/account/settings');
-  }
+  if (!user) return null;
 
   let profile = null;
   try {
@@ -65,10 +62,6 @@ export default async function SettingsPage() {
           street2: profile?.street2 ?? '',
           city: profile?.city ?? '',
           zip: profile?.zip ?? '',
-          state_id: profile?.state_id?.[0],
-          country_id: profile?.country_id?.[0],
-          state_name: profile?.state_id?.[1],
-          country_name: profile?.country_id?.[1],
         }}
       />
     </div>

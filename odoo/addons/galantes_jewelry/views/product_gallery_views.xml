@@ -8,7 +8,9 @@
             <form string="Product Gallery Image">
                 <group>
                     <field name="product_id" />
+                    <field name="name" />
                     <field name="sequence" />
+                    <field name="active" />
                 </group>
                 <group>
                     <field name="image" widget="image" />
@@ -24,9 +26,12 @@
         <field name="model">galantes.product.gallery</field>
         <field name="arch" type="xml">
             <list string="Product Gallery" editable="bottom">
+                <field name="active" />
                 <field name="product_id" />
                 <field name="sequence" widget="handle" />
+                <field name="name" />
                 <field name="alt_text" />
+                <field name="image" widget="image" />
             </list>
         </field>
     </record>

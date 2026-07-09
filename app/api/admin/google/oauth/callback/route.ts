@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getAdminSessionFromRequest } from '@/lib/auth';
 import { integrationEnvironments, type IntegrationEnvironment } from '@/lib/integration-types';
 import { storeGoogleOAuthTokens } from '@/lib/integrations';
@@ -22,7 +23,16 @@ function getCookieValue(cookieHeader: string | null, cookieName: string) {
   for (const cookie of cookieHeader.split(';')) {
     const [name, ...rest] = cookie.trim().split('=');
     if (name === cookieName) {
-      return rest.join('=') || null;
+      const rawValue = rest.join('=') || '';
+      if (!rawValue) {
+        return null;
+      }
+
+      try {
+        return decodeURIComponent(rawValue);
+      } catch {
+        return rawValue;
+      }
     }
   }
 
@@ -35,6 +45,54 @@ function parseEnvironment(value: string | null): IntegrationEnvironment {
   }
 
   return 'production';
+}
+
+function getOAuthStateSecret() {
+  return (
+    process.env.GOOGLE_SESSION_SECRET ||
+    process.env.ADMIN_SECRET_KEY ||
+    'local_only_admin_google_oauth_state_secret'
+  );
+}
+
+function parseSignedState(rawState: string | null) {
+  if (!rawState) {
+    return null;
+  }
+
+  const [version, encodedPayload, signature] = rawState.split('.');
+  if (version !== 'v1' || !encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', getOAuthStateSecret())
+    .update(encodedPayload)
+    .digest('base64url');
+
+  if (signature !== expectedSignature) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as {
+      n?: string;
+      e?: string;
+      r?: string;
+    };
+
+    if (!parsed.n || !parsed.e || !parsed.r) {
+      return null;
+    }
+
+    return {
+      nonce: parsed.n,
+      environment: parseEnvironment(parsed.e),
+      redirectUri: parsed.r,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function getAuditContext(request: Request, actor: string) {
@@ -91,21 +149,23 @@ export async function GET(request: Request) {
   // --- Detailed cookie diagnostics ---
   const allCookieNames = (cookieHeader || '').split(';').map(c => c.trim().split('=')[0]).filter(Boolean);
   const expectedState = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_STATE_COOKIE);
-  const environment = parseEnvironment(getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_ENV_COOKIE));
-  // Always recompute the callback URL from the live request host.
-  // Cookie values are percent-encoded by the browser, which can poison the
-  // token exchange if reused as-is for redirect_uri.
-  const redirectUri = getAdminGoogleOAuthRedirectUri(request);
+  const cookieEnvironment = parseEnvironment(getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_ENV_COOKIE));
+  const cookieRedirectUri = getCookieValue(cookieHeader, ADMIN_GOOGLE_CONNECT_REDIRECT_COOKIE);
 
   const error = requestUrl.searchParams.get('error');
   const code = requestUrl.searchParams.get('code');
   const state = requestUrl.searchParams.get('state');
+  const signedState = parseSignedState(state);
+  const environment = signedState?.environment || cookieEnvironment;
+  const redirectUri = signedState?.redirectUri || cookieRedirectUri || getAdminGoogleOAuthRedirectUri(request);
+  const expectedNonce = expectedState || signedState?.nonce || null;
 
   console.log('[Admin Google OAuth] callback diagnostics:', {
     hasCode: !!code,
     hasState: !!state,
-    hasExpectedState: !!expectedState,
-    stateMatch: state === expectedState,
+    hasExpectedState: !!expectedNonce,
+    stateMatch: signedState ? signedState.nonce === expectedNonce : state === expectedNonce,
+    hasSignedState: !!signedState,
     environment,
     redirectUri,
     cookieCount: allCookieNames.length,
@@ -134,7 +194,7 @@ export async function GET(request: Request) {
     }
 
     // --- State validation with detailed error messages ---
-    if (!expectedState) {
+    if (!expectedNonce) {
       console.error('[Admin Google OAuth] STATE COOKIE MISSING. The browser did not send the state cookie back.',
         'This usually means: (1) Cloudflare Access intercepted the callback and dropped cookies,',
         '(2) The cookie was set as Secure but the callback arrived via HTTP,',
@@ -152,9 +212,20 @@ export async function GET(request: Request) {
       throw new Error('Google did not return the state parameter in the callback URL.');
     }
 
-    if (state !== expectedState) {
+    if (signedState && signedState.nonce !== expectedNonce) {
+      console.error('[Admin Google OAuth] SIGNED STATE MISMATCH.',
+        { stateFromGoogle: signedState.nonce.substring(0, 8) + '...', stateFromCookie: expectedNonce.substring(0, 8) + '...' },
+        'Possible cause: user started two OAuth flows and the second overwrote the first cookie.',
+      );
+      throw new Error(
+        'OAuth signed state mismatch — the state from Google does not match the expected value. '
+        + 'Please try again in a single tab.'
+      );
+    }
+
+    if (!signedState && state !== expectedNonce) {
       console.error('[Admin Google OAuth] STATE MISMATCH.',
-        { stateFromGoogle: state.substring(0, 8) + '...', stateFromCookie: expectedState.substring(0, 8) + '...' },
+        { stateFromGoogle: state.substring(0, 8) + '...', stateFromCookie: expectedNonce.substring(0, 8) + '...' },
         'This means the cookie was present but contains a different value than what Google returned.',
         'Possible cause: user started two OAuth flows and the second overwrote the first cookie.',
       );

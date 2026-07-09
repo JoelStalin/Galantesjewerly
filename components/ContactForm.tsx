@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { FormEvent, useMemo, useRef, useState } from "react";
 
 type AvailabilityResponse = {
   availableSlots?: Array<{ time: string; label: string }>;
@@ -31,7 +30,7 @@ function formatWeekdays(weekdays: number[]) {
 }
 
 export function ContactForm() {
-  const searchParams = useSearchParams();
+  const availabilityRequestIdRef = useRef(0);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -44,10 +43,6 @@ export function ContactForm() {
     availableSlots: [],
     availableWeekdays: [],
   });
-
-  const reason = searchParams.get("reason");
-  const orderId = searchParams.get("orderId");
-  const carrier = searchParams.get("carrier");
 
   const scheduleSummary = useMemo(() => {
     const parts: string[] = [];
@@ -68,11 +63,12 @@ export function ContactForm() {
   }, [availability.durationMinutes, availability.endTime, availability.startTime, availability.timezone]);
 
   const loadAvailability = async (appointmentDate: string) => {
+    const requestId = ++availabilityRequestIdRef.current;
     setSelectedTime("");
     setAvailabilityError("");
     setAvailability((current) => ({ ...current, availableSlots: [] }));
 
-    if (!appointmentDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)) {
       return;
     }
 
@@ -83,6 +79,10 @@ export function ContactForm() {
         cache: "no-store",
       });
       const result: AvailabilityResponse = await response.json();
+
+      if (availabilityRequestIdRef.current !== requestId) {
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -106,13 +106,19 @@ export function ContactForm() {
         setAvailabilityError("No consultation times are currently available for that date. Please choose another day.");
       }
     } catch (caughtError) {
+      if (availabilityRequestIdRef.current !== requestId) {
+        return;
+      }
+
       setAvailabilityError(
         caughtError instanceof Error
           ? caughtError.message
           : "We could not load available appointment times.",
       );
     } finally {
-      setLoadingAvailability(false);
+      if (availabilityRequestIdRef.current === requestId) {
+        setLoadingAvailability(false);
+      }
     }
   };
 
@@ -214,16 +220,10 @@ export function ContactForm() {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-xs uppercase tracking-widest font-semibold opacity-70">Inquiry Type</label>
-            <select 
-              data-testid="contact-inquiry-type" 
-              name="inquiryType" 
-              className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent appearance-none"
-              defaultValue={reason === "order_fulfillment" ? "Order Collection/Delivery" : "Bridal & Engagement"}
-            >
+            <select data-testid="contact-inquiry-type" name="inquiryType" className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent appearance-none">
               <option value="Bridal & Engagement">Bridal & Engagement</option>
               <option value="Nautical Collections">Nautical Collections</option>
               <option value="Master Repair Service">Master Repair Service</option>
-              <option value="Order Collection/Delivery">Order Collection/Delivery</option>
               <option value="General Inquiry">General Inquiry</option>
             </select>
           </div>
@@ -290,15 +290,7 @@ export function ContactForm() {
 
           <div className="flex flex-col gap-2">
             <label className="text-xs uppercase tracking-widest font-semibold opacity-70">Message</label>
-            <textarea 
-              data-testid="contact-message" 
-              required 
-              name="message" 
-              rows={4} 
-              className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent" 
-              placeholder="Tell us what you would like to explore during your visit."
-              defaultValue={reason === "order_fulfillment" ? `I would like to schedule a time to ${carrier === 'pickup' ? 'collect' : 'receive'} my order #${orderId}.` : ""}
-            ></textarea>
+            <textarea data-testid="contact-message" required name="message" rows={4} className="border-b border-stone-300 pb-2 focus:outline-none focus:border-primary bg-transparent" placeholder="Tell us what you would like to explore during your visit."></textarea>
           </div>
           <input type="text" name="company" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
           <button data-testid="contact-submit" type="submit" disabled={loading || loadingAvailability || !selectedTime} className="bg-primary text-white py-4 mt-4 text-xs uppercase tracking-widest font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50">

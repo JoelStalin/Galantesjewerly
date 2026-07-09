@@ -233,6 +233,10 @@ function buildOdooUrl(model, method, config = getOdooConfig(), version = 'json2'
   return `${config.baseUrl}/json/2/${encodeURIComponent(normalizedModel)}/${encodeURIComponent(normalizedMethod)}`;
 }
 
+function buildOdooJson2Url(model, method, config = getOdooConfig()) {
+  return buildOdooUrl(model, method, config, 'json2');
+}
+
 async function parseResponseBody(response) {
   const contentType = response.headers.get('content-type') || '';
 

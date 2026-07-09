@@ -21,7 +21,7 @@ export default async function Home() {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Hero Section */}
-      <section className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-end text-white overflow-hidden">
+      <section id="hero" className="relative w-full h-[80vh] min-h-[600px] flex flex-col justify-end text-white overflow-hidden">
         <div
           className="absolute inset-0 z-0 bg-cover bg-center transition-all duration-1000"
           style={{ backgroundImage: `url('${hero?.image_url || ""}')` }}
@@ -49,7 +49,7 @@ export default async function Home() {
       </section>
 
       {/* Philosophy Section */}
-      <section className="py-24 px-6 md:px-12 max-w-5xl mx-auto text-center">
+      <section id="philosophy" className="py-24 px-6 md:px-12 max-w-5xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl mb-6">{philosophy?.title}</h2>
         <p className="text-lg opacity-80 leading-relaxed max-w-3xl mx-auto whitespace-pre-wrap">
           {philosophy?.content_text}
@@ -57,17 +57,17 @@ export default async function Home() {
       </section>
 
       {/* Featured Services Grid / Carousel */}
-      <section className="w-full bg-white py-24 px-6 md:px-12">
+      <section id="featured-services" className="w-full bg-white py-24 px-6 md:px-12">
         <FeaturedCarousel items={featured} />
       </section>
 
-      <section className="w-full bg-stone-50 py-24 px-6 md:px-12">
+      <section id="featured-products" className="w-full bg-stone-50 py-24 px-6 md:px-12">
         <div className="max-w-6xl mx-auto">
           <div className="mb-12 text-center">
             <p className="text-sm uppercase tracking-[0.35em] text-accent mb-4">Featured Jewelry</p>
-            <h2 className="text-4xl font-serif font-bold text-gray-900">Live product collection from Odoo</h2>
+            <h2 className="text-4xl font-serif font-bold text-gray-900">Featured Jewelry Collection</h2>
             <p className="mt-4 text-gray-600 max-w-3xl mx-auto">
-              These products are pulled directly from the Odoo catalog, including real-time availability and buying links.
+              Discover a curated selection of signature pieces chosen for their craftsmanship, elegance, and timeless character.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export default async function Home() {
       </section>
 
       {/* Review Proof */}
-      <section className="w-full py-24 bg-stone-50 px-6">
+      <section id="review" className="w-full py-24 bg-stone-50 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl mb-12">{review?.title}</h2>
           <blockquote className="text-xl md:text-2xl font-serif text-primary italic leading-relaxed mb-6">
@@ -96,7 +96,7 @@ export default async function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="w-full py-32 px-6 flex flex-col items-center justify-center bg-primary text-white text-center">
+      <section id="cta" className="w-full py-32 px-6 flex flex-col items-center justify-center bg-primary text-white text-center">
         <h2 className="text-4xl md:text-5xl text-accent mb-6">{cta?.title}</h2>
         <p className="max-w-2xl text-lg opacity-80 mb-10 whitespace-pre-wrap">
           {cta?.content_text}

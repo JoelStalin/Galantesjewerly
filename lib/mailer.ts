@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import sgMail from '@sendgrid/mail';
 import { getDecryptedAppointmentIntegration } from '@/lib/integrations';
 import { getGoogleOAuthRuntimeConfig, refreshGoogleOAuthAccessToken } from '@/lib/google-oauth';
 import type { IntegrationEnvironment } from '@/lib/integration-types';
@@ -16,7 +15,6 @@ export type MailRuntimeConfig = {
   oauthClientSecret: string;
   oauthRefreshToken: string;
   oauthConnectedGoogleEmail: string;
-  sendGridApiKey: string;
 };
 
 export async function getMailRuntimeConfig(environment: IntegrationEnvironment): Promise<MailRuntimeConfig> {
@@ -33,7 +31,6 @@ export async function getMailRuntimeConfig(environment: IntegrationEnvironment):
     oauthClientSecret: googleOAuth.clientSecret,
     oauthRefreshToken: googleOAuth.refreshToken,
     oauthConnectedGoogleEmail: googleOAuth.connectedGoogleEmail,
-    sendGridApiKey: stored.secrets.sendGridApiKey || process.env.SENDGRID_API_KEY || '',
   };
 }
 
@@ -46,8 +43,8 @@ function assertMailConfig(config: MailRuntimeConfig) {
     !config.enabled ? 'Gmail notifications are disabled' : '',
     !config.recipientInbox ? 'Gmail recipient inbox' : '',
     !config.sender ? 'Gmail sender' : '',
-    !config.sendGridApiKey && !config.smtpPassword && !hasGoogleOAuthConfig(config)
-      ? 'SendGrid API key, Gmail SMTP app password, or connected Google OAuth account'
+    !config.smtpPassword && !hasGoogleOAuthConfig(config)
+      ? 'Gmail SMTP app password or connected Google OAuth account'
       : '',
   ].filter(Boolean);
 
@@ -216,32 +213,6 @@ async function sendWithGmailApi(input: {
   return { messageId: payload.id };
 }
 
-async function sendWithSendGrid(input: {
-  config: MailRuntimeConfig;
-  record: AppointmentRecord;
-  submission: ContactSubmission;
-  event: CreatedCalendarEvent;
-  start?: Date;
-  end?: Date;
-}) {
-  assertMailConfig(input.config);
-  sgMail.setApiKey(input.config.sendGridApiKey);
-  const subject = `Galantes appointment: ${input.submission.name} - ${input.submission.inquiryType}`;
-  const text = buildPlainText(input);
-  const attachment = buildIcsAttachment(input);
-
-  const [result] = await sgMail.send({
-    to: input.config.recipientInbox,
-    from: input.config.sender,
-    replyTo: input.submission.email,
-    subject,
-    text,
-    attachments: attachment ? [attachment] : undefined,
-  });
-
-  return { messageId: String(result.headers['x-message-id'] || result.statusCode || input.record.id) };
-}
-
 export async function sendAppointmentNotification(input: {
   config: MailRuntimeConfig;
   record: AppointmentRecord;
@@ -260,10 +231,6 @@ export async function sendAppointmentNotification(input: {
 
   const subject = `Galantes appointment: ${input.submission.name} - ${input.submission.inquiryType}`;
   const text = buildPlainText(input);
-
-  if (input.config.sendGridApiKey) {
-    return sendWithSendGrid(input);
-  }
 
   if (!input.config.smtpPassword && hasGoogleOAuthConfig(input.config)) {
     return sendWithGmailApi({
@@ -285,41 +252,6 @@ export async function sendAppointmentNotification(input: {
   });
 }
 
-export async function sendTransactionalMail(input: {
-  environment: IntegrationEnvironment;
-  to: string;
-  subject: string;
-  text: string;
-  html?: string;
-}) {
-  const config = await getMailRuntimeConfig(input.environment);
-  if (!config.enabled) {
-    console.log('[Mailer] Notifications disabled, skipping email to', input.to);
-    return null;
-  }
-  
-  if (config.sendGridApiKey) {
-    sgMail.setApiKey(config.sendGridApiKey);
-    const [result] = await sgMail.send({
-      to: input.to,
-      from: config.sender,
-      subject: input.subject,
-      text: input.text,
-      html: input.html,
-    });
-    return { messageId: String(result.headers['x-message-id'] || result.statusCode) };
-  }
-
-  const transporter = createTransport(config);
-  return transporter.sendMail({
-    from: config.sender,
-    to: input.to,
-    subject: input.subject,
-    text: input.text,
-    html: input.html,
-  });
-}
-
 export async function testMailConnection(environment: IntegrationEnvironment) {
   const config = await getMailRuntimeConfig(environment);
 
@@ -331,16 +263,6 @@ export async function testMailConnection(environment: IntegrationEnvironment) {
   }
 
   assertMailConfig(config);
-
-  if (config.sendGridApiKey) {
-    sgMail.setApiKey(config.sendGridApiKey);
-
-    return {
-      sender: config.sender,
-      recipientInbox: config.recipientInbox,
-      authMode: 'sendgrid',
-    };
-  }
 
   if (!config.smtpPassword && hasGoogleOAuthConfig(config)) {
     await refreshGoogleOAuthAccessToken({

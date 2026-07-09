@@ -1,6 +1,5 @@
 "use client";
 
-// Re-compile trigger: 2026-04-27 11:00 AM
 import { useState, useEffect } from 'react';
 import type { PageSection, SiteSettings, FeaturedItem } from '@/lib/db';
 import ImageUploader from '@/components/admin/ImageUploader';
@@ -349,14 +348,6 @@ export default function Dashboard() {
                     onUploadSuccess={(url) => setSettings((current) => current ? { ...current, hero_image_url: url } : current)}
                     onRemove={() => setSettings((current) => current ? { ...current, hero_image_url: '' } : current)}
                     onUploadStateChange={(isUploading: boolean) => setUploadState('settings-hero', isUploading)}
-                  />
-
-                  <ImageUploader
-                    label="Shop Page Hero Background"
-                    currentUrl={settings.shop_hero_image_url}
-                    onUploadSuccess={(url) => setSettings((current) => current ? { ...current, shop_hero_image_url: url } : current)}
-                    onRemove={() => setSettings((current) => current ? { ...current, shop_hero_image_url: '' } : current)}
-                    onUploadStateChange={(isUploading: boolean) => setUploadState('settings-shop-hero', isUploading)}
                   />
 
                   <div>

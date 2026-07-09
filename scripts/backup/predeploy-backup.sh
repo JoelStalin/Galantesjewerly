@@ -29,6 +29,16 @@ mkdir -p "$BACKUP_DIR"
 
 echo "[backup] creating predeploy backup at $BACKUP_DIR"
 
+if [ -d "Galantesjewelry/data" ]; then
+  ROOT_APP_DATA_DIR="Galantesjewelry/data"
+elif [ -d "data" ]; then
+  ROOT_APP_DATA_DIR="data"
+else
+  ROOT_APP_DATA_DIR="Galantesjewelry/data"
+fi
+
+ROOT_APP_BLOBS_DIR="$ROOT_APP_DATA_DIR/blobs"
+
 if [ -f "$ENV_FILE" ]; then
   cp "$ENV_FILE" "$BACKUP_DIR/${ENV_FILE##*/}"
 fi
@@ -81,10 +91,73 @@ fi
 tar -czf "$BACKUP_DIR/app-data.tgz" \
   --ignore-failed-read \
   data \
+  "$ROOT_APP_DATA_DIR" \
   odoo \
   infra/nginx \
   "$ENV_FILE" \
   "$COMPOSE_FILE" 2>/dev/null || true
+
+if command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="python"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+else
+  PYTHON_BIN=""
+fi
+
+if [ -n "$PYTHON_BIN" ]; then
+"$PYTHON_BIN" - <<'PY' > "$BACKUP_DIR/managed-images-manifest.json" || true
+import json
+from pathlib import Path
+
+root = Path(".")
+if (root / "Galantesjewelry" / "data").exists():
+    data_root = root / "Galantesjewelry" / "data"
+else:
+    data_root = root / "data"
+blobs_root = data_root / "blobs"
+cms_path = data_root / "cms.json"
+integrations_path = data_root / "integrations.json"
+
+def safe_load_json(path: Path):
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+manifest = {
+    "cms_path": str(cms_path).replace("\\", "/"),
+    "integrations_path": str(integrations_path).replace("\\", "/"),
+    "blobs_path": str(blobs_root).replace("\\", "/"),
+    "blob_count": 0,
+    "blob_files": [],
+    "cms_urls": {},
+    "integrations_exists": integrations_path.exists(),
+}
+
+if blobs_root.exists():
+    files = sorted(p.name for p in blobs_root.iterdir() if p.is_file())
+    manifest["blob_count"] = len(files)
+    manifest["blob_files"] = files
+
+cms = safe_load_json(cms_path) or {}
+settings = cms.get("settings") or {}
+sections = cms.get("sections") or []
+featured_items = cms.get("featured_items") or []
+
+manifest["cms_urls"] = {
+    "favicon_url": settings.get("favicon_url"),
+    "logo_url": settings.get("logo_url"),
+    "hero_image_url": settings.get("hero_image_url"),
+    "section_image_urls": [item.get("image_url") for item in sections if item.get("image_url")],
+    "featured_image_urls": [item.get("image_url") for item in featured_items if item.get("image_url")],
+}
+
+print(json.dumps(manifest, indent=2, ensure_ascii=False))
+PY
+fi
 
 ls -1dt "$BACKUP_BASE_DIR"/* 2>/dev/null | tail -n +"$((KEEP_BACKUPS + 1))" | xargs -r rm -rf --
 

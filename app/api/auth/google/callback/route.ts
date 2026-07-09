@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import {
+  CUSTOMER_SESSION_COOKIE,
+  getCustomerAccountByEmail,
+  getCustomerSessionCookieOptions,
+  signCustomerSession,
+} from '@/lib/customer-auth';
+import {
   GOOGLE_OAUTH_RETURN_COOKIE,
   GOOGLE_OAUTH_STATE_COOKIE,
   GOOGLE_USER_COOKIE,
@@ -200,17 +206,27 @@ export async function GET(request: Request) {
       name: tokenInfo.name,
       picture: tokenInfo.picture,
     });
+    const existingCustomerAccount = await getCustomerAccountByEmail(tokenInfo.email || '');
+    const customerSessionToken = await signCustomerSession({
+      authMethod: 'google',
+      email: tokenInfo.email || '',
+      name: existingCustomerAccount?.name || tokenInfo.name || '',
+      username: existingCustomerAccount?.username,
+    });
 
     console.log('[Google OAuth] User authenticated:', tokenInfo.email);
 
     // Sync with Odoo (Equipo Senior: Account Merging Logic)
     try {
       const { OdooService } = await import('@/lib/odoo/services');
-      await OdooService.syncAuthenticatedUser({
+      await OdooService.syncCustomerProfile({
         name: tokenInfo.name || '',
-        email: tokenInfo.email!,
-        authMethod: 'google',
+        email: tokenInfo.email || '',
         google_id: tokenInfo.sub,
+        authMethod: 'google',
+        username: existingCustomerAccount?.username,
+        registeredAt: existingCustomerAccount ? undefined : new Date().toISOString(),
+        lastAuthAt: new Date().toISOString(),
       });
       console.log('[Google OAuth] Odoo Sync Successful');
     } catch (odooError) {
@@ -223,6 +239,11 @@ export async function GET(request: Request) {
       ...getGoogleUserCookieOptions(request),
       name: GOOGLE_USER_COOKIE,
       value: sessionToken,
+    });
+    response.cookies.set({
+      ...getCustomerSessionCookieOptions(request),
+      name: CUSTOMER_SESSION_COOKIE,
+      value: customerSessionToken,
     });
     response.cookies.set({
       ...getExpiredGoogleOAuthCookieOptions(request),

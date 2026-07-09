@@ -5,14 +5,12 @@ export type MaskedSecretState = {
   maskedValue: string;
 };
 
-const localIntegrationSecret = crypto.randomBytes(32).toString('hex');
-
 function getEncryptionKey() {
   const source =
     process.env.APPOINTMENT_ENCRYPTION_KEY ||
     process.env.INTEGRATIONS_SECRET_KEY ||
     process.env.ADMIN_SECRET_KEY ||
-    localIntegrationSecret;
+    'local_only_integration_secret_for_development';
 
   return crypto.createHash('sha256').update(source).digest();
 }
