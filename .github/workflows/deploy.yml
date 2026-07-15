@@ -1,0 +1,71 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: Force rebuild web and Odoo addon update
+        type: boolean
+        default: false
+      confirm_backup:
+        description: Type BACKUP_REQUIRED to confirm blocking predeploy backup
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: galantes-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirm_backup == 'BACKUP_REQUIRED' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://galantesjewelry.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Production deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          FORCE_REBUILD: ${{ inputs.force_rebuild }}
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_SSH_USER || 'yoeli' }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 60m
+          envs: TARGET_SHA,FORCE_REBUILD
+          script: |
+            set -Eeuo pipefail
+            cd /home/yoeli/galantesjewelry
+            git remote set-url origin https://github.com/JoelStalin/Galantesjewerly.git
+            BOOTSTRAP_BACKUP_ROOT="/home/yoeli/deploy-backups"
+            BOOTSTRAP_BACKUP_DIR="$BOOTSTRAP_BACKUP_ROOT/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-${TARGET_SHA:0:12}"
+            mkdir -p "$BOOTSTRAP_BACKUP_DIR"
+            if [ -f .env.prod ]; then
+              cp .env.prod "$BOOTSTRAP_BACKUP_DIR/env.prod"
+            fi
+            if [ -f docker-compose.production.yml ]; then
+              cp docker-compose.production.yml "$BOOTSTRAP_BACKUP_DIR/docker-compose.production.yml"
+            fi
+            git rev-parse HEAD > "$BOOTSTRAP_BACKUP_DIR/git-head-before.txt" || true
+            git status --short > "$BOOTSTRAP_BACKUP_DIR/git-status-before.txt" || true
+            docker compose --env-file .env.prod -f docker-compose.production.yml ps > "$BOOTSTRAP_BACKUP_DIR/docker-ps-before.txt" || true
+            docker inspect galantes_odoo_prod galantes_db_prod galantes_web_prod galantes_nginx_prod galantes_tunnel_prod > "$BOOTSTRAP_BACKUP_DIR/docker-inspect-before.json" || true
+            docker exec galantes_db_prod pg_dump -U odoo -Fc galantes_prod > "$BOOTSTRAP_BACKUP_DIR/galantes_prod.dump"
+            if [ -d data ]; then
+              tar -czf "$BOOTSTRAP_BACKUP_DIR/app-data.tgz" data
+            fi
+            printf '{"kind":"bootstrap-pre-checkout","target_sha":"%s","created_at":"%s"}\n' "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$BOOTSTRAP_BACKUP_DIR/backup.json"
+            git fetch origin main --tags
+            git checkout --detach -f "$TARGET_SHA"
+            chmod +x scripts/production/*.sh
+            scripts/production/preflight.sh
+            scripts/production/deploy-from-github.sh "$TARGET_SHA"

@@ -1,0 +1,615 @@
+/**
+ * Odoo API Client
+ *
+ * Provides typed access to Galante's Jewelry product catalog via Odoo REST API.
+ * Follows integration-contracts/shop-product.v1.ts schema.
+ *
+ * Usage:
+ *   const client = getOdooClient();
+ *   const products = await client.getProducts({ q: 'ring', sort: 'featured', page: 1 });
+ *   const product  = await client.getProductBySlug('engagement-ring-14k-gold');
+ *   const related  = await client.getRelatedProducts('engagement-ring-14k-gold', 4);
+ *   const cats     = await client.getCategories();
+ */
+
+// ---------------------------------------------------------------------------
+// Shared types (exported for use across the storefront)
+// ---------------------------------------------------------------------------
+
+export type ShopProduct = {
+  /** Odoo product.template.id */
+  id: string;
+  /** URL-friendly slug used in /shop/<slug> */
+  slug: string;
+  name: string;
+  /** One-line value proposition (product cards) */
+  tagline?: string;
+  /** 1–3 sentence sales copy (cards + listing previews) */
+  shortDescription?: string;
+  /** Full customer-facing copy (detail page) */
+  longDescription?: string;
+  /** Specifications: metal, stone, dimensions, etc. */
+  productDetails?: string;
+  /** Care instructions, shipping notes, packaging */
+  careAndShipping?: string;
+  price: number;
+  currency: string;
+  availability: 'in_stock' | 'out_of_stock' | 'preorder';
+  imageUrl?: string;
+  gallery?: string[];
+  galleryImages?: ProductGalleryImage[];
+  sku?: string;
+  /** Human-readable material label (e.g. '14K Gold') */
+  material?: string;
+  /** Raw material code for filtering (e.g. 'gold_14k') */
+  materialCode?: string;
+  category?: string;
+  categoryId?: number | null;
+  buyUrl: string;
+  publicUrl?: string;
+  isFeatured?: boolean;
+};
+
+export type ProductGalleryImage = {
+  id: number;
+  url: string;
+  altText?: string;
+  sequence?: number;
+};
+
+export type CategoryData = {
+  id: number;
+  name: string;
+  /** URL-friendly version of name */
+  slug: string;
+  /** Number of published products in this category */
+  count: number;
+  parentId?: number | null;
+};
+
+/** Combined search/filter/sort/pagination query for getProducts() */
+export type ShopQuery = {
+  /** Full-text search: name, tagline, short description, SKU */
+  q?: string;
+  category?: string;
+  material?: string;
+  sort?: 'featured' | 'newest' | 'price_asc' | 'price_desc' | 'alphabetical';
+  min_price?: number;
+  max_price?: number;
+  page?: number;
+  page_size?: number;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+};
+
+export interface OdooClientConfig {
+  baseUrl?: string;
+  timeout?: number;
+  cacheTTL?: number;
+}
+
+type PaginationInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+const PRODUCT_IMAGE_VERSION = '2';
+
+function buildProductImageProxyUrl(productId: string | number) {
+  return `/api/products/image?id=${productId}&v=${PRODUCT_IMAGE_VERSION}`;
+}
+
+function buildGalleryImageProxyUrl(galleryImageId: number) {
+  return `/api/products/gallery-image?id=${galleryImageId}&v=${PRODUCT_IMAGE_VERSION}`;
+}
+
+function normalizeGalleryImages(galleryImages?: ProductGalleryImage[]) {
+  return galleryImages?.map((image) => ({
+    ...image,
+    url: buildGalleryImageProxyUrl(image.id),
+  }));
+}
+
+function normalizeGalleryUrls(gallery?: string[], galleryImages?: ProductGalleryImage[]) {
+  if (galleryImages?.length) {
+    return galleryImages.map((image) => buildGalleryImageProxyUrl(image.id));
+  }
+
+  return gallery;
+}
+
+function normalizeProductImages(product: ShopProduct): ShopProduct {
+  const galleryImages = normalizeGalleryImages(product.galleryImages);
+
+  return {
+    ...product,
+    imageUrl: buildProductImageProxyUrl(product.id),
+    gallery: normalizeGalleryUrls(product.gallery, product.galleryImages),
+    galleryImages,
+  };
+}
+
+type FetchResponse<T> = {
+  data?: T;
+  pagination?: Partial<PaginationInfo>;
+};
+
+type FetchOptions = {
+  query?: Record<string, string | number | boolean | null | undefined>;
+  headers?: Record<string, string>;
+};
+
+// ---------------------------------------------------------------------------
+// OdooClient class
+// ---------------------------------------------------------------------------
+
+class OdooClient {
+  private baseUrl: string;
+  private timeout: number;
+  private cache: Map<string, { data: unknown; timestamp: number }>;
+  private cacheTTL: number;
+
+  constructor(config: OdooClientConfig = {}) {
+    this.baseUrl =
+      config.baseUrl || process.env.ODOO_BASE_URL || 'http://localhost:8069';
+    this.timeout = config.timeout || 10000;
+    this.cache = new Map();
+    this.cacheTTL = config.cacheTTL || 5 * 60 * 1000; // 5 minutes
+  }
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+
+  /**
+   * Fetch a paginated, filtered, and sorted product list.
+   *
+   * Accepts either a ShopQuery object (new) or legacy (page, pageSize) numbers.
+   */
+  async getProducts(
+    queryOrPage: ShopQuery | number = 1,
+    legacyPageSize: number = 24,
+  ): Promise<PaginatedResponse<ShopProduct>> {
+    const params = this._buildProductParams(queryOrPage, legacyPageSize);
+    const cacheKey = `products-${JSON.stringify(params)}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as PaginatedResponse<ShopProduct>;
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products', { query: params });
+      const data = (response.data || []).map((product) => normalizeProductImages(product));
+
+      const incomingPagination = response.pagination || {};
+      const page = incomingPagination.page ?? (typeof params.page === 'number' ? params.page : 1);
+      const pageSize = incomingPagination.pageSize ?? (typeof params.page_size === 'number' ? params.page_size : 24);
+      const total = incomingPagination.total ?? data.length;
+      const pages = incomingPagination.pages ?? Math.max(1, Math.ceil(total / pageSize));
+      const paginatedResponse: PaginatedResponse<ShopProduct> = {
+        data,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          pages,
+          hasNext: incomingPagination.hasNext ?? page < pages,
+          hasPrev: incomingPagination.hasPrev ?? page > 1,
+        },
+      };
+
+      this.cache.set(cacheKey, { data: paginatedResponse, timestamp: Date.now() });
+      return paginatedResponse;
+    } catch (error) {
+      console.warn('Odoo API unreachable, serving luxury masterpiece collection fallback.', error);
+      
+      const pageNum = typeof params.page === 'number' ? params.page : 1;
+      const pageSizeNum = typeof params.page_size === 'number' ? params.page_size : 24;
+      
+      return {
+        data: LUXURY_FALLBACK_PRODUCTS.slice((pageNum - 1) * pageSizeNum, pageNum * pageSizeNum),
+        pagination: {
+          page: pageNum,
+          pageSize: pageSizeNum,
+          total: LUXURY_FALLBACK_PRODUCTS.length,
+          pages: Math.ceil(LUXURY_FALLBACK_PRODUCTS.length / pageSizeNum),
+          hasNext: pageNum * pageSizeNum < LUXURY_FALLBACK_PRODUCTS.length,
+          hasPrev: pageNum > 1
+        },
+      };
+    }
+  }
+
+  /** Fetch a single product by its URL slug. */
+  async getProductBySlug(slug: string): Promise<ShopProduct | null> {
+    const cacheKey = `product-${slug}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as ShopProduct | null;
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct>>(`/api/products/${slug}`);
+      if (!response.data) return null;
+
+      const normalized = normalizeProductImages(response.data);
+      this.cache.set(cacheKey, { data: normalized, timestamp: Date.now() });
+      return normalized;
+    } catch {
+      console.warn(`Product slug ${slug} not found in Odoo, checking fallback collection...`);
+      return LUXURY_FALLBACK_PRODUCTS.find(p => p.slug === slug) || null;
+    }
+  }
+
+  /** Fetch related products for the detail page (by slug). */
+  async getRelatedProducts(
+    slug: string,
+    limit: number = 4,
+  ): Promise<ShopProduct[]> {
+    const cacheKey = `related-${slug}-${limit}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>(`/api/products/${slug}/related`, {
+        query: { limit },
+      });
+      let data = response.data || [];
+      
+      // Proxy images
+      data = data.map((product) => normalizeProductImages(product));
+
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error(`Failed to fetch related products for ${slug}:`, error);
+      return [];
+    }
+  }
+
+  /** Fetch all categories that have at least one published product. */
+  async getCategories(): Promise<CategoryData[]> {
+    const cacheKey = 'categories';
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as CategoryData[];
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<CategoryData[]>>('/api/categories');
+      const data: CategoryData[] = response.data || [];
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      return [];
+    }
+  }
+
+  /** Featured products for homepage / collections block. */
+  async getFeaturedProducts(limit: number = 6): Promise<ShopProduct[]> {
+    const cacheKey = `featured-${limit}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products/featured', {
+        query: { limit },
+      });
+      let data = response.data || [];
+      
+      // Proxy images
+      data = data.map((product) => normalizeProductImages(product));
+
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch featured products:', error);
+      return [];
+    }
+  }
+
+  /** Collections page: best sellers first, then featured favorites. */
+  async getCollectionProducts(limit: number = 12): Promise<ShopProduct[]> {
+    const cacheKey = `collections-${limit}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!.data as ShopProduct[];
+    }
+
+    try {
+      const response = await this.fetch<FetchResponse<ShopProduct[]>>('/api/products/collections', {
+        query: { limit },
+      });
+      let data = response.data || [];
+
+      data = data.map((product) => normalizeProductImages(product));
+
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch collection products:', error);
+      return this.getFeaturedProducts(limit);
+    }
+  }
+
+  /**
+   * Fetch products by category (legacy helper – prefer getProducts({ category })).
+   * @deprecated Use getProducts({ category, page, page_size }) instead.
+   */
+  async getProductsByCategory(
+    category: string,
+    page: number = 1,
+    pageSize: number = 24,
+  ): Promise<PaginatedResponse<ShopProduct>> {
+    return this.getProducts({ category, page, page_size: pageSize });
+  }
+
+  clearCache(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
+    }
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  /** Build the query-param object accepted by /api/products. */
+  private _buildProductParams(
+    queryOrPage: ShopQuery | number,
+    legacyPageSize: number,
+  ): Record<string, string | number> {
+    if (typeof queryOrPage === 'number') {
+      return { page: queryOrPage, page_size: legacyPageSize };
+    }
+
+    const q = queryOrPage;
+    const params: Record<string, string | number> = {
+      page: q.page ?? 1,
+      page_size: q.page_size ?? legacyPageSize,
+    };
+
+    if (q.q)         params.q         = q.q;
+    if (q.category)  params.category  = q.category;
+    if (q.material)  params.material  = q.material;
+    if (q.sort)      params.sort      = q.sort;
+    if (q.min_price != null) params.min_price = q.min_price;
+    if (q.max_price != null) params.max_price = q.max_price;
+
+    return params;
+  }
+
+  private async fetch<T>(
+    endpoint: string,
+    options: FetchOptions = {},
+  ): Promise<T> {
+    const url = new URL(endpoint, this.baseUrl);
+
+    if (options.query) {
+      Object.entries(options.query).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Odoo API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private isCacheValid(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+    return Date.now() - entry.timestamp < this.cacheTTL;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Singleton factory
+// ---------------------------------------------------------------------------
+
+let clientInstance: OdooClient | null = null;
+
+/** @deprecated Use getOdooClient() */
+export function createOdooClient(config?: OdooClientConfig): OdooClient {
+  if (!clientInstance) clientInstance = new OdooClient(config);
+  return clientInstance;
+}
+
+export function getOdooClient(): OdooClient {
+  if (!clientInstance) clientInstance = new OdooClient();
+  return clientInstance;
+}
+
+export default OdooClient;
+
+const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
+  {
+    id: '1',
+    slug: 'the-islamorada-solitaire',
+    name: 'The Islamorada Solitaire',
+    shortDescription: '2ct Diamond on Platinum with Coral Engravings',
+    longDescription: 'A masterpiece of coastal elegance, featuring a brilliant 2-carat ethically sourced diamond set upon a hand-engraved platinum band with intricate coral patterns.',
+    price: 18500,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=1&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Bridal',
+    buyUrl: '#',
+    isFeatured: true
+  },
+  {
+    id: '2',
+    slug: 'mariners-bond-band',
+    name: "Mariner's Bond Band",
+    shortDescription: '18k Rose Gold Nautical Knot Band',
+    longDescription: 'Symbolize your eternal bond with this 18k rose gold wedding band, featuring a continuous nautical knot motif representing strength and unity.',
+    price: 2400,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=2&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Bridal',
+    buyUrl: '#'
+  },
+  {
+    id: '3',
+    slug: 'compass-rose-pendant',
+    name: 'The Compass Rose Pendant',
+    shortDescription: '18k Gold with Sapphire Center',
+    longDescription: 'Never lose your way with this exquisite 18k yellow gold compass rose pendant, accented with a deep blue sapphire at its center.',
+    price: 3200,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=3&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Nautical',
+    buyUrl: '#',
+    isFeatured: true
+  },
+  {
+    id: '4',
+    slug: 'keys-azure-drop-earrings',
+    name: 'Keys Azure Drop Earrings',
+    shortDescription: 'Aquamarine and Diamond Drops',
+    longDescription: 'Capturing the crystalline waters of the Florida Keys, these drop earrings feature pear-shaped aquamarines suspended from diamond-encrusted studs.',
+    price: 5800,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=4&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Coastal',
+    buyUrl: '#'
+  },
+  {
+    id: '5',
+    slug: 'anchor-soul-bracelet',
+    name: 'Anchor of the Soul Bracelet',
+    shortDescription: 'Diamond Pavé Anchor Cuff',
+    longDescription: 'A stunning solid gold cuff featuring a central anchor clasp adorned with brilliant-cut diamond pavé. A true statement of coastal luxury.',
+    price: 8900,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=5&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Nautical',
+    buyUrl: '#',
+    isFeatured: true
+  },
+  {
+    id: '6',
+    slug: 'coastal-tide-ring',
+    name: 'Coastal Tide Ring',
+    shortDescription: 'Blue Sapphire Gradient Wave Ring',
+    longDescription: 'Five rows of graduated blue sapphires mimic the rolling waves of the Atlantic, set in high-polish white gold.',
+    price: 4500,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=6&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Coastal',
+    buyUrl: '#'
+  },
+  {
+    id: '7',
+    slug: 'sirens-pearl-necklace',
+    name: "Siren's Pearl Necklace",
+    shortDescription: 'South Sea Pearl with White Gold Mermaid Tail',
+    longDescription: 'A lustrous 12mm South Sea pearl cradled by a delicate white gold mermaid tail set with shimmering diamonds.',
+    price: 7200,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=7&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Nautical',
+    buyUrl: '#'
+  },
+  {
+    id: '8',
+    slug: 'navigators-chrono-link',
+    name: "Navigator's Chrono Link",
+    shortDescription: 'Solid Heavy Link Bracelet',
+    longDescription: 'Inspired by vintage ship anchor chains, this heavy-link bracelet is handcrafted in sterling silver and 18k yellow gold accents.',
+    price: 1800,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=8&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Coastal',
+    buyUrl: '#'
+  },
+  {
+    id: '9',
+    slug: 'tritons-trident-tie-bar',
+    name: "Triton's Trident Tie Bar",
+    shortDescription: 'Sterling Silver and Gold Tie Bar',
+    longDescription: 'A refined accessory for the coastal gentleman, featuring a hand-forged sterling silver trident with 18k gold detailing.',
+    price: 650,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=9&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Nautical',
+    buyUrl: '#'
+  },
+  {
+    id: '10',
+    slug: 'lighthouse-guardian-charm',
+    name: 'Lighthouse Guardian Charm',
+    shortDescription: 'Gold and Ruby Lighthouse Charm',
+    longDescription: 'A detailed 18k gold lighthouse charm featuring a tiny ruby crystal that catches the light like a true beacon.',
+    price: 1200,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=10&v=${PRODUCT_IMAGE_VERSION}`,
+    category: 'Coastal',
+    buyUrl: '#'
+  },
+  {
+    id: '11',
+    slug: 'shipping-calculation-demo-pendant',
+    name: 'Shipping Calculation Demo Pendant',
+    shortDescription: 'Ready-to-ship demo pendant for previewing shipping totals',
+    longDescription: 'A ready-to-ship gold pendant published specifically for customer portal testing. Add it to the cart to preview live shipping totals before checkout.',
+    price: 1250,
+    currency: 'USD',
+    availability: 'in_stock',
+    imageUrl: `/api/products/image?id=11&v=${PRODUCT_IMAGE_VERSION}`,
+    gallery: [
+      '/assets/products/compass-rose-pendant.png',
+      '/assets/products/lighthouse-guardian-charm.png',
+      '/assets/products/sirens-pearl-necklace.png',
+    ],
+    category: 'Ready to Ship',
+    buyUrl: '#',
+    isFeatured: true
+  }
+];

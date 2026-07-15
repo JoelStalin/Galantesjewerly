@@ -1,0 +1,15 @@
+tunnel: 0caea30f-6bbe-499e-8e25-7fe87c9658ac
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: galantesjewelry.com
+    service: http://nginx:80
+  - hostname: www.galantesjewelry.com
+    service: http://nginx:80
+  - hostname: shop.galantesjewelry.com
+    service: http://nginx:80
+  - hostname: odoo.galantesjewelry.com
+    service: http://nginx:80
+  - hostname: admin.galantesjewelry.com
+    service: http://nginx:80
+  - service: http_status:404
