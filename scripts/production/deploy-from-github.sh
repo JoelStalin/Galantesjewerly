@@ -45,6 +45,14 @@ if printf '%s\n' "$CHANGES" | grep -qE '^(odoo|docker-compose.production.yml)'; 
   needs_odoo=true
 fi
 
+log "Verifying critical CMS/product images are durable in Odoo"
+docker_cmd run --rm \
+  --env-file "$ENV_FILE" \
+  -v "$REPO_DIR:/work" \
+  -w /work \
+  galantes-web:gcp \
+  node scripts/verify-image-durability.mjs --env-file "$ENV_FILE"
+
 if [ "$needs_web" = "true" ]; then
   log "Building web image"
   compose build web

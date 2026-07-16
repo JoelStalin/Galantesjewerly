@@ -12,7 +12,7 @@ load_env
 require_vars GCP_PROJECT_ID GCP_ZONE GCP_VM_NAME GCP_VM_REPO_DIR
 check_vm_reachable
 
-log_step "Backfill de imagenes gestionadas a Odoo"
+log_step "Restauracion de imagenes gestionadas y productos a Odoo"
 
 SOURCE_DIR="${1:-$GCP_VM_REPO_DIR/Galantesjewelry/data/blobs}"
 CMS_FILE="${2:-$GCP_VM_REPO_DIR/Galantesjewelry/data/cms.json}"
@@ -20,6 +20,6 @@ CMS_FILE="${2:-$GCP_VM_REPO_DIR/Galantesjewelry/data/cms.json}"
 vm_ssh "set -e; \
     cd '$GCP_VM_REPO_DIR'; \
     test -d '$SOURCE_DIR'; \
-    node scripts/backfill-managed-images-to-odoo.mjs --source '$SOURCE_DIR' --cms '$CMS_FILE'"
+    node scripts/restore-images-to-odoo.mjs --source '$SOURCE_DIR' --cms '$CMS_FILE'"
 
-log_ok "Backfill de imagenes completado"
+log_ok "Restauracion de imagenes completada"

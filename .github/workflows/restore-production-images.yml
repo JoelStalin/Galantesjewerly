@@ -1,0 +1,81 @@
+name: Restore Production Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_restore:
+        description: Type RESTORE_IMAGES to confirm Odoo image restore
+        required: true
+        type: string
+      image_source_dir:
+        description: Directory on the production VM containing recovered image blobs
+        required: true
+        default: /home/yoeli/galantesjewelry/Galantesjewelry/data/blobs
+        type: string
+      overwrite_product_images:
+        description: Overwrite existing product.template image_1920 values
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: galantes-production-images
+  cancel-in-progress: false
+
+jobs:
+  restore-images:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirm_restore == 'RESTORE_IMAGES' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://galantesjewelry.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore images through production runner
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          IMAGE_SOURCE_DIR: ${{ inputs.image_source_dir }}
+          OVERWRITE_PRODUCT_IMAGES: ${{ inputs.overwrite_product_images }}
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_SSH_USER || 'yoeli' }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 60m
+          envs: TARGET_SHA,IMAGE_SOURCE_DIR,OVERWRITE_PRODUCT_IMAGES
+          script: |
+            set -Eeuo pipefail
+            cd /home/yoeli/galantesjewelry
+            git remote set-url origin https://github.com/JoelStalin/Galantesjewerly.git
+            git fetch origin main --tags
+            git checkout --detach -f "$TARGET_SHA"
+            chmod +x scripts/production/*.sh
+            scripts/production/predeploy-backup.sh
+            test -d "$IMAGE_SOURCE_DIR"
+            RESTORE_FLAGS=""
+            if [ "$OVERWRITE_PRODUCT_IMAGES" = "true" ]; then
+              RESTORE_FLAGS="--overwrite-product-images"
+            fi
+            sudo docker run --rm \
+              --env-file .env.gcp \
+              -v /home/yoeli/galantesjewelry:/work \
+              -w /work \
+              galantes-web:gcp \
+              node scripts/restore-images-to-odoo.mjs \
+                --env-file .env.gcp \
+                --source "$IMAGE_SOURCE_DIR" \
+                --cms /work/Galantesjewelry/data/cms.json \
+                $RESTORE_FLAGS
+            sudo docker run --rm \
+              --env-file .env.gcp \
+              -v /home/yoeli/galantesjewelry:/work \
+              -w /work \
+              galantes-web:gcp \
+              node scripts/verify-image-durability.mjs --env-file .env.gcp
+            scripts/production/postdeploy-validate.sh
