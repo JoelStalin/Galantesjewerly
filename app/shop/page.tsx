@@ -111,29 +111,30 @@ export default async function ShopPage({
       </section>
 
       {/* ── Controls + Grid ──────────────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
-
-        {/* Search / Category / Filter / Sort controls (interactive client component) */}
-        <Suspense fallback={<div className="h-32 bg-gray-100 rounded animate-pulse" />}>
-          <ShopControls
-            categories={categories}
-            currentFilters={{
-              q:         params.q,
-              category:  params.category,
-              material:  params.material,
-              sort:      params.sort || 'featured',
-              min_price: params.min_price,
-              max_price: params.max_price,
-            }}
-            totalCount={totalCount}
-            startItem={startItem}
-            endItem={endItem}
-            activeFilters={activeFilters}
-          />
-        </Suspense>
+      <div className="px-6 md:px-12 py-8">
+        <div className="w-full text-left">
+          {/* Search / Category / Filter / Sort controls (interactive client component) */}
+          <Suspense fallback={<div className="h-32 bg-gray-100 rounded animate-pulse" />}>
+            <ShopControls
+              categories={categories}
+              currentFilters={{
+                q:         params.q,
+                category:  params.category,
+                material:  params.material,
+                sort:      params.sort || 'featured',
+                min_price: params.min_price,
+                max_price: params.max_price,
+              }}
+              totalCount={totalCount}
+              startItem={startItem}
+              endItem={endItem}
+              activeFilters={activeFilters}
+            />
+          </Suspense>
+        </div>
 
         {/* Product grid */}
-        <div className="mt-8">
+        <div className="max-w-6xl mx-auto mt-8">
           {fetchError ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
               <h2 className="text-lg font-semibold text-red-800 mb-2">
