@@ -59,7 +59,7 @@ if [ "$needs_odoo" = "true" ]; then
   log "Updating Odoo addon in $PRODUCTION_DB"
   POSTGRES_PASSWORD="$(awk -F= '$1 == "POSTGRES_PASSWORD" {print substr($0, length($1) + 2)}' .env.gcp | tail -n 1)"
   [ -n "$POSTGRES_PASSWORD" ] || fail "POSTGRES_PASSWORD is required for Odoo addon update"
-  compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d "$PRODUCTION_DB" -u galantes_jewelry --stop-after-init --db_password "$POSTGRES_PASSWORD"
+  compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d "$PRODUCTION_DB" -u galantes_jewelry --stop-after-init --no-http --db_password "$POSTGRES_PASSWORD"
   compose up -d --no-deps odoo
 fi
 
