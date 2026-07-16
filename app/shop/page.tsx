@@ -1,5 +1,5 @@
 /**
- * Shop Page – Premium Jewelry Catalog
+ * Shop Page - Premium Jewelry Catalog
  *
  * Full-featured listing page with search, category navigation,
  * material & price filters, sorting, and real pagination.
@@ -45,7 +45,6 @@ export default async function ShopPage({
   const client  = getOdooClient();
   const page    = Math.max(1, parseInt(params.page || '1', 10));
 
-  // Fetch products and categories in parallel; degrade gracefully on errors.
   const [productsResult, categoriesResult] = await Promise.allSettled([
     client.getProducts({
       q:         params.q,
@@ -65,7 +64,6 @@ export default async function ShopPage({
   const fetchError = productsResult.status === 'rejected'  ? (productsResult.reason as Error).message : null;
   const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value         : [];
 
-  // Build active filter chips
   const activeFilters: ActiveFilters = [];
   if (params.q)         activeFilters.push({ label: `"${params.q}"`, key: 'q' });
   if (params.category)  activeFilters.push({ label: params.category, key: 'category' });
@@ -73,7 +71,7 @@ export default async function ShopPage({
   if (params.min_price || params.max_price) {
     const label =
       params.min_price && params.max_price
-        ? `$${params.min_price} – $${params.max_price}`
+        ? `$${params.min_price} - $${params.max_price}`
         : params.min_price
           ? `From $${params.min_price}`
           : `Up to $${params.max_price}`;
@@ -84,7 +82,6 @@ export default async function ShopPage({
   const startItem  = totalCount === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const endItem    = Math.min(page * PAGE_SIZE, totalCount);
 
-  // currentParams passed to Pagination so it can preserve existing filters
   const currentParams: Record<string, string | undefined> = {
     q:         params.q,
     category:  params.category,
@@ -96,8 +93,6 @@ export default async function ShopPage({
 
   return (
     <div className="min-h-screen bg-white">
-
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
       <section className="bg-primary text-white py-12 px-6 md:px-12">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-3">
@@ -110,74 +105,89 @@ export default async function ShopPage({
         </div>
       </section>
 
-      {/* ── Controls + Grid ──────────────────────────────────────────────── */}
-      <div className="px-6 md:px-12 py-8">
-        <div className="max-w-2xl text-left">
-          {/* Search / Category / Filter / Sort controls (interactive client component) */}
-          <Suspense fallback={<div className="h-32 bg-gray-100 rounded animate-pulse" />}>
-            <ShopControls
-              categories={categories}
-              currentFilters={{
-                q:         params.q,
-                category:  params.category,
-                material:  params.material,
-                sort:      params.sort || 'featured',
-                min_price: params.min_price,
-                max_price: params.max_price,
-              }}
-              totalCount={totalCount}
-              startItem={startItem}
-              endItem={endItem}
-              activeFilters={activeFilters}
-            />
-          </Suspense>
-        </div>
+      <div className="mx-auto max-w-7xl px-6 py-8 md:px-12">
+        <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
+          <aside className="lg:sticky lg:top-24 lg:border-r lg:border-gray-100 lg:pr-6">
+            <Suspense fallback={<div className="h-80 bg-gray-100 rounded animate-pulse" />}>
+              <ShopControls
+                categories={categories}
+                currentFilters={{
+                  q:         params.q,
+                  category:  params.category,
+                  material:  params.material,
+                  sort:      params.sort || 'featured',
+                  min_price: params.min_price,
+                  max_price: params.max_price,
+                }}
+                totalCount={totalCount}
+                startItem={startItem}
+                endItem={endItem}
+                activeFilters={activeFilters}
+                layout="sidebar"
+              />
+            </Suspense>
+          </aside>
 
-        {/* Product grid */}
-        <div className="max-w-6xl mx-auto mt-8">
-          {fetchError ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <h2 className="text-lg font-semibold text-red-800 mb-2">
-                Unable to Load Products
-              </h2>
-              <p className="text-red-700">{fetchError}</p>
+          <main className="min-w-0">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {activeFilters.map((filter) => (
+                  <span
+                    key={filter.key}
+                    className="inline-flex items-center rounded-full bg-accent/20 px-3 py-1 text-sm font-medium text-primary-dark"
+                  >
+                    {filter.label}
+                  </span>
+                ))}
+              </div>
+              {totalCount > 0 && (
+                <p className="text-sm text-gray-500">
+                  Showing {startItem}-{endItem} of {totalCount} piece{totalCount !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
 
-          ) : products.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-6 select-none" aria-hidden>💎</div>
-              <h2 className="text-2xl font-serif font-semibold text-gray-900 mb-3">
-                No products matched your search
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Try adjusting your filters or browse another collection.
-              </p>
-              <Link
-                href="/shop"
-                className="inline-block bg-accent text-primary-dark px-6 py-3 font-semibold hover:bg-accent-light transition-colors rounded"
-              >
-                Clear filters
-              </Link>
-            </div>
+            {fetchError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <h2 className="text-lg font-semibold text-red-800 mb-2">
+                  Unable to Load Products
+                </h2>
+                <p className="text-red-700">{fetchError}</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-20">
+                <h2 className="text-2xl font-serif font-semibold text-gray-900 mb-3">
+                  No products matched your search
+                </h2>
+                <p className="text-gray-600 mb-8">
+                  Try adjusting your filters or browse another collection.
+                </p>
+                <Link
+                  href="/shop"
+                  className="inline-block bg-accent text-primary-dark px-6 py-3 font-semibold hover:bg-accent-light transition-colors rounded"
+                >
+                  Clear filters
+                </Link>
+              </div>
+            ) : (
+              <ProductGrid products={products} columns={3} />
+            )}
 
-          ) : (
-            <ProductGrid products={products} columns={3} />
-          )}
+            {pagination && pagination.pages > 1 && (
+              <div className="mt-10">
+                <Pagination
+                  currentPage={page}
+                  totalPages={pagination.pages}
+                  hasNext={pagination.hasNext}
+                  hasPrev={pagination.hasPrev}
+                  currentParams={currentParams}
+                />
+              </div>
+            )}
+          </main>
         </div>
-
-        {/* Pagination */}
-        {pagination && pagination.pages > 1 && (
-          <Pagination
-            currentPage={page}
-            totalPages={pagination.pages}
-            hasNext={pagination.hasNext}
-            hasPrev={pagination.hasPrev}
-            currentParams={currentParams}
-          />
-        )}
       </div>
 
-      {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
       <section className="bg-accent py-14 px-6 md:px-12 text-primary-dark text-center">
         <h2 className="text-3xl font-serif font-bold mb-3">
           Can&apos;t Find What You&apos;re Looking For?
