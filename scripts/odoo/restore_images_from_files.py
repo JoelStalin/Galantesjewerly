@@ -109,6 +109,8 @@ for product, source in zip(products, seed_files):
     product.write({"image_1920": read_b64(source)})
     product_results.append({"productId": product.id, "name": product.name, "fileName": source.name, "bytes": source.stat().st_size})
 
+env.cr.commit()
+
 published_products = Product.search([("sale_ok", "=", True), ("available_on_website", "=", True)], order="id asc")
 missing_products = published_products.filtered(lambda product: not product.image_1920)
 
