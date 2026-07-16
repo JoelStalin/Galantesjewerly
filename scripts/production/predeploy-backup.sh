@@ -38,7 +38,13 @@ else
 fi
 
 log "Backing up Docker volume metadata and inspect output"
-docker_cmd inspect galantes_web galantes_odoo galantes_db galantes_nginx galantes_tunnel_prod > "$BACKUP_DIR/docker-inspect.json"
+inspect_containers=(galantes_odoo galantes_db galantes_nginx galantes_tunnel_prod)
+if docker_cmd inspect galantes_web >/dev/null 2>&1; then
+  inspect_containers=(galantes_web "${inspect_containers[@]}")
+elif docker_cmd inspect galantes_web_v4 >/dev/null 2>&1; then
+  inspect_containers=(galantes_web_v4 "${inspect_containers[@]}")
+fi
+docker_cmd inspect "${inspect_containers[@]}" > "$BACKUP_DIR/docker-inspect.json"
 compose config > "$BACKUP_DIR/docker-compose.resolved.yml"
 docker_cmd volume ls > "$BACKUP_DIR/docker-volumes.txt"
 
