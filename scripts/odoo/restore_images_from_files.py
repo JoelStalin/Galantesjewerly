@@ -65,6 +65,9 @@ if not settings_record:
 
 cms = load_cms(settings_record)
 cms["settings"].update(BRANDING_ASSETS)
+for section in cms.get("sections", []):
+    if section.get("section_identifier") == "hero":
+        section["image_url"] = BRANDING_ASSETS["hero_image_url"]
 for index, item in enumerate(cms.get("featured_items", [])):
     if index < len(FEATURED_IMAGES):
         item["image_url"] = FEATURED_IMAGES[index]
