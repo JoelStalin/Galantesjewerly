@@ -40,4 +40,14 @@ then
   fail "Current Odoo health check failed before deploy"
 fi
 
+log "Checking image durability in Odoo"
+if ! docker_cmd run --rm \
+  --env-file "$ENV_FILE" \
+  -v "$REPO_DIR:/work" \
+  -w /work \
+  galantes-web:gcp \
+  node scripts/verify-image-durability.mjs --env-file "$ENV_FILE"; then
+  fail "Odoo image durability check failed. Run the Restore Production Images workflow before deploying."
+fi
+
 log "Preflight OK"

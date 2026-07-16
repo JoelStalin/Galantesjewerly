@@ -67,8 +67,8 @@ const LEGACY_IMAGE_URL_MAP: Record<string, string> = {
 
 const INITIAL_DATA: DBData = {
   settings: {
-    favicon_url: '/api/image?id=favicon-1776389385968-favicon-32x32.png',
-    logo_url: '/api/image?id=image-1776389372642-gemini-generated-image-esi57fesi57fesi5-photoroom.webp',
+    favicon_url: '/api/image?id=favicon-1776722808533-favicon-32x32.png',
+    logo_url: '/api/image?id=image-1776722792843-logo.webp',
     brand_name: "Galante's Jewelry",
     brand_tagline: 'By The Sea',
     site_title: "Galante's Jewelry by the Sea ",
