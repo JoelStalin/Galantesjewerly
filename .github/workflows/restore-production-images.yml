@@ -69,7 +69,7 @@ jobs:
             sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
               -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
               -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
-              odoo odoo shell -d galantes_prod < scripts/odoo/restore_images_from_files.py
+              odoo odoo shell -d galantes_prod --no-http < scripts/odoo/restore_images_from_files.py
             sudo docker run --rm \
               --network "$WEB_NETWORK" \
               --env-file .env.gcp \
