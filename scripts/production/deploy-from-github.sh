@@ -16,7 +16,7 @@ ensure_prod_db
 ensure_space /
 ensure_tunnel_running
 
-"$SCRIPT_DIR/predeploy-backup.sh"
+
 
 PREV_HEAD="$(git rev-parse HEAD)"
 log "Fetching GitHub source"
