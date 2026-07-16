@@ -96,7 +96,7 @@ const INITIAL_DATA: DBData = {
       section_identifier: 'hero',
       title: "Galante's Jewelry by the Sea",
       content_text: "The Coastal Concierge",
-      image_url: "https://images.unsplash.com/photo-1516912481808-3406841bd33c?q=80&w=2844&auto=format&fit=crop",
+      image_url: "/api/image?id=image-1776959050826-portada.webp",
       action_text: "Book Appointment",
       action_link: "/contact",
       is_active: true
