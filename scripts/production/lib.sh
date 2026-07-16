@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 REPO_DIR="${REPO_DIR:-/home/yoeli/galantesjewelry}"
-ENV_FILE="${ENV_FILE:-.env.prod}"
+ENV_FILE="${ENV_FILE:-.env.gcp}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 BACKUP_ROOT="${BACKUP_ROOT:-/home/yoeli/deploy-backups}"
 PRODUCTION_DB="${PRODUCTION_DB:-galantes_prod}"
