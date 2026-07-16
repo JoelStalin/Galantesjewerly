@@ -63,6 +63,16 @@ ensure_tunnel_running() {
   [ "$status" = "running" ] || fail "Cloudflare tunnel is not running (status: ${status:-missing})"
 }
 
+web_network() {
+  local network
+  network="$(docker_cmd inspect galantes_web -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
+  if [ -z "$network" ]; then
+    network="$(docker_cmd inspect galantes_web_v4 -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
+  fi
+  [ -n "$network" ] || fail "Unable to resolve web Docker network"
+  printf '%s\n' "$network"
+}
+
 safe_backup_root() {
   local resolved
   mkdir -p "$BACKUP_ROOT"

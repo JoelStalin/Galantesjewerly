@@ -58,22 +58,31 @@ jobs:
             chmod +x scripts/production/*.sh
             scripts/production/predeploy-backup.sh
             test -d "$IMAGE_SOURCE_DIR"
+            WEB_NETWORK="$(sudo docker inspect galantes_web -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
+            if [ -z "$WEB_NETWORK" ]; then
+              WEB_NETWORK="$(sudo docker inspect galantes_web_v4 -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
+            fi
+            test -n "$WEB_NETWORK"
             RESTORE_FLAGS=""
             if [ "$OVERWRITE_PRODUCT_IMAGES" = "true" ]; then
               RESTORE_FLAGS="--overwrite-product-images"
             fi
             sudo docker run --rm \
+              --network "$WEB_NETWORK" \
               --env-file .env.gcp \
+              -e ODOO_BASE_URL=http://odoo:8069 \
               -v /home/yoeli/galantesjewelry:/work \
               -w /work \
               galantes-web:gcp \
               node scripts/restore-images-to-odoo.mjs \
                 --env-file .env.gcp \
-                --source "$IMAGE_SOURCE_DIR" \
+                --source /work/Galantesjewelry/data/blobs \
                 --cms /work/Galantesjewelry/data/cms.json \
                 $RESTORE_FLAGS
             sudo docker run --rm \
+              --network "$WEB_NETWORK" \
               --env-file .env.gcp \
+              -e ODOO_BASE_URL=http://odoo:8069 \
               -v /home/yoeli/galantesjewelry:/work \
               -w /work \
               galantes-web:gcp \
