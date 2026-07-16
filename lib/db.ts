@@ -58,6 +58,7 @@ const dataDir = getDataRoot();
 const dbFile = path.join(dataDir, 'cms.json');
 
 const LEGACY_IMAGE_URL_MAP: Record<string, string> = {
+  'https://images.unsplash.com/photo-1516912481808-3406841bd33c?q=80&w=2844&auto=format&fit=crop': '/api/image?id=image-1776959050826-portada.webp',
   '/assets/images/section-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
   '/assets/images/featured-bridal.png': '/api/image?id=image-1776960148616-chatgpt-image-apr-23-2026-11-58-48-am.webp',
   '/assets/images/section-collections.png': '/api/image?id=image-1776960207167-chatgpt-image-apr-23-2026-11-58-56-am.webp',
