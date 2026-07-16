@@ -41,15 +41,7 @@ then
 fi
 
 log "Checking image durability in Odoo"
-WEB_NETWORK="$(web_network)"
-if ! docker_cmd run --rm \
-  --network "$WEB_NETWORK" \
-  --env-file "$ENV_FILE" \
-  -e ODOO_BASE_URL=http://odoo:8069 \
-  -v "$REPO_DIR:/work" \
-  -w /work \
-  galantes-web:gcp \
-  node scripts/verify-image-durability.mjs --env-file "$ENV_FILE"; then
+if ! "$SCRIPT_DIR/verify-image-durability.sh"; then
   fail "Odoo image durability check failed. Run the Restore Production Images workflow before deploying."
 fi
 

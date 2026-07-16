@@ -46,15 +46,7 @@ if printf '%s\n' "$CHANGES" | grep -qE '^(odoo|docker-compose.production.yml)'; 
 fi
 
 log "Verifying critical CMS/product images are durable in Odoo"
-WEB_NETWORK="$(web_network)"
-docker_cmd run --rm \
-  --network "$WEB_NETWORK" \
-  --env-file "$ENV_FILE" \
-  -e ODOO_BASE_URL=http://odoo:8069 \
-  -v "$REPO_DIR:/work" \
-  -w /work \
-  galantes-web:gcp \
-  node scripts/verify-image-durability.mjs --env-file "$ENV_FILE"
+"$SCRIPT_DIR/verify-image-durability.sh"
 
 if [ "$needs_web" = "true" ]; then
   log "Building web image"
