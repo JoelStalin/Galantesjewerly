@@ -97,7 +97,7 @@ export function ShopControls({
   return (
     <div className="space-y-4">
       {/* Search Bar */}
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <form onSubmit={handleSearch} className="flex w-full max-w-2xl gap-2 mr-auto">
         <input
           type="search"
           value={searchInput}
