@@ -95,9 +95,9 @@ export function ShopControls({
   const clearAll = () => router.push(pathname);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-2xl mr-auto">
       {/* Search Bar */}
-      <form onSubmit={handleSearch} className="flex w-full max-w-2xl gap-2 mr-auto">
+      <form onSubmit={handleSearch} className="flex w-full gap-2">
         <input
           type="search"
           value={searchInput}

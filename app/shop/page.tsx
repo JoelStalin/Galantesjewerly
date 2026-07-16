@@ -112,7 +112,7 @@ export default async function ShopPage({
 
       {/* ── Controls + Grid ──────────────────────────────────────────────── */}
       <div className="px-6 md:px-12 py-8">
-        <div className="w-full text-left">
+        <div className="max-w-2xl text-left">
           {/* Search / Category / Filter / Sort controls (interactive client component) */}
           <Suspense fallback={<div className="h-32 bg-gray-100 rounded animate-pulse" />}>
             <ShopControls
