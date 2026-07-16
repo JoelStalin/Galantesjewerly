@@ -63,22 +63,13 @@ jobs:
               WEB_NETWORK="$(sudo docker inspect galantes_web_v4 -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
             fi
             test -n "$WEB_NETWORK"
-            RESTORE_FLAGS=""
-            if [ "$OVERWRITE_PRODUCT_IMAGES" = "true" ]; then
-              RESTORE_FLAGS="--overwrite-product-images"
-            fi
-            sudo docker run --rm \
-              --network "$WEB_NETWORK" \
-              --env-file .env.gcp \
-              -e ODOO_BASE_URL=http://odoo:8069 \
-              -v /home/yoeli/galantesjewelry:/work \
-              -w /work \
-              galantes-web:gcp \
-              node scripts/restore-images-to-odoo.mjs \
-                --env-file .env.gcp \
-                --source /work/Galantesjewelry/data/blobs \
-                --cms /work/Galantesjewelry/data/cms.json \
-                $RESTORE_FLAGS
+            sudo docker exec galantes_odoo rm -rf /tmp/galantes-blobs
+            sudo docker cp "$IMAGE_SOURCE_DIR" galantes_odoo:/tmp/galantes-blobs
+            sudo docker cp scripts/odoo/restore_images_from_files.py galantes_odoo:/tmp/restore_images_from_files.py
+            sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
+              -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
+              -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
+              odoo odoo shell -d galantes_prod < scripts/odoo/restore_images_from_files.py
             sudo docker run --rm \
               --network "$WEB_NETWORK" \
               --env-file .env.gcp \
