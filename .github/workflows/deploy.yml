@@ -49,17 +49,17 @@ jobs:
             BOOTSTRAP_BACKUP_ROOT="/home/yoeli/deploy-backups"
             BOOTSTRAP_BACKUP_DIR="$BOOTSTRAP_BACKUP_ROOT/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-${TARGET_SHA:0:12}"
             mkdir -p "$BOOTSTRAP_BACKUP_DIR"
-            if [ -f .env.prod ]; then
-              cp .env.prod "$BOOTSTRAP_BACKUP_DIR/env.prod"
+            if [ -f .env.gcp ]; then
+              cp .env.gcp "$BOOTSTRAP_BACKUP_DIR/env.prod"
             fi
             if [ -f docker-compose.production.yml ]; then
               cp docker-compose.production.yml "$BOOTSTRAP_BACKUP_DIR/docker-compose.production.yml"
             fi
             git rev-parse HEAD > "$BOOTSTRAP_BACKUP_DIR/git-head-before.txt" || true
             git status --short > "$BOOTSTRAP_BACKUP_DIR/git-status-before.txt" || true
-            docker compose --env-file .env.prod -f docker-compose.production.yml ps > "$BOOTSTRAP_BACKUP_DIR/docker-ps-before.txt" || true
-            docker inspect galantes_odoo_prod galantes_db_prod galantes_web_prod galantes_nginx_prod galantes_tunnel_prod > "$BOOTSTRAP_BACKUP_DIR/docker-inspect-before.json" || true
-            docker exec galantes_db_prod pg_dump -U odoo -Fc galantes_prod > "$BOOTSTRAP_BACKUP_DIR/galantes_prod.dump"
+            sudo docker compose --env-file .env.gcp -f docker-compose.production.yml ps > "$BOOTSTRAP_BACKUP_DIR/docker-ps-before.txt" || true
+            sudo docker inspect galantes_odoo_prod galantes_db_prod galantes_web_prod galantes_nginx_prod galantes_tunnel_prod > "$BOOTSTRAP_BACKUP_DIR/docker-inspect-before.json" || true
+            sudo docker exec galantes_db_prod pg_dump -U odoo -Fc galantes_prod > "$BOOTSTRAP_BACKUP_DIR/galantes_prod.dump"
             if [ -d data ]; then
               tar -czf "$BOOTSTRAP_BACKUP_DIR/app-data.tgz" data
             fi
