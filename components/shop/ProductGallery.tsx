@@ -120,6 +120,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
               src={activeImage}
               alt={productName}
               fill
+              unoptimized
               className="cursor-zoom-in object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -205,6 +206,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
                 alt={`${productName} – view ${idx + 1}`}
                 width={150}
                 height={150}
+                unoptimized
                 className="w-full h-full object-cover"
               />
             </button>
@@ -259,6 +261,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
                 src={activeImage}
                 alt={productName}
                 fill
+                unoptimized
                 className="object-contain"
                 sizes="100vw"
               />
