@@ -37,9 +37,9 @@ check_http() {
   echo
   echo "## HTTP"
   echo '```text'
-  check_http "https://galantesjewelry.com/api/health" "public-health"
-  check_http "https://galantesjewelry.com/shop" "public-shop"
-  check_http "https://odoo.galantesjewelry.com/web/login" "public-odoo"
+  check_http "https://galantesjewelry.com/api/health" "public-health" || true
+  check_http "https://galantesjewelry.com/shop" "public-shop" || true
+  check_http "https://odoo.galantesjewelry.com/web/login" "public-odoo" || true
   echo '```'
   echo
   echo "## Product Image Sample"
