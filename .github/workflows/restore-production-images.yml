@@ -66,10 +66,12 @@ jobs:
             sudo docker exec -u 0 galantes_odoo rm -rf /tmp/galantes-blobs
             sudo docker cp "$IMAGE_SOURCE_DIR" galantes_odoo:/tmp/galantes-blobs
             sudo docker cp scripts/odoo/restore_images_from_files.py galantes_odoo:/tmp/restore_images_from_files.py
+            POSTGRES_PASSWORD="$(awk -F= '$1 == "POSTGRES_PASSWORD" {print substr($0, length($1) + 2)}' .env.gcp | tail -n 1)"
+            test -n "$POSTGRES_PASSWORD"
             sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
               -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
               -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
-              odoo odoo shell -d galantes_prod --no-http < scripts/odoo/restore_images_from_files.py
+              odoo odoo shell -d galantes_prod --no-http --db_password "$POSTGRES_PASSWORD" < scripts/odoo/restore_images_from_files.py
             sudo docker run --rm \
               --network "$WEB_NETWORK" \
               --env-file .env.gcp \
