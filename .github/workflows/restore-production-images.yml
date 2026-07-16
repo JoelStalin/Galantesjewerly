@@ -63,7 +63,7 @@ jobs:
               WEB_NETWORK="$(sudo docker inspect galantes_web_v4 -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1 || true)"
             fi
             test -n "$WEB_NETWORK"
-            sudo docker exec galantes_odoo rm -rf /tmp/galantes-blobs
+            sudo docker exec -u 0 galantes_odoo rm -rf /tmp/galantes-blobs
             sudo docker cp "$IMAGE_SOURCE_DIR" galantes_odoo:/tmp/galantes-blobs
             sudo docker cp scripts/odoo/restore_images_from_files.py galantes_odoo:/tmp/restore_images_from_files.py
             sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
