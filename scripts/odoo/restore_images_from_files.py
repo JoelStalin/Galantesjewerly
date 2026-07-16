@@ -31,6 +31,16 @@ def product_seed_files(blobs_dir):
     return [path for path in image_files(blobs_dir) if path.name.startswith("20260610_") and path.suffix.lower() in {".jpg", ".jpeg"}]
 
 
+def fallback_product_file(blobs_dir):
+    for url in FEATURED_IMAGES + [BRANDING_ASSETS["hero_image_url"]]:
+        storage_id = storage_id_from_url(url)
+        if storage_id:
+            source = blobs_dir / storage_id
+            if source.exists():
+                return source
+    return None
+
+
 def content_type(path):
     return mimetypes.guess_type(path.name)[0] or "application/octet-stream"
 
@@ -106,9 +116,14 @@ domain = [("sale_ok", "=", True), ("available_on_website", "=", True)]
 if not overwrite_product_images:
     domain.append(("image_1920", "=", False))
 seed_files = product_seed_files(blobs_dir)
-products = Product.search(domain, order="id asc", limit=len(seed_files))
+fallback_seed = fallback_product_file(blobs_dir)
+limit = len(seed_files) if not fallback_seed else None
+products = Product.search(domain, order="id asc", limit=limit)
 product_results = []
-for product, source in zip(products, seed_files):
+for index, product in enumerate(products):
+    source = seed_files[index] if index < len(seed_files) else fallback_seed
+    if not source:
+        break
     product.write({"image_1920": read_b64(source)})
     product_results.append({"productId": product.id, "name": product.name, "fileName": source.name, "bytes": source.stat().st_size})
 
