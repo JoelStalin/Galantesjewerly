@@ -43,6 +43,25 @@ def collect_image_metrics(driver):
     )
 
 
+def wait_for_images(driver, timeout: int = 20):
+    driver.execute_script(
+        """
+        window.scrollTo(0, 0);
+        for (const img of document.images) {
+          img.loading = 'eager';
+        }
+        window.scrollTo(0, document.body.scrollHeight);
+        window.scrollTo(0, 0);
+        """
+    )
+    WebDriverWait(driver, timeout).until(
+        lambda current: all(
+            not image.get("src") or (image.get("complete") and image.get("naturalWidth", 0) > 0)
+            for image in collect_image_metrics(current)
+        )
+    )
+
+
 def fetch_resource(driver, url: str) -> dict:
     return driver.execute_async_script(
         """
@@ -98,7 +117,11 @@ def main() -> None:
         for page in pages:
             url = page if page.startswith("http") else f"{BASE_URL}{page}"
             driver.get(url)
-            time.sleep(4)
+            time.sleep(2)
+            try:
+                wait_for_images(driver)
+            except Exception:
+                pass
 
             images = collect_image_metrics(driver)
             api_images = [img for img in images if "/api/image" in img["src"] or "/api/products/image" in img["src"]]
