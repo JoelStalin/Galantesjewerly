@@ -12,6 +12,7 @@ ensure_prod_db
 log "Running safe Docker cache cleanup before space validation"
 docker builder prune -af --filter "until=72h" >/dev/null 2>&1 || true
 docker image prune -af --filter "until=72h" >/dev/null 2>&1 || true
+"$SCRIPT_DIR/rotate-backups.sh"
 
 ensure_space /
 
