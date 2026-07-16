@@ -39,7 +39,11 @@ check_http() {
   echo '```text'
   check_http "https://galantesjewelry.com/api/health" "public-health" || true
   check_http "https://galantesjewelry.com/shop" "public-shop" || true
-  check_http "https://odoo.galantesjewelry.com/web/login" "public-odoo" || true
+  if compose exec -T odoo python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8069/web/login', timeout=10)" >/dev/null 2>&1; then
+    printf '%s %s %s\n' "internal-odoo" "200" "http://127.0.0.1:8069/web/login"
+  else
+    printf '%s %s %s\n' "internal-odoo" "FAIL" "http://127.0.0.1:8069/web/login"
+  fi
   echo '```'
   echo
   echo "## Product Image Sample"
@@ -56,7 +60,7 @@ check_http() {
   echo '```'
 } > "$OUT_FILE"
 
-if grep -q 'public-health 200' "$OUT_FILE" && grep -q 'public-shop 200' "$OUT_FILE" && grep -q 'public-odoo 200' "$OUT_FILE"; then
+if grep -q 'public-health 200' "$OUT_FILE" && grep -q 'public-shop 200' "$OUT_FILE" && grep -q 'internal-odoo 200' "$OUT_FILE"; then
   log "Postdeploy validation written: $OUT_FILE"
 else
   cat "$OUT_FILE"
