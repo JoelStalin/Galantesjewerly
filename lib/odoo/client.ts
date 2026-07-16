@@ -129,7 +129,7 @@ function normalizeGalleryUrls(gallery?: string[], galleryImages?: ProductGallery
     return galleryImages.map((image) => buildGalleryImageProxyUrl(image.id));
   }
 
-  return gallery;
+  return gallery?.filter((url) => url.startsWith('/api/') || url.startsWith('/assets/'));
 }
 
 function normalizeProductImages(product: ShopProduct): ShopProduct {
