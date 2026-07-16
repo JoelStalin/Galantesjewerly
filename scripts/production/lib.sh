@@ -7,7 +7,7 @@ ENV_FILE="${ENV_FILE:-.env.gcp}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 BACKUP_ROOT="${BACKUP_ROOT:-/home/yoeli/deploy-backups}"
 PRODUCTION_DB="${PRODUCTION_DB:-galantes_prod}"
-MIN_FREE_MB="${MIN_FREE_MB:-8192}"
+MIN_FREE_MB="${MIN_FREE_MB:-6144}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-5}"
 KEEP_BACKUP_HOURS="${KEEP_BACKUP_HOURS:-72}"
 
