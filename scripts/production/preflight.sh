@@ -41,8 +41,11 @@ then
 fi
 
 log "Checking image durability in Odoo"
+WEB_NETWORK="$(web_network)"
 if ! docker_cmd run --rm \
+  --network "$WEB_NETWORK" \
   --env-file "$ENV_FILE" \
+  -e ODOO_BASE_URL=http://odoo:8069 \
   -v "$REPO_DIR:/work" \
   -w /work \
   galantes-web:gcp \
