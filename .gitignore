@@ -1,0 +1,54 @@
+# ==========================================
+# Galantes Jewelry isolated repository gitignore
+# ==========================================
+
+# Next.js build and development artifacts
+.next/
+/Galantesjewelry/.next/
+**/cache/
+**/turbopack/
+
+# Dependency folders
+node_modules/
+/Galantesjewelry/node_modules/
+/odoo/addons/galantes_jewelry/node_modules/
+
+# Python caching and compiled code
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local testing and runtime context
+tests/e2e/.runtime/
+**/chrome-user-data/
+**/ShaderCache/
+**/component_crx_cache/
+**/extensions_crx_cache/
+tests/e2e/artifacts/
+/test-results/
+
+# Local configuration and environment variables
+.env
+.env.local
+.env.gcp
+.env.cloudflare
+.env.backup*
+.env.obsidian.example
+secrets/
+
+# Temporary and build logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+build_log.txt
+test_error.png
+*.tar.gz
+*.zip
+*.dump
+
+# Miscellaneous OS metadata
+.DS_Store
+Thumbs.db

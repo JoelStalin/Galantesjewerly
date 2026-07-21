@@ -1,0 +1,267 @@
+{
+  "name": "Galantes Inventory Agent - Safe Intake And Review",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1JzM1wpBtvM8ILEnYu0t5qBtG8pMYht6u",
+          "mode": "id",
+          "cachedResultName": "Products"
+        },
+        "event": "fileCreatedOrUpdated"
+      },
+      "id": "drive-products-trigger",
+      "name": "Drive Products Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [0, -220],
+      "notes": "Dispara intake cuando se sube o modifica una foto en la carpeta Products: https://drive.google.com/drive/folders/1JzM1wpBtvM8ILEnYu0t5qBtG8pMYht6u?usp=sharing"
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs errors:use-cases"
+      },
+      "id": "error-use-cases",
+      "name": "Error Use Cases",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs status"
+      },
+      "id": "agent-status",
+      "name": "Agent Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs drive:scan"
+      },
+      "id": "drive-scan",
+      "name": "Drive Scan",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs drive:download"
+      },
+      "id": "drive-download",
+      "name": "Drive Download",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs processed:index-status"
+      },
+      "id": "processed-index-status",
+      "name": "Processed Index Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [960, -220]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs image:convert-deps-check"
+      },
+      "id": "image-convert-deps",
+      "name": "Image Convert Deps Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1200, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs image:convert-heic"
+      },
+      "id": "image-convert-heic",
+      "name": "Convert HEIC",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1440, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs image:features"
+      },
+      "id": "image-features",
+      "name": "Image Features",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1680, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs ml:deps-check"
+      },
+      "id": "ml-deps-check",
+      "name": "ML Deps Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1920, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs ml:build-index"
+      },
+      "id": "ml-build-index",
+      "name": "ML Build Index",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2160, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs ml:index-status"
+      },
+      "id": "ml-index-status",
+      "name": "ML Index Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2160, -220]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs ml:cluster"
+      },
+      "id": "ml-cluster",
+      "name": "ML Cluster",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2400, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs vision:mediapipe-deps-check"
+      },
+      "id": "mediapipe-deps-check",
+      "name": "MediaPipe Deps Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2640, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs gemini:same-product-review"
+      },
+      "id": "gemini-same-product-review",
+      "name": "Gemini Same Product Review",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2880, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs gemini:apply-same-product-review"
+      },
+      "id": "gemini-apply-same-product-review",
+      "name": "Apply Gemini Same Product Review",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3120, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs ml:contact-sheets"
+      },
+      "id": "ml-contact-sheets",
+      "name": "ML Contact Sheets",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3360, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs product:metadata-suggest"
+      },
+      "id": "product-metadata-suggest",
+      "name": "Product Metadata Suggest",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3600, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs gemini:product-metadata"
+      },
+      "id": "gemini-product-metadata",
+      "name": "Gemini Product Metadata",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3840, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs review:export"
+      },
+      "id": "review-export",
+      "name": "Review Export",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [4080, 0]
+    },
+    {
+      "parameters": {
+        "command": "node -e \"const fs=require('fs'); const p='data/inventory-agent/review/review-queue.csv'; console.log(JSON.stringify({ok:true, reviewQueue:p, exists:fs.existsSync(p)}))\""
+      },
+      "id": "review-summary",
+      "name": "Review Summary",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [4320, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Error Use Cases", "type": "main", "index": 0 }]] },
+    "Drive Products Trigger": { "main": [[{ "node": "Error Use Cases", "type": "main", "index": 0 }]] },
+    "Error Use Cases": { "main": [[{ "node": "Agent Status", "type": "main", "index": 0 }]] },
+    "Agent Status": { "main": [[{ "node": "Drive Scan", "type": "main", "index": 0 }]] },
+    "Drive Scan": { "main": [[{ "node": "Processed Index Status", "type": "main", "index": 0 }]] },
+    "Processed Index Status": { "main": [[{ "node": "Drive Download", "type": "main", "index": 0 }]] },
+    "Drive Download": { "main": [[{ "node": "Image Convert Deps Check", "type": "main", "index": 0 }]] },
+    "Image Convert Deps Check": { "main": [[{ "node": "Convert HEIC", "type": "main", "index": 0 }]] },
+    "Convert HEIC": { "main": [[{ "node": "Image Features", "type": "main", "index": 0 }]] },
+    "Image Features": { "main": [[{ "node": "ML Deps Check", "type": "main", "index": 0 }]] },
+    "ML Deps Check": { "main": [[{ "node": "ML Index Status", "type": "main", "index": 0 }]] },
+    "ML Index Status": { "main": [[{ "node": "ML Build Index", "type": "main", "index": 0 }]] },
+    "ML Build Index": { "main": [[{ "node": "ML Cluster", "type": "main", "index": 0 }]] },
+    "ML Cluster": { "main": [[{ "node": "MediaPipe Deps Check", "type": "main", "index": 0 }]] },
+    "MediaPipe Deps Check": { "main": [[{ "node": "Gemini Same Product Review", "type": "main", "index": 0 }]] },
+    "Gemini Same Product Review": { "main": [[{ "node": "Apply Gemini Same Product Review", "type": "main", "index": 0 }]] },
+    "Apply Gemini Same Product Review": { "main": [[{ "node": "ML Contact Sheets", "type": "main", "index": 0 }]] },
+    "ML Contact Sheets": { "main": [[{ "node": "Product Metadata Suggest", "type": "main", "index": 0 }]] },
+    "Product Metadata Suggest": { "main": [[{ "node": "Gemini Product Metadata", "type": "main", "index": 0 }]] },
+    "Gemini Product Metadata": { "main": [[{ "node": "Review Export", "type": "main", "index": 0 }]] },
+    "Review Export": { "main": [[{ "node": "Review Summary", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "active": false,
+  "versionId": "galantes-inventory-safe-intake-review-v1"
+}
