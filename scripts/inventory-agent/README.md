@@ -6,6 +6,26 @@ Rule: every Orca/n8n node must call a deterministic script command first. LLM/mo
 
 ## Entrypoints
 
+Drive, image, clustering, review, and dry-run nodes run on the local worker
+machine. GitHub Actions is only the protected production gate and must not scan
+Drive or perform image classification.
+
+Run the complete local intake sequence with:
+
+```bash
+node scripts/inventory-agent/run-local-intake.mjs
+```
+
+Run the persistent local autocorrection monitor with:
+
+```bash
+node scripts/inventory-agent/monitor-loop.mjs
+```
+
+Provider routing is declared in `config/inventory-agent.providers.json`: OpenAI
+is the decision brain, Gemini handles vision/editing, and local Ollama/Hermes
+are fallbacks. Secrets are read only from `.env.local`.
+
 - Google Drive OAuth:
 
 ```bash

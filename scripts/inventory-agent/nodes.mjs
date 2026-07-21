@@ -1070,14 +1070,11 @@ async function odooDryRun() {
   await ensureDirs();
   const dto = await loadProductDto();
   const approved = await readJson('data/inventory-agent/manifests/approved-products.json');
-  const reviewedClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json');
   const mlClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json');
-  const clusters = reviewedClusters?.clusters?.length
-    && reviewedClusters.sourceClusterGeneratedAt
-    && mlClusters?.generatedAt
-    && reviewedClusters.sourceClusterGeneratedAt === mlClusters.generatedAt
-    ? reviewedClusters
-    : mlClusters || await readJson('data/inventory-agent/manifests/product-clusters.json');
+  // Review manifests may re-cluster and change display IDs. Approved rows use
+  // the stable ml-cluster-* IDs from review-queue.csv, so Odoo dry-run must
+  // resolve them against the base manifest.
+  const clusters = mlClusters || await readJson('data/inventory-agent/manifests/product-clusters.json');
   if (!approved) throw new Error('Missing approved-products.json. Run review:import first.');
   if (!clusters) throw new Error('Missing product-clusters.json. Run product:cluster first.');
   const clusterById = new Map((clusters.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
@@ -1403,6 +1400,48 @@ async function exportN8nWorkflow() {
   }, null, 2));
 }
 
+async function imageEnhance() {
+  await ensureDirs();
+  const manifest = await readJson('data/inventory-agent/manifests/ml-product-clusters.json')
+    || await readJson('data/inventory-agent/manifests/product-clusters.json');
+  if (!manifest?.clusters?.length) throw new Error('Missing product clusters. Run ml:cluster first.');
+  const outputs = [];
+  for (const cluster of manifest.clusters) {
+    const files = cluster.files || [];
+    const edited = (await Promise.all(files.map(async (file) => {
+      const source = file.localPath || file.path;
+      if (!source) return null;
+      const absoluteSource = path.isAbsolute(source) ? source : path.join(root, source);
+      const outputRelative = path.join('data/inventory-agent/edited', `${cluster.clusterId}-${path.basename(source, path.extname(source))}.jpg`);
+      const outputAbsolute = path.join(root, outputRelative);
+      await sharp(absoluteSource).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 92, mozjpeg: true }).toFile(outputAbsolute);
+      return { source: source.replaceAll('\\', '/'), output: outputRelative.replaceAll('\\', '/'), provider: 'local-sharp', sourceExists: true };
+    }))).filter(Boolean);
+    outputs.push({ clusterId: cluster.clusterId, images: edited });
+  }
+  const payload = { ok: true, generatedAt: new Date().toISOString(), provider: 'local-sharp', clusters: outputs, llmUsed: false };
+  await writeJson('data/inventory-agent/manifests/image-enhancement.json', payload);
+  console.log(JSON.stringify({ ok: true, provider: payload.provider, clusters: outputs.length, images: outputs.reduce((n, x) => n + x.images.length, 0), output: 'data/inventory-agent/manifests/image-enhancement.json' }, null, 2));
+}
+
+async function descriptionGenerate() {
+  await ensureDirs();
+  const metadata = await readJson('data/inventory-agent/manifests/product-metadata-suggestions.json', { suggestions: [] });
+  const clusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json') || await readJson('data/inventory-agent/manifests/product-clusters.json');
+  if (!clusters?.clusters?.length) throw new Error('Missing product clusters. Run ml:cluster first.');
+  const byCluster = new Map((metadata.suggestions || []).map((item) => [item.clusterId, item]));
+  const products = clusters.clusters.map((cluster) => {
+    const suggestion = byCluster.get(cluster.clusterId) || {};
+    const name = suggestion.suggestedProductName || `Galante's Jewelry ${suggestion.suggestedCategory || 'Jewelry'}`;
+    const category = suggestion.suggestedCategory || 'jewelry';
+    const material = suggestion.suggestedMaterial || 'premium material';
+    return { clusterId: cluster.clusterId, productName: name, category, material, description: `${name}, una pieza de ${category} elaborada en ${material}. Consulta disponibilidad y detalles con Galante's Jewelry.`, provider: 'local-template', llmUsed: false };
+  });
+  const payload = { ok: true, generatedAt: new Date().toISOString(), provider: 'local-template', products, policy: 'Descriptions only; price, cost, and stock are never generated.' };
+  await writeJson('data/inventory-agent/manifests/product-copy.json', payload);
+  console.log(JSON.stringify({ ok: true, provider: payload.provider, products: products.length, output: 'data/inventory-agent/manifests/product-copy.json' }, null, 2));
+}
+
 function getPythonCommand() {
   return process.env.INVENTORY_AGENT_PYTHON || 'python';
 }
@@ -1470,6 +1509,8 @@ async function placeholderRun(command) {
   if (command === 'ml:build-index') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'build-index']);
   if (command === 'ml:cluster') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'cluster']);
   if (command === 'ml:contact-sheets') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'contact-sheets']);
+  if (command === 'image:enhance') return imageEnhance();
+  if (command === 'description:generate') return descriptionGenerate();
   if (command === 'vision:yolo-deps-check') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'deps-check']);
   if (command === 'vision:yolo-classify') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'classify']);
   if (command === 'vision:mediapipe-deps-check') return runPythonTool(['scripts/inventory-agent/mediapipe_classifier.py', 'deps-check']);
@@ -1601,7 +1642,11 @@ async function odooPublish() {
 
 async function autocorrectionLoop() {
   await ensureDirs();
-  const clusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json', { clusters: [] });
+  const baseClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json', { clusters: [] });
+  const reviewedClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json', null);
+  const clusters = reviewedClusters?.generatedAt && reviewedClusters.generatedAt >= (baseClusters.generatedAt || '')
+    ? reviewedClusters
+    : baseClusters;
   const suggestions = await readJson('data/inventory-agent/manifests/product-metadata-suggestions.json', { suggestions: [] });
   const queuePath = path.join(root, 'data/inventory-agent/review/review-queue.csv');
   const queueExists = await fs.access(queuePath).then(() => true).catch(() => false);
@@ -1622,7 +1667,9 @@ async function autocorrectionLoop() {
     reviewQueueRows: rows.length,
     unresolvedClusterCount: Math.max(unresolved.length, unresolvedQueueRows),
     publishableCount: 0,
-    corrections: [],
+    corrections: reviewedClusters?.generatedAt && clusters === reviewedClusters
+      ? [{ action: 'applied_reviewed_clusters', source: 'ml-product-clusters-reviewed.json', reviewedAt: reviewedClusters.generatedAt }]
+      : [],
     nextRequiredActions: [
       'Resolve merge/split and uncertain rows in review-queue.csv.',
       'Enter user-approved price, cost, and stock for every product.',
