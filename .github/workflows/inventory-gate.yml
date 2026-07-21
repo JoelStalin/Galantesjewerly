@@ -31,6 +31,8 @@ jobs:
           node scripts/inventory-agent/nodes.mjs inventory:autocorrect-loop
       - name: Run application tests
         run: npm test -- --run
+      - name: Import review queue
+        run: node scripts/inventory-agent/nodes.mjs review:import
       - name: Run Odoo dry-run gate
         run: node scripts/inventory-agent/nodes.mjs odoo:dry-run
       - name: Upload inventory evidence
