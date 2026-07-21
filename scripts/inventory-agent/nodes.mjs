@@ -576,8 +576,27 @@ async function driveDownload() {
       byId.set(file.id, { ...file, downloadedAt: current?.downloadedAt || new Date().toISOString() });
       continue;
     }
-    const response = await drive.files.get({ fileId: file.id, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
-    await pipeline(response.data, createWriteStream(absolutePath));
+    let lastDownloadError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      let response;
+      try {
+        response = await drive.files.get({ fileId: file.id, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`Drive download timeout after 120s (attempt ${attempt})`)), 120000);
+          pipeline(response.data, createWriteStream(absolutePath))
+            .then(resolve, reject)
+            .finally(() => clearTimeout(timer));
+        });
+        lastDownloadError = null;
+        break;
+      } catch (error) {
+        lastDownloadError = error;
+        response?.data?.destroy?.(error);
+        await fs.rm(absolutePath, { force: true });
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+      }
+    }
+    if (lastDownloadError) throw new Error(`Unable to download Drive file ${file.id}: ${lastDownloadError.message}`);
     const sha256 = await sha256File(absolutePath);
     const entry = { ...file, localPath: relativePath, sha256, downloadedAt: new Date().toISOString() };
     byId.set(file.id, entry);
