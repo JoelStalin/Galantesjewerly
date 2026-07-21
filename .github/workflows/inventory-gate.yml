@@ -1,0 +1,46 @@
+name: Inventory Workflow Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/inventory-agent/**"
+      - "data/inventory-agent/review/review-queue.csv"
+      - "lib/odoo/product-template-dto.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate inventory command surface
+        run: |
+          node --check scripts/inventory-agent/nodes.mjs
+          node scripts/inventory-agent/nodes.mjs manifest
+          node scripts/inventory-agent/nodes.mjs inventory:autocorrect-loop
+      - name: Run application tests
+        run: npm test -- --run
+      - name: Run Odoo dry-run gate
+        run: node scripts/inventory-agent/nodes.mjs odoo:dry-run
+      - name: Upload inventory evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-gate-evidence
+          path: |
+            data/inventory-agent/manifests/autocorrection-loop.json
+            data/inventory-agent/manifests/odoo-dry-run.json
+            data/inventory-agent/review/review-queue.csv
+      # This workflow intentionally cannot publish. Production publication
+      # requires the protected production environment, backup, JSON-2 adapter,
+      # and post-deploy Selenium evidence in a separate approved workflow.

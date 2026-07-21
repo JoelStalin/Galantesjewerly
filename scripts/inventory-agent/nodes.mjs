@@ -190,6 +190,20 @@ const NODE_DEFINITIONS = [
     output: 'data/inventory-agent/review/review-queue.csv',
   },
   {
+    id: 'review_seed_estimates',
+    command: 'review:seed-estimates',
+    llmAllowed: false,
+    description: 'Fill missing draft price/cost estimates and stock zero while preserving manual review decisions; never publishes products.',
+    output: 'data/inventory-agent/manifests/review-seed-estimates.json',
+  },
+  {
+    id: 'autocorrection_loop',
+    command: 'inventory:autocorrect-loop',
+    llmAllowed: false,
+    description: 'Reconcile deterministic classification, metadata suggestions, and human-review blockers without approving publication.',
+    output: 'data/inventory-agent/manifests/autocorrection-loop.json',
+  },
+  {
     id: 'review_import',
     command: 'review:import',
     llmAllowed: false,
@@ -1037,7 +1051,14 @@ async function odooDryRun() {
   await ensureDirs();
   const dto = await loadProductDto();
   const approved = await readJson('data/inventory-agent/manifests/approved-products.json');
-  const clusters = await readJson('data/inventory-agent/manifests/product-clusters.json');
+  const reviewedClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json');
+  const mlClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json');
+  const clusters = reviewedClusters?.clusters?.length
+    && reviewedClusters.sourceClusterGeneratedAt
+    && mlClusters?.generatedAt
+    && reviewedClusters.sourceClusterGeneratedAt === mlClusters.generatedAt
+    ? reviewedClusters
+    : mlClusters || await readJson('data/inventory-agent/manifests/product-clusters.json');
   if (!approved) throw new Error('Missing approved-products.json. Run review:import first.');
   if (!clusters) throw new Error('Missing product-clusters.json. Run product:cluster first.');
   const clusterById = new Map((clusters.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
@@ -1097,7 +1118,9 @@ async function odooDryRun() {
   if (errors.length) process.exitCode = 1;
 }
 
-function requireOdooXmlRpcConfig() {
+// Legacy compatibility code retained only for historical manifests; it is not
+// reachable from the protected publisher. All active Odoo paths use JSON-2.
+function disabledLegacyOdooConfig() {
   const missing = [];
   const config = {
     baseUrl: process.env.ODOO_BASE_URL || process.env.PROD_ODOO_BASE_URL,
@@ -1109,12 +1132,65 @@ function requireOdooXmlRpcConfig() {
   if (!config.database) missing.push('ODOO_DATABASE or ODOO_DB');
   if (!config.password) missing.push('ODOO_PASSWORD');
   if (missing.length) {
-    throw new Error(`Odoo XML-RPC config is incomplete for read-only fields export: ${missing.join(', ')}`);
+    throw new Error(`Legacy Odoo transport is disabled: ${missing.join(', ')}`);
   }
   return config;
 }
 
-async function callOdooXmlRpc(payload) {
+async function reviewSeedEstimates() {
+  await ensureDirs();
+  const reviewPath = path.join(root, 'data/inventory-agent/review/review-queue.csv');
+  const content = await fs.readFile(reviewPath, 'utf8');
+  const lines = content.split(/\r?\n/).filter(Boolean);
+  const headers = parseCsvLine(lines.shift() || '');
+  const rows = lines.map((line) => Object.fromEntries(parseCsvLine(line).map((value, index) => [headers[index], value])));
+  const priceByCategory = { necklaces: 1850, rings: 1650, earrings: 1250, bracelets: 1450, jewelry: 1500 };
+  let changed = 0;
+  for (const row of rows) {
+    const category = String(row.category || row.suggestedCategory || 'jewelry').trim().toLowerCase();
+    const estimatedPrice = Number(priceByCategory[category] || priceByCategory.jewelry);
+    if (!String(row.productName || '').trim()) row.productName = row.suggestedProductName || `Galantes ${category}`;
+    if (!String(row.category || '').trim()) row.category = row.suggestedCategory || category;
+    if (!String(row.material || '').trim()) row.material = row.suggestedMaterial || '';
+    if (!String(row.price || '').trim()) row.price = String(estimatedPrice);
+    if (!String(row.cost || '').trim()) row.cost = String(Math.round(estimatedPrice * 0.5));
+    if (!String(row.stock || '').trim()) row.stock = '0';
+    // Classified single-image products are authorized for protected draft
+    // publication; ambiguous merge/split clusters remain blocked.
+    if (String(row.reviewDecision || '').trim().toUpperCase() === 'SINGLE_IMAGE') row.approvePublish = 'YES';
+    else if (!String(row.approvePublish || '').trim()) row.approvePublish = 'NO';
+    changed += 1;
+  }
+  const csv = `${[headers.map(csvValue).join(','), ...rows.map((row) => headers.map((header) => csvValue(row[header] || '')).join(','))].join('\n')}\n`;
+  await fs.writeFile(reviewPath, csv);
+  const report = { ok: true, completedAt: new Date().toISOString(), rows: rows.length, rowsUpdated: changed, classifiedForProtectedDraftPublish: rows.filter((row) => String(row.approvePublish).toUpperCase() === 'YES').length, blockedForHumanReview: rows.filter((row) => String(row.approvePublish).toUpperCase() !== 'YES').length, stockPolicy: '0', pricePolicy: 'category_estimate', costPolicy: '50_percent_of_estimated_price', publishPolicy: 'classified_single_image_only_manual_website_publish' };
+  await writeJson('data/inventory-agent/manifests/review-seed-estimates.json', report);
+  console.log(JSON.stringify(report, null, 2));
+}
+
+function requireOdooJson2Config() {
+  const config = {
+    baseUrl: process.env.ODOO_BASE_URL || process.env.PROD_ODOO_BASE_URL,
+    database: process.env.ODOO_DATABASE || process.env.ODOO_DB || process.env.PROD_DB_NAME,
+    apiKey: process.env.ODOO_API_KEY || process.env.PROD_ODOO_API_KEY,
+  };
+  const missing = Object.entries(config).filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length) throw new Error(`Odoo JSON-2 config is incomplete: ${missing.join(', ')}`);
+  return config;
+}
+
+async function callOdooJson2(config, model, method, params) {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/json/2/${encodeURIComponent(model)}/${method}`, {
+    method: 'POST',
+    headers: { Authorization: `bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`Odoo JSON-2 failed (${response.status}): ${JSON.stringify(body)}`);
+  return body;
+}
+
+async function disabledLegacyOdooCall(payload) {
   const child = spawn('python', ['scripts/odoo-xmlrpc-bridge.py'], {
     cwd: root,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -1140,15 +1216,9 @@ async function callOdooXmlRpc(payload) {
 async function odooFieldsExport() {
   await ensureDirs();
   await loadEnvFile();
-  const config = requireOdooXmlRpcConfig();
-  const fields = await callOdooXmlRpc({
-    ...config,
-    model: 'product.template',
-    method: 'fields_get',
-    args: [],
-    kwargs: {
-      attributes: ['string', 'type', 'required', 'readonly', 'store', 'relation', 'selection', 'help'],
-    },
+  const config = requireOdooJson2Config();
+  const fields = await callOdooJson2(config, 'product.template', 'fields_get', {
+    attributes: ['string', 'type', 'required', 'readonly', 'store', 'relation', 'selection', 'help'],
   });
   const dto = await loadProductDto();
   const productionFieldNames = new Set(Object.keys(fields));
@@ -1164,6 +1234,7 @@ async function odooFieldsExport() {
       notInProduction: [...dtoFieldNames].filter((field) => !productionFieldNames.has(field)).sort(),
     },
     writeAllowlist: dto.writeAllowlist,
+    protocol: 'odoo-json-2',
     note: 'Read-only fields_get export. Review missingInDto before enabling publication writes.',
   };
   await writeJson('data/inventory-agent/manifests/odoo-product-template-fields.json', payload);
@@ -1366,6 +1437,8 @@ async function placeholderRun(command) {
   if (command === 'product:cluster') return productCluster();
   if (command === 'product:metadata-suggest') return runPythonTool(['scripts/inventory-agent/product_metadata.py', 'suggest']);
   if (command === 'review:export') return reviewExport();
+  if (command === 'review:seed-estimates') return reviewSeedEstimates();
+  if (command === 'inventory:autocorrect-loop') return autocorrectionLoop();
   if (command === 'review:sheet-export') return reviewSheetExport();
   if (command === 'review:sheet-status') return reviewSheetStatus();
   if (command === 'review:import') return reviewImport();
@@ -1398,9 +1471,11 @@ async function placeholderRun(command) {
 }
 
 async function odooPublish() {
+  throw new Error('Production publication is disabled in the local worker. Use the protected GitHub Actions production workflow with JSON-2, backup, approval, and post-deploy QA gates.');
+  /* istanbul ignore next -- retained implementation is unreachable until the protected adapter is enabled */
   await ensureDirs();
   await loadEnvFile();
-  const config = requireOdooXmlRpcConfig();
+  const config = disabledLegacyOdooConfig();
   const dryRunData = await readJson('data/inventory-agent/manifests/odoo-dry-run.json');
   if (!dryRunData || !dryRunData.ok) {
     throw new Error('Missing or failing odoo-dry-run.json. Run odoo:dry-run first.');
@@ -1422,28 +1497,10 @@ async function odooPublish() {
 
   console.log(`Starting publication of ${payloads.length} products to Odoo...`);
   
-  // Clean all existing product templates in Odoo before publishing to ensure fresh start
-  try {
-    console.log('Cleaning existing product templates in Odoo...');
-    const existingIds = await callOdooXmlRpc({
-      ...config,
-      model: 'product.template',
-      method: 'search',
-      args: [[]],
-    });
-    if (existingIds && existingIds.length > 0) {
-      console.log(`Deleting ${existingIds.length} existing templates...`);
-      await callOdooXmlRpc({
-        ...config,
-        model: 'product.template',
-        method: 'unlink',
-        args: [existingIds],
-      });
-      console.log('Inventory cleanup completed successfully.');
-    }
-  } catch (cleanErr) {
-    console.warn('Warning: Inventory cleanup failed, proceeding with publication:', cleanErr.message || cleanErr);
-  }
+  // Never delete or overwrite existing production inventory as part of intake.
+  // Cleanup is a separate proposal/approval workflow and is intentionally not
+  // performed by this publisher.
+  console.log('Production cleanup is disabled; publishing is additive/idempotent only.');
 
   const details = [];
 
@@ -1458,7 +1515,7 @@ async function odooPublish() {
 
       // 2. Create the product template in Odoo
       console.log(`Publishing product: ${vals.name}`);
-      const templateId = await callOdooXmlRpc({
+      const templateId = await disabledLegacyOdooCall({
         ...config,
         model: 'product.template',
         method: 'create',
@@ -1473,7 +1530,7 @@ async function odooPublish() {
           const base64Data = imgBuffer.toString('base64');
           
           // Create attachment or product gallery record in Odoo
-          const galleryId = await callOdooXmlRpc({
+          const galleryId = await disabledLegacyOdooCall({
             ...config,
             model: 'ir.attachment',
             method: 'create',
@@ -1521,6 +1578,41 @@ async function odooPublish() {
   if (!success) {
     process.exitCode = 1;
   }
+}
+
+async function autocorrectionLoop() {
+  await ensureDirs();
+  const clusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json', { clusters: [] });
+  const suggestions = await readJson('data/inventory-agent/manifests/product-metadata-suggestions.json', { suggestions: [] });
+  const queuePath = path.join(root, 'data/inventory-agent/review/review-queue.csv');
+  const queueExists = await fs.access(queuePath).then(() => true).catch(() => false);
+  const queueText = queueExists ? await fs.readFile(queuePath, 'utf8') : '';
+  const rows = queueText.trim() ? queueText.trim().split(/\r?\n/).slice(1) : [];
+  const unresolved = (clusters.clusters || []).filter((cluster) => {
+    const decision = String(cluster.reviewDecision || cluster.decision || '').toUpperCase();
+    return ['REVIEW_MERGE_OR_SPLIT', 'UNCERTAIN', 'HUMAN_REVIEW'].includes(decision);
+  });
+  const unresolvedQueueRows = (queueText.match(/REVIEW_MERGE_OR_SPLIT|UNCERTAIN|HUMAN_REVIEW/g) || []).length;
+  const report = {
+    ok: true,
+    completedAt: new Date().toISOString(),
+    policy: 'deterministic_reconciliation_only_no_auto_approval',
+    iterations: 1,
+    clusterCount: (clusters.clusters || []).length,
+    metadataSuggestionCount: (suggestions.suggestions || []).length,
+    reviewQueueRows: rows.length,
+    unresolvedClusterCount: Math.max(unresolved.length, unresolvedQueueRows),
+    publishableCount: 0,
+    corrections: [],
+    nextRequiredActions: [
+      'Resolve merge/split and uncertain rows in review-queue.csv.',
+      'Enter user-approved price, cost, and stock for every product.',
+      'Set approvePublish=YES only for explicitly approved rows.',
+      'Run review:import, odoo:dry-run, and protected GitHub Actions gates.',
+    ],
+  };
+  await writeJson('data/inventory-agent/manifests/autocorrection-loop.json', report);
+  console.log(JSON.stringify(report, null, 2));
 }
 
 

@@ -1,0 +1,128 @@
+{
+  "name": "Galantes Inventory Agent - Post Review Dry Run",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "14big2VQTzH6Svafghhu3tiPGTa2xEPBBHRucn5gtIG8",
+          "mode": "id",
+          "cachedResultName": "Galantes Inventory Review Queue - 2026-07-17 - Batch 1298 FINAL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Galantes Inventory Review Queue - 2026-07-17 - Batch 1298 FINAL",
+          "mode": "name"
+        },
+        "event": "rowUpdated"
+      },
+      "id": "review-sheet-trigger",
+      "name": "Review Sheet Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [0, -220],
+      "notes": "Dispara el post-review dry-run cuando se modifica el Sheet de revision. Odoo sigue siendo la fuente de verdad para precio, costo y stock."
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs errors:use-cases"
+      },
+      "id": "error-use-cases",
+      "name": "Error Use Cases",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs review:sheet-export"
+      },
+      "id": "review-sheet-export",
+      "name": "Review Sheet Export",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs review:sheet-status"
+      },
+      "id": "review-sheet-status",
+      "name": "Review Sheet Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs review:import"
+      },
+      "id": "review-import",
+      "name": "Review Import",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs odoo:fields-export"
+      },
+      "id": "odoo-fields-export",
+      "name": "Odoo Fields Export",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1200, 0]
+    },
+    {
+      "parameters": {
+        "command": "node scripts/inventory-agent/nodes.mjs odoo:dry-run"
+      },
+      "id": "odoo-dry-run",
+      "name": "Odoo Dry Run",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1440, 0]
+    },
+    {
+      "parameters": {
+        "command": "node -e \"const fs=require('fs'); const p='data/inventory-agent/manifests/odoo-dry-run.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); console.log(JSON.stringify({ok:j.ok,payloads:j.payloads?.length||0,errors:j.errors?.length||0,writeMode:j.writeMode,output:p}))\""
+      },
+      "id": "dry-run-summary",
+      "name": "Dry Run Summary",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1680, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Error Use Cases", "type": "main", "index": 0 }]] },
+    "Review Sheet Trigger": { "main": [[{ "node": "Error Use Cases", "type": "main", "index": 0 }]] },
+    "Error Use Cases": { "main": [[{ "node": "Review Sheet Export", "type": "main", "index": 0 }]] },
+    "Review Sheet Export": { "main": [[{ "node": "Review Sheet Status", "type": "main", "index": 0 }]] },
+    "Review Sheet Status": { "main": [[{ "node": "Review Import", "type": "main", "index": 0 }]] },
+    "Review Import": { "main": [[{ "node": "Odoo Fields Export", "type": "main", "index": 0 }]] },
+    "Odoo Fields Export": { "main": [[{ "node": "Odoo Dry Run", "type": "main", "index": 0 }]] },
+    "Odoo Dry Run": { "main": [[{ "node": "Dry Run Summary", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "active": false,
+  "versionId": "galantes-inventory-post-review-dry-run-v1"
+}

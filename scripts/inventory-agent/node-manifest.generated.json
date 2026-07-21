@@ -1,0 +1,273 @@
+{
+  "generatedAt": "2026-07-21T18:36:04.424Z",
+  "rule": "Script-first execution. LLM calls are forbidden unless llmAllowed=true for the node.",
+  "nodes": [
+    {
+      "id": "drive_incremental_ingest",
+      "command": "drive:scan",
+      "llmAllowed": false,
+      "description": "List Google Drive folder, compare against local manifest, and produce new/changed file queue.",
+      "output": "data/inventory-agent/manifests/drive-scan.json"
+    },
+    {
+      "id": "drive_download",
+      "command": "drive:download",
+      "llmAllowed": false,
+      "description": "Download queued Drive photos into raw local storage with sha256 checksums.",
+      "output": "data/inventory-agent/manifests/downloads.json"
+    },
+    {
+      "id": "image_feature_extract",
+      "command": "image:features",
+      "llmAllowed": false,
+      "description": "Generate deterministic image hashes, quality metrics, thumbnails, and vector input manifest.",
+      "output": "data/inventory-agent/manifests/image-features.json"
+    },
+    {
+      "id": "processed_image_index_status",
+      "command": "processed:index-status",
+      "llmAllowed": false,
+      "description": "Summarize the processed image index used to avoid reprocessing unchanged Drive images.",
+      "output": "data/inventory-agent/manifests/processed-images.json"
+    },
+    {
+      "id": "processed_image_index_rebuild",
+      "command": "processed:index-rebuild",
+      "llmAllowed": false,
+      "description": "Rebuild processed-images.json from existing image-features/download manifests without recomputing images.",
+      "output": "data/inventory-agent/manifests/processed-images.json"
+    },
+    {
+      "id": "image_convert_dependency_check",
+      "command": "image:convert-deps-check",
+      "llmAllowed": false,
+      "description": "Verify local image conversion dependencies before HEIC/HEIF normalization.",
+      "output": "data/inventory-agent/manifests/image-convert-deps-check.json"
+    },
+    {
+      "id": "image_convert_heic",
+      "command": "image:convert-heic",
+      "llmAllowed": false,
+      "description": "Convert HEIC/HEIF downloads into JPEG copies and write a normalized downloads manifest.",
+      "output": "data/inventory-agent/manifests/downloads-normalized.json"
+    },
+    {
+      "id": "product_cluster",
+      "command": "product:cluster",
+      "llmAllowed": false,
+      "description": "Cluster photos by same-product similarity using local vectors/hashes.",
+      "output": "data/inventory-agent/manifests/product-clusters.json"
+    },
+    {
+      "id": "ml_dependency_check",
+      "command": "ml:deps-check",
+      "llmAllowed": false,
+      "description": "Verify local Python ML dependencies before nearest-neighbor image matching.",
+      "output": "data/inventory-agent/manifests/ml-deps-check.json"
+    },
+    {
+      "id": "ml_similarity_index",
+      "command": "ml:build-index",
+      "llmAllowed": false,
+      "description": "Build dataframe, deterministic image vectors, and nearest-neighbor pairs for same-product matching.",
+      "output": "data/inventory-agent/manifests/ml-similarity-index.json"
+    },
+    {
+      "id": "ml_similarity_index_status",
+      "command": "ml:index-status",
+      "llmAllowed": false,
+      "description": "Summarize the reusable mass-comparison vector index and nearest-neighbor outputs.",
+      "output": "data/inventory-agent/manifests/ml-similarity-index.json"
+    },
+    {
+      "id": "ml_product_cluster",
+      "command": "ml:cluster",
+      "llmAllowed": false,
+      "description": "Build candidate product clusters from nearest-neighbor and perceptual-hash edges.",
+      "output": "data/inventory-agent/manifests/ml-product-clusters.json"
+    },
+    {
+      "id": "ml_contact_sheets",
+      "command": "ml:contact-sheets",
+      "llmAllowed": false,
+      "description": "Generate visual contact sheets for human cluster review.",
+      "output": "data/inventory-agent/review/contact-sheets.json"
+    },
+    {
+      "id": "vision_yolo_dependency_check",
+      "command": "vision:yolo-deps-check",
+      "llmAllowed": false,
+      "description": "Verify YOLOv8n dependencies before object/category suggestion.",
+      "output": "data/inventory-agent/manifests/yolo-deps-check.json"
+    },
+    {
+      "id": "vision_yolo_classify",
+      "command": "vision:yolo-classify",
+      "llmAllowed": false,
+      "description": "Run YOLOv8n object detection and category suggestions for product review metadata.",
+      "output": "data/inventory-agent/manifests/yolo-category-suggestions.json"
+    },
+    {
+      "id": "vision_mediapipe_dependency_check",
+      "command": "vision:mediapipe-deps-check",
+      "llmAllowed": false,
+      "description": "Verify MediaPipe image classifier dependency/model for category suggestions.",
+      "output": "data/inventory-agent/manifests/mediapipe-deps-check.json"
+    },
+    {
+      "id": "gemini_same_product_review",
+      "command": "gemini:same-product-review",
+      "llmAllowed": true,
+      "preferredProviders": [
+        "gemini"
+      ],
+      "description": "Ask Gemini boolean sameProduct for local-similarity pairs in the 60-85 percent band.",
+      "output": "data/inventory-agent/review/gemini-same-product-review.json"
+    },
+    {
+      "id": "gemini_apply_same_product_review",
+      "command": "gemini:apply-same-product-review",
+      "llmAllowed": false,
+      "description": "Apply Gemini boolean same-product decisions to candidate clusters and keep rejected pairs separated.",
+      "output": "data/inventory-agent/manifests/ml-product-clusters-reviewed.json"
+    },
+    {
+      "id": "cluster_review_reasoning",
+      "command": "cluster:review",
+      "llmAllowed": true,
+      "preferredProviders": [
+        "ollama",
+        "hermes",
+        "gemini",
+        "openai"
+      ],
+      "description": "Ask a model only for uncertain merge/split decisions after deterministic clustering.",
+      "output": "data/inventory-agent/review/cluster-review.json"
+    },
+    {
+      "id": "image_enhance",
+      "command": "image:enhance",
+      "llmAllowed": true,
+      "preferredProviders": [
+        "local-tools",
+        "gemini"
+      ],
+      "description": "Apply local image cleanup first, then Gemini/Nano Banana only when configured and needed.",
+      "output": "data/inventory-agent/edited/"
+    },
+    {
+      "id": "description_generate",
+      "command": "description:generate",
+      "llmAllowed": true,
+      "preferredProviders": [
+        "ollama",
+        "hermes",
+        "gemini",
+        "openai"
+      ],
+      "description": "Generate product copy from approved cluster metadata; never generate price, cost, or stock.",
+      "output": "data/inventory-agent/manifests/product-copy.json"
+    },
+    {
+      "id": "product_metadata_suggest",
+      "command": "product:metadata-suggest",
+      "llmAllowed": false,
+      "description": "Suggest reviewable product name, category, and material from local image/cluster evidence.",
+      "output": "data/inventory-agent/manifests/product-metadata-suggestions.json"
+    },
+    {
+      "id": "gemini_product_metadata",
+      "command": "gemini:product-metadata",
+      "llmAllowed": true,
+      "preferredProviders": [
+        "gemini"
+      ],
+      "description": "Ask Gemini for reviewable product name, category, material, and short description suggestions.",
+      "output": "data/inventory-agent/review/gemini-product-metadata.json"
+    },
+    {
+      "id": "review_export",
+      "command": "review:export",
+      "llmAllowed": false,
+      "description": "Export CSV/JSON review queue for user price, cost, stock, merge/split, and publish approval.",
+      "output": "data/inventory-agent/review/review-queue.csv"
+    },
+    {
+      "id": "autocorrection_loop",
+      "command": "inventory:autocorrect-loop",
+      "llmAllowed": false,
+      "description": "Reconcile deterministic classification, metadata suggestions, and human-review blockers without approving publication.",
+      "output": "data/inventory-agent/manifests/autocorrection-loop.json"
+    },
+    {
+      "id": "review_import",
+      "command": "review:import",
+      "llmAllowed": false,
+      "description": "Import user-approved review queue and validate required price/cost/stock fields.",
+      "output": "data/inventory-agent/manifests/approved-products.json"
+    },
+    {
+      "id": "review_sheet_status",
+      "command": "review:sheet-status",
+      "llmAllowed": false,
+      "description": "Print the linked Google Sheets review manifest and local CSV readiness before post-review import.",
+      "output": "data/inventory-agent/manifests/review-sheet-status.json"
+    },
+    {
+      "id": "review_sheet_export",
+      "command": "review:sheet-export",
+      "llmAllowed": false,
+      "description": "Read the linked Google Sheet review table and overwrite review-queue.csv with validated columns.",
+      "output": "data/inventory-agent/review/review-queue.csv"
+    },
+    {
+      "id": "publish_odoo_dry_run",
+      "command": "odoo:dry-run",
+      "llmAllowed": false,
+      "description": "Validate Odoo payloads locally without writing to production.",
+      "output": "data/inventory-agent/manifests/odoo-dry-run.json"
+    },
+    {
+      "id": "odoo_product_fields_export",
+      "command": "odoo:fields-export",
+      "llmAllowed": false,
+      "description": "Read product.template fields_get from Odoo and export a production field catalog for DTO validation.",
+      "output": "data/inventory-agent/manifests/odoo-product-template-fields.json"
+    },
+    {
+      "id": "publish_odoo_draft",
+      "command": "odoo:publish",
+      "llmAllowed": false,
+      "description": "Create/update approved products and galleries in Galantes production Odoo after approval gates.",
+      "output": "data/inventory-agent/manifests/publication-result.json"
+    },
+    {
+      "id": "publication_evidence",
+      "command": "qa:selenium-profile9",
+      "llmAllowed": false,
+      "description": "Run real Selenium Profile 9 evidence checks against production Odoo/storefront.",
+      "output": "data/inventory-agent/evidence/"
+    },
+    {
+      "id": "workflow_status",
+      "command": "status",
+      "llmAllowed": false,
+      "description": "Print current manifests, pending approvals, and publication state.",
+      "output": "stdout"
+    },
+    {
+      "id": "known_error_use_cases",
+      "command": "errors:use-cases",
+      "llmAllowed": false,
+      "description": "Print the active error use-case registry for workflow regression checks.",
+      "output": "docs/inventory-agent-error-use-cases.md"
+    },
+    {
+      "id": "n8n_workflow_export",
+      "command": "n8n:export-workflow",
+      "llmAllowed": false,
+      "description": "Export the safe n8n intake/review workflow JSON for manual import.",
+      "output": "data/inventory-agent/review/galantes-inventory-safe-intake-review.n8n.json"
+    }
+  ]
+}
