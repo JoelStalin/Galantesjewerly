@@ -43,7 +43,7 @@ jobs:
       GOOGLE_OAUTH_CLIENT_JSON_CONTENT: ${{ secrets.GOOGLE_OAUTH_CLIENT_JSON }}
       GOOGLE_DRIVE_TOKEN_JSON_CONTENT: ${{ secrets.GOOGLE_DRIVE_TOKEN_JSON }}
       GOOGLE_OAUTH_REDIRECT_URI: ${{ secrets.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost' }}
-      INVENTORY_AGENT_MAX_QUEUE: '2000'
+      INVENTORY_AGENT_MAX_QUEUE: '100'
     steps:
       - name: Checkout canonical deploy repository
         uses: actions/checkout@v4
@@ -72,9 +72,17 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          node scripts/inventory-agent/nodes.mjs drive:scan
-          node scripts/inventory-agent/nodes.mjs drive:download
-          node scripts/inventory-agent/nodes.mjs image:features
+          python -m pip install --disable-pip-version-check -q Pillow pillow-heif
+          for batch in $(seq 1 30); do
+            node scripts/inventory-agent/nodes.mjs drive:scan
+            pending=$(node -e "const x=require('./data/inventory-agent/manifests/drive-scan.json'); process.stdout.write(String(x.pendingTotal || 0))")
+            if [ "$pending" = "0" ]; then break; fi
+            node scripts/inventory-agent/nodes.mjs drive:download
+            node scripts/inventory-agent/nodes.mjs image:convert-heic
+            node scripts/inventory-agent/nodes.mjs image:features
+          done
+          pending=$(node -e "const x=require('./data/inventory-agent/manifests/drive-scan.json'); process.stdout.write(String(x.pendingTotal || 0))")
+          test "$pending" = "0"
           node scripts/inventory-agent/nodes.mjs ml:build-index
           node scripts/inventory-agent/nodes.mjs ml:cluster
           node scripts/inventory-agent/nodes.mjs product:metadata-suggest
