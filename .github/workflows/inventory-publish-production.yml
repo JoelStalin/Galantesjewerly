@@ -77,9 +77,9 @@ jobs:
             node scripts/inventory-agent/nodes.mjs drive:scan
             pending=$(node -e "const x=require('./data/inventory-agent/manifests/drive-scan.json'); process.stdout.write(String(x.pendingTotal || 0))")
             if [ "$pending" = "0" ]; then break; fi
-            node scripts/inventory-agent/nodes.mjs drive:download
+            timeout 300 node scripts/inventory-agent/nodes.mjs drive:download
             node scripts/inventory-agent/nodes.mjs image:convert-heic
-            node scripts/inventory-agent/nodes.mjs image:features
+            timeout 300 node scripts/inventory-agent/nodes.mjs image:features
           done
           pending=$(node -e "const x=require('./data/inventory-agent/manifests/drive-scan.json'); process.stdout.write(String(x.pendingTotal || 0))")
           test "$pending" = "0"
