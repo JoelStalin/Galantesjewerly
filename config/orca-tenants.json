@@ -1,0 +1,32 @@
+{
+  "policy": "strict_company_isolation",
+  "tenants": [
+    {
+      "tenant_id": "getupsoft",
+      "company_name": "GetUpSoft",
+      "project_id": "getupsoft-orca-core",
+      "owner_user_ids": ["yoeli"],
+      "workflow_ids": [],
+      "workspace_root": "C:/Users/yoeli/Documents/GetUpSoft_Workspace",
+      "memory_root": "data/orca/tenants/getupsoft/memory",
+      "logs_root": "data/orca/tenants/getupsoft/logs",
+      "evidence_root": "data/orca/tenants/getupsoft/evidence",
+      "credentials": {"source": "environment", "names": ["ORCA_CORE_ADMIN_KEY"]}
+    },
+    {
+      "tenant_id": "galantesjewelry",
+      "company_name": "Galantes Jewelry",
+      "project_id": "galantesjewelry",
+      "owner_user_ids": ["galantesjewelry-ceo"],
+      "workflow_ids": ["galantes-inventory-agent", "galantes-odoo-invoice-chat"],
+      "workspace_root": "C:/Users/yoeli/Documents/GetUpSoft_Workspace/06_E_Commerce_Lux/Galantesjewelry",
+      "memory_root": "data/orca/tenants/galantesjewelry/memory",
+      "logs_root": "data/orca/tenants/galantesjewelry/logs",
+      "evidence_root": "data/orca/tenants/galantesjewelry/evidence",
+      "credentials": {
+        "source": "environment",
+        "names": ["ORCA_PARTNER_EMAIL", "ORCA_PARTNER_PASSWORD", "ODOO_URL", "ODOO_API_TOKEN"]
+      }
+    }
+  ]
+}

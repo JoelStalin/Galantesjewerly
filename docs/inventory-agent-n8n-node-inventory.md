@@ -1,6 +1,8 @@
 # Galantes Inventory Agent - n8n Node Inventory
 
-Status: draft for review before workflow execution.
+Status: local-worker execution design. Drive, image, ML, review, and dry-run
+nodes execute on the local machine; the protected production workflow only
+consumes the validated publication bundle.
 
 Rule: n8n orchestrates deterministic local scripts first. LLM/model calls are only allowed in explicitly marked decision, vision, image-editing, or copy QA nodes. Price, cost, and stock always require user approval and must be written/verified in Odoo before production storefront publication.
 

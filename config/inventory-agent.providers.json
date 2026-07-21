@@ -1,0 +1,16 @@
+{
+  "decisionBrain": {"provider":"openai","apiKeyEnv":"OPENAI_API_KEY","modelEnv":"OPENAI_INVENTORY_MODEL","defaultModel":"gpt-4o-mini"},
+  "imageVisionAndEditing": {"provider":"gemini","apiKeyEnv":"GEMINI_API_KEY","modelEnv":"GEMINI_IMAGE_MODEL","defaultModel":"gemini-2.5-flash-image"},
+  "localFallbacks": [
+    {"provider":"ollama","baseUrlEnv":"OLLAMA_BASE_URL","modelEnv":"OLLAMA_MODEL"},
+    {"provider":"hermes","baseUrlEnv":"HERMES_BASE_URL","modelEnv":"HERMES_MODEL"}
+  ],
+  "routing": {
+    "scriptFirst": true,
+    "useOpenAIFor": ["orchestration","error_analysis","copy_qa","workflow_planning"],
+    "useGeminiFor": ["image_editing","vision_review","same_product_visual_review"],
+    "neverDelegate": ["price","cost","stock","cleanup_approval","production_publish"],
+    "maxRetries": 2,
+    "requireJson": true
+  }
+}

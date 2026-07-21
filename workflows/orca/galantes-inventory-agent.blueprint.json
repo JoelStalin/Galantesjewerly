@@ -1,0 +1,59 @@
+{
+  "id": "galantes-inventory-agent",
+  "name": "Galantes Inventory Publishing Agent",
+  "objective": "Orquestar desde Orca la ingesta local de Google Drive, clasificación, galerías, edición, descripciones, revisión humana, dry-run Odoo, publicación protegida y QA Selenium.",
+  "status": "draft",
+  "orchestrator": "orca",
+  "execution_engine": "n8n",
+  "worker": "local-script-worker",
+  "nodes": [
+    {"id":"inventory-command","type":"trigger","label":"Inventory command","command":"status"},
+    {"id":"local-intake","type":"worker","label":"Local Drive intake","command":"run-local-intake"},
+    {"id":"image-processing","type":"worker","label":"Image conversion and features","command":"image:features"},
+    {"id":"product-clustering","type":"worker","label":"Product and gallery clustering","command":"ml:cluster"},
+    {"id":"cluster-review","type":"decision","label":"Ambiguous cluster review","command":"cluster:review","requiresHumanReview":true},
+    {"id":"image-enhancement","type":"worker","label":"Catalog image enhancement","command":"image:enhance","requiresHumanReview":true},
+    {"id":"description-generation","type":"worker","label":"Product description generation","command":"description:generate","requiresHumanReview":true},
+    {"id":"review-ui","type":"approval","label":"Price, cost, stock and publish review","command":"review:import","requiresHumanReview":true},
+    {"id":"autocorrection","type":"recovery","label":"Autocorrection and regression loop","command":"inventory:autocorrect-loop"},
+    {"id":"odoo-dry-run","type":"validation","label":"Odoo DTO dry-run","command":"odoo:dry-run"},
+    {"id":"production-gate","type":"approval","label":"Protected production gate","command":"publish_odoo_draft","requiresHumanReview":true},
+    {"id":"selenium-qa","type":"test","label":"Production Selenium Profile 9 QA","command":"qa:selenium-profile9","requiresEvidence":true},
+    {"id":"completion-report","type":"report","label":"Evidence and status report","command":"status"}
+  ],
+  "edges": [
+    {"from":"inventory-command","to":"local-intake"},
+    {"from":"local-intake","to":"image-processing"},
+    {"from":"image-processing","to":"product-clustering"},
+    {"from":"product-clustering","to":"cluster-review"},
+    {"from":"cluster-review","to":"image-enhancement"},
+    {"from":"image-enhancement","to":"description-generation"},
+    {"from":"description-generation","to":"review-ui"},
+    {"from":"review-ui","to":"autocorrection"},
+    {"from":"autocorrection","to":"odoo-dry-run"},
+    {"from":"odoo-dry-run","to":"production-gate"},
+    {"from":"production-gate","to":"selenium-qa"},
+    {"from":"selenium-qa","to":"completion-report"}
+  ],
+  "policies": {
+    "localFirst": true,
+    "scriptFirst": true,
+    "noAiPriceCostStock": true,
+    "ambiguousClustersBlockPublish": true,
+    "productionWritesOnlyViaProtectedGithubActions": true,
+    "cleanupRequiresExplicitApprovalAndBlockingBackup": true,
+    "errorsRequireResearchBeforeRetry": true,
+    "seleniumProfile": "Profile 9",
+    "imageEvidenceRequiresNaturalWidth": true
+  },
+  "settings": {
+    "repository": "JoelStalin/Galantesjewerly",
+    "workerRoot": "C:/Users/yoeli/Documents/GetUpSoft_Workspace/06_E_Commerce_Lux/Galantesjewelry",
+    "n8nWorkflowTemplates": [
+      "scripts/inventory-agent/n8n_workflow_template.json",
+      "scripts/inventory-agent/n8n_post_review_workflow_template.json"
+    ],
+    "errorRegistry": "docs/inventory-agent-error-use-cases.md",
+    "evidenceRoot": "data/inventory-agent/evidence"
+  }
+}

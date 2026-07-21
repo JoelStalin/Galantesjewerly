@@ -1,0 +1,45 @@
+services:
+  local-gateway:
+    image: nginx:1.27-alpine
+    container_name: getupsoft-orca-gateway
+    restart: unless-stopped
+    depends_on:
+      - orca-core
+      - orca-dns
+    ports:
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:443:443"
+    volumes:
+      - ./docker/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+
+  orca-dns:
+    image: coredns/coredns:1.11.3
+    container_name: galantes-orca-dns
+    restart: unless-stopped
+    command: -conf /etc/coredns/Corefile
+    volumes:
+      - ./docker/Corefile:/etc/coredns/Corefile:ro
+    ports:
+      - "127.0.0.1:15353:53/udp"
+      - "127.0.0.1:15353:53/tcp"
+
+  orca-core:
+    build:
+      context: ../..
+      dockerfile: 06_E_Commerce_Lux/Galantesjewelry/docker/orca.Dockerfile
+    container_name: getupsoft-orca-core
+    restart: unless-stopped
+    ports:
+      - "4173:4173"
+    environment:
+      ORCA_UI_PORT: "4173"
+      ORCA_TENANT_MODE: "multi_company"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4173/api/n8n/workflows"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Hermes debe existir en la misma red Docker y escuchar en el puerto 8000.
+  # Si el contenedor tiene otro nombre o puerto, ajustar hermes_local en nginx.local.conf.

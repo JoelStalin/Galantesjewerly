@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T18:36:04.424Z",
+  "generatedAt": "2026-07-21T22:27:33.372Z",
   "rule": "Script-first execution. LLM calls are forbidden unless llmAllowed=true for the node.",
   "nodes": [
     {
@@ -191,6 +191,13 @@
       "llmAllowed": false,
       "description": "Export CSV/JSON review queue for user price, cost, stock, merge/split, and publish approval.",
       "output": "data/inventory-agent/review/review-queue.csv"
+    },
+    {
+      "id": "review_seed_estimates",
+      "command": "review:seed-estimates",
+      "llmAllowed": false,
+      "description": "Fill missing draft price/cost estimates and stock zero while preserving manual review decisions; never publishes products.",
+      "output": "data/inventory-agent/manifests/review-seed-estimates.json"
     },
     {
       "id": "autocorrection_loop",

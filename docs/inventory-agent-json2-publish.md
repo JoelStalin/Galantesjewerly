@@ -1,8 +1,10 @@
 # Inventory JSON-2 publication gate
 
-The inventory worker never publishes from a developer shell. The only allowed
-publisher is `scripts/inventory-agent/odoo-json2-publish.mjs`, invoked by a
-GitHub Actions job using the protected `production` environment.
+The inventory worker runs locally. Drive download, image conversion/features,
+clustering, review preparation, and the Odoo dry-run must complete on the local
+worker before production dispatch. The only production publisher is
+`scripts/inventory-agent/odoo-json2-publish.mjs`, invoked by a GitHub Actions job
+using the protected `production` environment with a validated local bundle.
 
 Required gates, in order:
 

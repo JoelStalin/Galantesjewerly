@@ -63,14 +63,19 @@ async function main() {
   const featureManifest = await readJson('data/inventory-agent/manifests/image-features.json');
   const fileById = new Map((featureManifest.files || []).map((file) => [file.id, file]));
   const pairs = (clusters.geminiReviewPairs || []).slice(0, Number(process.env.GEMINI_SAME_PRODUCT_MAX_PAIRS || '25'));
+  const outputPath = 'data/inventory-agent/review/gemini-same-product-review.json';
+  const existing = await readJson(outputPath, { reviews: [] });
+  const existingByPair = new Map((existing.reviews || []).map((item) => [`${item.sourceId}:${item.targetId}`, item]));
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const models = (process.env.GEMINI_SAME_PRODUCT_MODELS || process.env.GEMINI_SAME_PRODUCT_MODEL || 'gemini-flash-latest,gemini-flash-lite-latest')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
-  const reviews = [];
+  const reviews = [...existingByPair.values()];
 
   for (const pair of pairs) {
+    const pairKey = `${pair.sourceId}:${pair.targetId}`;
+    if (existingByPair.has(pairKey)) continue;
     const source = fileById.get(pair.sourceId);
     const target = fileById.get(pair.targetId);
     if (!source || !target) continue;
@@ -128,6 +133,14 @@ async function main() {
       localScore: pair.sameProductScore,
       model: usedModel || null,
     });
+    await writeJson(outputPath, {
+      ok: true,
+      models,
+      policy: 'Only pairs with local score 0.60-0.85 are sent to Gemini. Gemini returns boolean sameProduct.',
+      reviewedPairs: reviews.length,
+      reviews,
+      checkpoint: { completedPair: pairKey, resumable: true },
+    });
   }
 
   const payload = {
@@ -137,7 +150,7 @@ async function main() {
     reviewedPairs: reviews.length,
     reviews,
   };
-  await writeJson('data/inventory-agent/review/gemini-same-product-review.json', payload);
+  await writeJson(outputPath, payload);
   console.log(JSON.stringify({
     ok: true,
     reviewedPairs: reviews.length,
