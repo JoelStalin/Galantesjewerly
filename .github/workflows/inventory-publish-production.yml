@@ -43,6 +43,7 @@ jobs:
       GOOGLE_OAUTH_CLIENT_JSON_CONTENT: ${{ secrets.GOOGLE_OAUTH_CLIENT_JSON }}
       GOOGLE_DRIVE_TOKEN_JSON_CONTENT: ${{ secrets.GOOGLE_DRIVE_TOKEN_JSON }}
       GOOGLE_OAUTH_REDIRECT_URI: ${{ secrets.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost' }}
+      INVENTORY_AGENT_MAX_QUEUE: '2000'
     steps:
       - name: Checkout canonical deploy repository
         uses: actions/checkout@v4
