@@ -28,6 +28,7 @@ log "Checking out $TARGET_SHA"
 # approved SHA so stale tracked edits on the VM cannot keep old Nginx/frontend
 # configuration alive after a successful deployment.
 git checkout --detach -f "$TARGET_SHA"
+chmod +x "$SCRIPT_DIR"/*.sh
 
 ensure_prod_db
 CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
