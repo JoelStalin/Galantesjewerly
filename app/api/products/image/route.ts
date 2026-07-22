@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { createOdooClient, getOdooConfig } from '@/src/config/odooClient.js';
@@ -30,16 +30,22 @@ async function fallbackImageResponse(status = 200) {
 async function driveImageResponse(productId: number) {
   // Production catalog currently exposes the 24 imported products as ids 138..161.
   // The Drive import stores four ordered photos per product; the first is the card image.
-  const index = productId - 138;
+  const index = productId >= 138 && productId <= 161
+      ? productId - 138
+      : -1;
   if (index < 0 || index > 23) return null;
-  const files = (await import('fs/promises')).readdir(DRIVE_PRIMARY_DIR).then(xs => xs.filter(x => x.endsWith('.jpg')).sort());
-  const names = await files;
-  const name = names[index * 4];
-  if (!name) return null;
-  const imageBuffer = await readFile(path.join(DRIVE_PRIMARY_DIR, name));
-  return new NextResponse(toBinaryBody(imageBuffer), {
-    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Galantes-Image-Source': 'drive-import' },
-  });
+  try {
+    const names = (await readdir(DRIVE_PRIMARY_DIR)).filter(x => x.endsWith('.jpg')).sort();
+    const name = names[index * 4];
+    if (!name) return null;
+    const imageBuffer = await readFile(path.join(DRIVE_PRIMARY_DIR, name));
+    return new NextResponse(toBinaryBody(imageBuffer), {
+      headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Galantes-Image-Source': 'drive-import' },
+    });
+  } catch (error) {
+    console.error('[ProductImage] Drive import image unavailable:', productId, error);
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
