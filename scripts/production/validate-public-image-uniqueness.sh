@@ -4,7 +4,10 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 require_repo
-ensure_prod_db
+ACTIVE_WEB="galantes_web_v4"
+if ! docker_cmd inspect "$ACTIVE_WEB" >/dev/null 2>&1; then ACTIVE_WEB="galantes_web"; fi
+PRODUCTION_DB="$(docker_cmd inspect "$ACTIVE_WEB" --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '/^ODOO_DB=/{print $2; exit}' | tr -d '\r')"
+test -n "$PRODUCTION_DB"
 
 # Fail closed when the public Odoo image endpoint serves one shared fallback
 # for multiple catalog products. This protects both primary images and future

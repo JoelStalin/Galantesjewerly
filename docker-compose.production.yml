@@ -21,7 +21,7 @@ services:
       - ODOO_PASSWORD=${ODOO_PASSWORD}
       - ODOO_API_KEY=${ODOO_API_KEY}
       - ODOO_BASE_URL=http://odoo:8069
-      - ODOO_DB=${ODOO_DB:-galantes_prod}
+      - ODOO_DB=${ODOO_DB:-galantes_db}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - APPOINTMENT_TEST_MODE=${APPOINTMENT_TEST_MODE:-}
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
@@ -61,7 +61,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - ODOO_PASSWORD=${POSTGRES_PASSWORD}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - ODOO_DB=${ODOO_DB:-galantes_prod}
+      - ODOO_DB=${ODOO_DB:-galantes_db}
     volumes:
       - odoo-data:/var/lib/odoo
     networks:
@@ -84,7 +84,7 @@ services:
         limits:
           memory: 512M
     environment:
-      - POSTGRES_DB=${ODOO_DB:-galantes_prod}
+      - POSTGRES_DB=${ODOO_DB:-galantes_db}
       - POSTGRES_USER=${POSTGRES_USER:-odoo}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
