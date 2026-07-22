@@ -82,5 +82,6 @@ jobs:
               -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
               -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
               odoo odoo shell -d "$PRODUCTION_DB" --no-http --db_password "$POSTGRES_PASSWORD" < scripts/odoo/restore_images_from_files.py
+            scripts/production/validate-public-image-uniqueness.sh
             scripts/production/verify-image-durability.sh
             scripts/production/postdeploy-validate.sh
