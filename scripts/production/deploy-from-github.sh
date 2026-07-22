@@ -31,7 +31,14 @@ git checkout --detach -f "$TARGET_SHA"
 chmod +x "$SCRIPT_DIR"/*.sh
 
 ensure_prod_db
-CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
+# The GitHub deploy wrapper checks out TARGET_SHA before invoking this script,
+# so PREV_HEAD may already equal TARGET_SHA. Compare the target merge commit
+# with its first parent to detect the files introduced by the approved PR.
+if git rev-parse "$TARGET_SHA^1" >/dev/null 2>&1; then
+  CHANGES="$(git diff --name-only "$TARGET_SHA^1" "$TARGET_SHA" || true)"
+else
+  CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
+fi
 
 needs_web=false
 needs_odoo=false
