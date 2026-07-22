@@ -6,6 +6,9 @@ export default async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   let { pathname } = url;
   const hostname = request.headers.get('host') || '';
+  if (hostname.split(':')[0].toLowerCase() === 'www.galantesjewelry.com') {
+    return NextResponse.redirect(new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, 'https://galantesjewelry.com'), 308);
+  }
   const isAdminSubdomain = hostname.startsWith('admin.galantesjewelry.com');
   let shouldRewrite = false;
 
