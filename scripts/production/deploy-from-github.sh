@@ -24,7 +24,10 @@ git fetch origin main --tags
 git fetch origin "$TARGET_SHA" || true
 
 log "Checking out $TARGET_SHA"
-git checkout --detach "$TARGET_SHA"
+# The blocking backup has already captured the production checkout. Force the
+# approved SHA so stale tracked edits on the VM cannot keep old Nginx/frontend
+# configuration alive after a successful deployment.
+git checkout --detach -f "$TARGET_SHA"
 
 ensure_prod_db
 CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
