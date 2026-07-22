@@ -30,7 +30,11 @@ async function fallbackImageResponse(status = 200) {
 async function driveImageResponse(productId: number) {
   // Production catalog currently exposes the 24 imported products as ids 138..161.
   // The Drive import stores four ordered photos per product; the first is the card image.
-  const index = productId - 138;
+  const index = productId >= 61 && productId <= 75
+    ? productId - 61
+    : productId >= 138 && productId <= 161
+      ? productId - 138
+      : -1;
   if (index < 0 || index > 23) return null;
   try {
     const names = (await readdir(DRIVE_PRIMARY_DIR)).filter(x => x.endsWith('.jpg')).sort();
