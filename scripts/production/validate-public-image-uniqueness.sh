@@ -4,7 +4,8 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 require_repo
-ensure_prod_db
+PRODUCTION_DB="$(docker_cmd exec galantes_odoo sh -c "awk -F= '/^[[:space:]]*db_name[[:space:]]*=/{gsub(/[[:space:]]/,\"\",\$2); print \$2; exit}' /etc/odoo/odoo.conf" | tr -d '\r')"
+test -n "$PRODUCTION_DB"
 
 # Fail closed when the public Odoo image endpoint serves one shared fallback
 # for multiple catalog products. This protects both primary images and future
