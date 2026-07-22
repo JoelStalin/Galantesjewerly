@@ -172,6 +172,10 @@ class GalantesProductTemplate(models.Model):
         for vals in vals_list:
             if not vals.get('slug') and vals.get('name'):
                 vals['slug'] = _slugify_text(vals['name'])
+            # Odoo is the source of truth for the storefront catalog. Unless
+            # an explicit integration opts out, every new product is visible
+            # to the shop API immediately after creation.
+            vals.setdefault('available_on_website', True)
         return super().create(vals_list)
 
     def write(self, vals):
