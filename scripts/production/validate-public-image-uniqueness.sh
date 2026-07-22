@@ -10,7 +10,7 @@ ensure_prod_db
 # for multiple catalog products. This protects both primary images and future
 # gallery work from silently publishing a broken catalog.
 BASE_URL="${ODOO_PUBLIC_IMAGE_BASE_URL:-https://odoo.galantesjewelry.com}"
-ids="$(compose_cmd exec -T db psql -U odoo -d "$PRODUCTION_DB" -Atc \
+ids="$(compose exec -T db psql -U odoo -d "$PRODUCTION_DB" -Atc \
   "select id from product_template where type <> 'service' and active = true and sale_ok = true and available_on_website = true order by id limit 25;")"
 
 declare -A hashes=()
