@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { createOdooClient, getOdooConfig } from '@/src/config/odooClient.js';
 
 const FALLBACK_PRODUCT_IMAGE = path.join(process.cwd(), 'public', 'assets', 'images', 'logo-square.png');
+const DRIVE_PRIMARY_DIR = path.join(process.cwd(), 'data', 'drive_inventory_20260722');
 
 function toBinaryBody(buffer: Buffer) {
   return new Uint8Array(buffer);
@@ -23,6 +24,21 @@ async function fallbackImageResponse(status = 200) {
       'Cache-Control': 'public, max-age=300',
       'X-Galantes-Image-Fallback': 'product',
     },
+  });
+}
+
+async function driveImageResponse(productId: number) {
+  // Production catalog currently exposes the 24 imported products as ids 138..161.
+  // The Drive import stores four ordered photos per product; the first is the card image.
+  const index = productId - 138;
+  if (index < 0 || index > 23) return null;
+  const files = (await import('fs/promises')).readdir(DRIVE_PRIMARY_DIR).then(xs => xs.filter(x => x.endsWith('.jpg')).sort());
+  const names = await files;
+  const name = names[index * 4];
+  if (!name) return null;
+  const imageBuffer = await readFile(path.join(DRIVE_PRIMARY_DIR, name));
+  return new NextResponse(toBinaryBody(imageBuffer), {
+    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Galantes-Image-Source': 'drive-import' },
   });
 }
 
@@ -50,6 +66,8 @@ export async function GET(request: Request) {
 
     const imageBase64 = records[0]?.image_1920;
     if (!imageBase64 || typeof imageBase64 !== 'string') {
+      const driveResponse = await driveImageResponse(productId);
+      if (driveResponse) return driveResponse;
       return fallbackImageResponse(200);
     }
 
@@ -67,6 +85,8 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[ProductImage] Failed to load product image from Odoo:', productId, error);
+    const driveResponse = await driveImageResponse(productId);
+    if (driveResponse) return driveResponse;
     return fallbackImageResponse(200);
   }
 }
