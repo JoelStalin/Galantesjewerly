@@ -158,3 +158,14 @@ Esto no reemplaza Selenium E2E: las pruebas funcionales con Selenium siguen usan
 - If Google quota exceeded: queue appointment for retry
 - If memory corrupted: rebuild from task-ledger + docs
 <!-- END:appointment-system-rules -->
+
+<!-- BEGIN:shared-agent-memory-rule -->
+# Multi-Agent Shared Memory & Task Ledger Protocol (GetUpSoft / Orca)
+
+## Mandatory Multi-Agent Rules
+1. **Identify Yourself**: Each agent session MUST have a unique `agent_id` (e.g., `antigravity-main`, `codex-worker-01`, `claude-dev-02`).
+2. **Check Shared Memory & Ledger First**: At the start of every session, read `C:\Users\yoeli\.agents_shared_memory\ACTIVE_TASKS.md` and `TASKS_LEDGER.json` to see active agents and claimed tasks.
+3. **Claim & Mark Active Tasks**: Never work on a task currently locked by another `agent_id`. Claim your `task_id` using `sync_memory.py start-task` or by writing to `TASKS_LEDGER.json`.
+4. **Update Progress & Hand-Off**: Before ending a turn, hitting token limits, or context switching, update your task progress in `TASKS_LEDGER.json` and `ACTIVE_SESSION.md` so peer agents can collaborate smoothly on the same project without duplicating effort.
+5. **Brand & Ecosystem Identity**: Remember GetUpSoft (mother company), Orca (automation engine), Galantes Jewelry (e-commerce client). Use Google AI Studio / Antigravity (never Vertex AI).
+<!-- END:shared-agent-memory-rule -->

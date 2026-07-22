@@ -465,3 +465,69 @@ class ProductAPIController(http.Controller):
             'status': 'ok',
             'service': 'odoo-api',
         })
+
+    @http.route('/api/products/bulk', auth='public', methods=['POST'], type='json', csrf=False)
+    def bulk_create_products(self, **kwargs):
+        """Bulk ingest or update product templates in Odoo."""
+        try:
+            body = request.jsonrequest or {}
+            products_data = body.get('products', [])
+            if not isinstance(products_data, list):
+                return {'success': False, 'error': 'products field must be a list'}
+            
+            Product = request.env['product.template'].sudo()
+            has_gallery_model = 'galantes.product.gallery' in request.env
+            Gallery = request.env['galantes.product.gallery'].sudo() if has_gallery_model else None
+            
+            created_count = 0
+            updated_count = 0
+            details = []
+            
+            for item in products_data:
+                vals = dict(item.get('vals', {}))
+                if not vals.get('name'):
+                    continue
+                
+                vals.setdefault('type', 'consu')
+                vals.setdefault('sale_ok', True)
+                vals.setdefault('available_on_website', True)
+                
+                primary_base64 = item.get('primaryImageBase64')
+                if primary_base64:
+                    vals['image_1920'] = primary_base64
+                
+                existing = Product.search([('name', '=', vals['name'])], limit=1)
+                if existing:
+                    existing.write(vals)
+                    product_rec = existing
+                    updated_count += 1
+                else:
+                    product_rec = Product.create(vals)
+                    created_count += 1
+                
+                gallery_base64_list = item.get('galleryImagesBase64', [])
+                if gallery_base64_list and Gallery:
+                    for idx, img_b64 in enumerate(gallery_base64_list):
+                        Gallery.create({
+                            'product_id': product_rec.id,
+                            'name': f"{product_rec.name}_gallery_{idx + 1}",
+                            'image': img_b64,
+                            'sequence': idx + 1,
+                        })
+                
+                details.append({
+                    'id': product_rec.id,
+                    'name': product_rec.name,
+                    'slug': getattr(product_rec, 'slug', f"product-{product_rec.id}"),
+                })
+            
+            return {
+                'success': True,
+                'created': created_count,
+                'updated': updated_count,
+                'total': len(details),
+                'data': details,
+            }
+        except Exception as e:
+            _logger.exception("Error in bulk_create_products")
+            return {'success': False, 'error': str(e)}

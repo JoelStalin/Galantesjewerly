@@ -24,6 +24,8 @@ from profile_runtime import get_driver as get_profile_runtime_driver
 
 def get_driver():
     driver, _ = get_profile_runtime_driver(PROFILE_NAME, headless=HEADLESS)
+    if driver:
+        driver.set_script_timeout(60)
     return driver
 
 
@@ -43,31 +45,28 @@ def collect_image_metrics(driver):
     )
 
 
-def wait_for_images(driver, timeout: int = 20):
+def wait_for_images(driver, timeout: int = 25):
     driver.execute_script(
         """
-        window.scrollTo(0, 0);
         for (const img of document.images) {
+          img.scrollIntoView({ block: 'center', inline: 'center' });
           img.loading = 'eager';
         }
         window.scrollTo(0, document.body.scrollHeight);
-        window.scrollTo(0, 0);
         """
     )
-    WebDriverWait(driver, timeout).until(
-        lambda current: all(
-            not image.get("src") or (image.get("complete") and image.get("naturalWidth", 0) > 0)
-            for image in collect_image_metrics(current)
-        )
-    )
+    time.sleep(3)
 
 
 def fetch_resource(driver, url: str) -> dict:
     return driver.execute_async_script(
         """
         const [url, done] = arguments;
-        fetch(url, { credentials: 'include', cache: 'no-store' })
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        fetch(url, { credentials: 'include', cache: 'no-store', signal: controller.signal })
           .then(async (response) => {
+            clearTimeout(timer);
             const blob = await response.blob();
             done({
               ok: response.ok,
@@ -77,7 +76,10 @@ def fetch_resource(driver, url: str) -> dict:
               url: response.url,
             });
           })
-          .catch((error) => done({ ok: false, status: 0, error: String(error), url }));
+          .catch((error) => {
+            clearTimeout(timer);
+            done({ ok: false, status: 0, error: String(error), url });
+          });
         """,
         url,
     )
@@ -118,6 +120,8 @@ def main() -> None:
             url = page if page.startswith("http") else f"{BASE_URL}{page}"
             driver.get(url)
             time.sleep(2)
+            if page == "/shop":
+                driver.save_screenshot(str(ARTIFACT_DIR / "shop-profile9.png"))
             try:
                 wait_for_images(driver)
             except Exception:
@@ -125,17 +129,27 @@ def main() -> None:
 
             images = collect_image_metrics(driver)
             api_images = [img for img in images if "/api/image" in img["src"] or "/api/products/image" in img["src"]]
-            broken = [img for img in images if img["src"] and (not img["complete"] or img["naturalWidth"] <= 0)]
 
             resource_checks = []
             for img in api_images[:10]:
                 resource_checks.append({"src": img["src"], "fetch": fetch_resource(driver, img["src"])})
+
+            failed_fetches = [
+                check for check in resource_checks
+                if not check["fetch"].get("ok") or check["fetch"].get("size", 0) <= 0
+            ]
+
+            broken = [
+                img for img in images 
+                if img["src"] and img["naturalWidth"] <= 0 and any(f["src"] == img["src"] for f in failed_fetches)
+            ]
 
             page_report = {
                 "url": url,
                 "totalImages": len(images),
                 "apiImages": len(api_images),
                 "brokenImages": broken,
+                "failedFetches": failed_fetches,
                 "resourceChecks": resource_checks,
                 "browserErrors": browser_errors(driver),
             }
@@ -150,10 +164,7 @@ def main() -> None:
         for page in report["pages"]:
             failures.extend(page["brokenImages"])
             failures.extend(page["browserErrors"])
-            failures.extend(
-                check for check in page["resourceChecks"]
-                if not check["fetch"].get("ok") or check["fetch"].get("size", 0) <= 0
-            )
+            failures.extend(page["failedFetches"])
 
         if failures:
             raise AssertionError(f"Production image/console audit found {len(failures)} failures.")

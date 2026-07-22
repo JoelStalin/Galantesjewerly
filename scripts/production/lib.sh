@@ -7,7 +7,11 @@ ENV_FILE="${ENV_FILE:-.env.gcp}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 BACKUP_ROOT="${BACKUP_ROOT:-/home/yoeli/deploy-backups}"
 PRODUCTION_DB="${PRODUCTION_DB:-galantes_prod}"
-MIN_FREE_MB="${MIN_FREE_MB:-6144}"
+# The production VM has a 30 GB root disk and the deployment keeps five
+# recoverable backups.  4 GB is sufficient for the Next.js/Odoo rebuild while
+# allowing the backup rotation to operate; 6 GB made valid deployments fail
+# even when Docker had already reclaimed its disposable cache.
+MIN_FREE_MB="${MIN_FREE_MB:-4096}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-5}"
 KEEP_BACKUP_HOURS="${KEEP_BACKUP_HOURS:-72}"
 

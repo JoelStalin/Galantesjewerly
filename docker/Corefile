@@ -3,6 +3,7 @@
         127.0.0.1 orca.dev
         127.0.0.1 getupsoft.orca.dev
         127.0.0.1 galantesjewelry.orca.dev
+        127.0.0.1 hermes.dev
         fallthrough
     }
     forward . 1.1.1.1 8.8.8.8

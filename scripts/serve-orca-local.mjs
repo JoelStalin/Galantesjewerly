@@ -9,6 +9,8 @@ const blueprintFile = path.join(runtimeRoot, 'data', 'workflow_blueprints.json')
 const tenantsFile = path.join(runtimeRoot, 'data', 'orca-tenants.json');
 const port = Number(process.env.ORCA_UI_PORT || 4173);
 const host = process.env.ORCA_UI_HOST || '127.0.0.1';
+const hermesBaseUrl = process.env.HERMES_BASE_URL || 'https://hermes.dev/v1';
+const hermesApiKey = process.env.HERMES_API_KEY || '';
 
 function readBlueprint(tenantId = 'galantesjewelry') {
   const all = JSON.parse(fs.readFileSync(blueprintFile, 'utf8'));
@@ -52,6 +54,15 @@ function sendJson(res, value) {
   res.end(body);
 }
 
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; if (body.length > 2_000_000) reject(new Error('Request body too large')); });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
 const server = http.createServer((req, res) => {
   try {
     if (req.url?.startsWith('/api/tenants')) return sendJson(res, JSON.parse(fs.readFileSync(tenantsFile, 'utf8')));
@@ -62,7 +73,12 @@ const server = http.createServer((req, res) => {
     if (req.url === '/api/n8n/node-types') return sendJson(res, nodeTypes);
     if (req.url === '/api/stats') return sendJson(res, { tenant_id: 'galantesjewelry', status: 'local', workflows: 2 });
     if (req.url === '/api/pipeline/stats') return sendJson(res, { workflow: 'galantes-inventory-agent', state: 'running' });
-    if (req.url === '/api/hermes/doctor') return sendJson(res, { ok: true, provider: 'hermes', mode: 'local' });
+    if (req.url === '/api/hermes/doctor') return hermesRequest('/models').then((payload) => sendJson(res, { ok: true, provider: 'hermes', mode: 'api-server', models: payload.data || [] })).catch((error) => { res.writeHead(502, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, provider: 'hermes', error: error.message })); });
+    if (req.url === '/api/hermes/run' && req.method === 'POST') return readBody(req).then((raw) => {
+      const input = JSON.parse(raw || '{}');
+      if (!Array.isArray(input.messages) || input.messages.length === 0) throw new Error('messages must be a non-empty array');
+      return hermesRequest('/chat/completions', { method: 'POST', body: JSON.stringify({ model: input.model || 'hermes-agent', messages: input.messages, stream: false }) });
+    }).then((payload) => sendJson(res, payload)).catch((error) => { res.writeHead(400, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, provider: 'hermes', error: error.message })); });
     if (req.url === '/vite.svg') {
       res.writeHead(200, { 'content-type': 'image/svg+xml' });
       return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="transparent"/></svg>');
@@ -82,4 +98,13 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ error: error.message }));
   }
 });
+async function hermesRequest(endpoint, options = {}) {
+  if (!hermesApiKey) throw new Error('HERMES_API_KEY is not configured in the Orca runtime');
+  const response = await fetch(`${hermesBaseUrl.replace(/\/$/, '')}${endpoint}`, {
+    ...options,
+    headers: { Authorization: `Bearer ${hermesApiKey}`, 'content-type': 'application/json', ...(options.headers || {}) },
+  });
+  if (!response.ok) throw new Error(`Hermes API ${response.status}`);
+  return response.json();
+}
 server.listen(port, host, () => console.log(`Orca local UI adapter listening on http://${host}:${port}`));
