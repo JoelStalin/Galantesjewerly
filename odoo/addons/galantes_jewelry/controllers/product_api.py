@@ -466,14 +466,18 @@ class ProductAPIController(http.Controller):
             'service': 'odoo-api',
         })
 
-    @http.route('/api/products/bulk', auth='public', methods=['POST'], type='json', csrf=False)
+    @http.route('/api/products/bulk', auth='public', methods=['POST'], type='http', csrf=False)
     def bulk_create_products(self, **kwargs):
         """Bulk ingest or update product templates in Odoo."""
         try:
-            body = request.jsonrequest or {}
+            try:
+                body = json.loads(request.httprequest.data.decode('utf-8'))
+            except Exception:
+                body = {}
+
             products_data = body.get('products', [])
             if not isinstance(products_data, list):
-                return {'success': False, 'error': 'products field must be a list'}
+                return request.make_json_response({'success': False, 'error': 'products field must be a list'}, status=400)
             
             Product = request.env['product.template'].sudo()
             has_gallery_model = 'galantes.product.gallery' in request.env
@@ -488,15 +492,19 @@ class ProductAPIController(http.Controller):
                 if not vals.get('name'):
                     continue
                 
-                vals.setdefault('type', 'consu')
-                vals.setdefault('sale_ok', True)
-                vals.setdefault('available_on_website', True)
+                vals['type'] = 'consu'
+                vals['sale_ok'] = True
+                vals['available_on_website'] = True
                 
                 primary_base64 = item.get('primaryImageBase64')
                 if primary_base64:
                     vals['image_1920'] = primary_base64
                 
-                existing = Product.search([('name', '=', vals['name'])], limit=1)
+                key = vals.get('default_code')
+                existing = Product.search([('default_code', '=', key)], limit=1) if key else None
+                if not existing:
+                    existing = Product.search([('name', '=', vals['name'])], limit=1)
+
                 if existing:
                     existing.write(vals)
                     product_rec = existing
@@ -521,13 +529,16 @@ class ProductAPIController(http.Controller):
                     'slug': getattr(product_rec, 'slug', f"product-{product_rec.id}"),
                 })
             
-            return {
+            return request.make_json_response({
                 'success': True,
                 'created': created_count,
                 'updated': updated_count,
                 'total': len(details),
                 'data': details,
-            }
+            })
         except Exception as e:
             _logger.exception("Error in bulk_create_products")
-            return {'success': False, 'error': str(e)}
+            return request.make_json_response({
+                'success': False,
+                'error': str(e),
+            }, status=500)
