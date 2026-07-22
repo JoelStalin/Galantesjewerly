@@ -9,6 +9,22 @@ if not chunk_files:
 
 print(f"Found {len(chunk_files)} chunk files. Processing products...")
 
+category_titles = {
+    'necklaces': 'Collar Fino Galantes',
+    'necklace': 'Collar Fino Galantes',
+    'chains': 'Cadena de Oro Galantes',
+    'chain': 'Cadena de Oro Galantes',
+    'rings': 'Anillo Elegante Galantes',
+    'ring': 'Anillo Elegante Galantes',
+    'earrings': 'Aretes Elegantes Galantes',
+    'earring': 'Aretes Elegantes Galantes',
+    'bracelets': 'Pulsera Fina Galantes',
+    'bracelet': 'Pulsera Fina Galantes',
+    'pendants': 'Dije Elegante Galantes',
+    'pendant': 'Dije Elegante Galantes',
+    'jewelry': 'Joya Fina Galantes',
+}
+
 Product = self.env['product.template'].sudo()
 created = 0
 updated = 0
@@ -23,9 +39,11 @@ for cfile in chunk_files:
         vals = dict(item.get('vals', {}))
         cluster_id = item.get('clusterId', 'item')
         sku = vals.get('default_code') or f"GAL-{cluster_id}"
-        cat_label = (item.get('categoryLabel') or 'Jewelry').title()
         
-        vals['name'] = f"Galantes {cat_label} {sku.replace('GAL-', '#')}"
+        cat_key = (item.get('categoryLabel') or 'jewelry').lower().strip()
+        title = category_titles.get(cat_key, 'Joya Fina Galantes')
+        
+        vals['name'] = title
         vals['default_code'] = sku
         vals['type'] = 'consu'
         vals['sale_ok'] = True
@@ -45,4 +63,4 @@ for cfile in chunk_files:
             created += 1
 
 self.env.cr.commit()
-print(f"SUCCESS: 1-to-1 Base64 ingestion complete! {created} created, {updated} updated out of {total_items} total products.")
+print(f"SUCCESS: 1-to-1 luxury ingestion complete! {created} created, {updated} updated out of {total_items} total products.")
