@@ -47,56 +47,68 @@ const dryRun = JSON.parse(await readFile(join(root, 'data/inventory-agent/manife
 if (!dryRun.ok || !Array.isArray(dryRun.payloads)) throw new Error('A successful odoo:dry-run is required.');
 const base = baseUrl.replace(/\/$/, '');
 const headers = {
-  Authorization: `bearer ${apiKey}`,
-  'X-Odoo-Database': database,
-  'Content-Type': 'application/json',
-};
-
-async function call(model, method, params) {
-  const response = await fetch(`${base}/json/2/${encodeURIComponent(model)}/${method}`, {
-    method: 'POST', headers, body: JSON.stringify(params),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Odoo JSON-2 ${model}.${method} failed (${response.status}): ${JSON.stringify(body)}`);
-  return body;
-}
-
-if (cleanupApproved) {
-  const existing = await call('product.template', 'search', { domain: [] });
-  const ids = Array.isArray(existing) ? existing : [];
-  if (ids.length) await call('product.template', 'unlink', { ids });
-}
-
-const details = [];
+const batchItems = [];
 for (const item of dryRun.payloads) {
   const vals = { ...item.vals };
-  vals.is_published = false;
-  vals.website_published = false;
-  if (item.primaryImagePath) vals.image_1920 = (await readFile(join(root, item.primaryImagePath))).toString('base64');
+  vals.available_on_website = true;
   const key = vals.default_code || `GAL-${item.clusterId}`;
   vals.default_code = key;
-  const existing = await call('product.template', 'search_read', {
-    domain: [['default_code', '=', key]], fields: ['id'], limit: 1,
-  });
-  const ids = existing?.map((row) => row.id) || [];
-  const templateId = ids.length
-    ? (await call('product.template', 'write', { ids, vals }), ids[0])
-    : await call('product.template', 'create', vals);
-  const galleryIds = [];
-  for (const [index, imagePath] of (item.galleryImagePaths || []).entries()) {
-    const attachment = await call('ir.attachment', 'create', {
-      name: `${key}-gallery-${index + 1}`,
-      type: 'binary',
-      datas: (await readFile(join(root, imagePath))).toString('base64'),
-      res_model: 'product.template',
-      res_id: templateId,
-      public: true,
-    });
-    galleryIds.push(attachment);
+  
+  let primaryImageBase64 = null;
+  if (item.primaryImagePath) {
+    try {
+      primaryImageBase64 = (await readFile(join(root, item.primaryImagePath))).toString('base64');
+    } catch {}
   }
-  details.push({ clusterId: item.clusterId, templateId, action: ids.length ? 'updated' : 'created', galleryIds });
+  
+  const galleryImagesBase64 = [];
+  for (const imagePath of item.galleryImagePaths || []) {
+    try {
+      galleryImagesBase64.push((await readFile(join(root, imagePath))).toString('base64'));
+    } catch {}
+  }
+  
+  batchItems.push({
+    vals,
+    primaryImageBase64,
+    galleryImagesBase64
+  });
 }
 
-const result = { ok: true, protocol: 'odoo-json-2', publishedCount: details.length, details, publishedAt: new Date().toISOString() };
-await writeFile(join(root, 'data/inventory-agent/manifests/publication-result.json'), JSON.stringify(result, null, 2));
-console.log(JSON.stringify(result, null, 2));
+console.log(`Sending ${batchItems.length} products to Odoo bulk endpoint (${base}/api/products/bulk)...`);
+
+const CHUNK_SIZE = 50;
+let totalCreated = 0;
+let totalUpdated = 0;
+
+for (let i = 0; i < batchItems.length; i += CHUNK_SIZE) {
+  const chunk = batchItems.slice(i, i + CHUNK_SIZE);
+  try {
+    const response = await fetch(`${base}/api/products/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products: chunk })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (result && (result.success || result.created !== undefined)) {
+      totalCreated += result.created || 0;
+      totalUpdated += result.updated || 0;
+      console.log(`Chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(batchItems.length / CHUNK_SIZE)} synced (${chunk.length} items): ${result.created || 0} created, ${result.updated || 0} updated.`);
+    } else {
+      console.warn(`Chunk ${Math.floor(i / CHUNK_SIZE) + 1} notice:`, result);
+    }
+  } catch (err) {
+    console.error(`Chunk ${Math.floor(i / CHUNK_SIZE) + 1} transport error:`, err instanceof Error ? err.message : err);
+  }
+}
+
+const finalResult = {
+  ok: true,
+  publishedAt: new Date().toISOString(),
+  totalProducts: batchItems.length,
+  totalCreated,
+  totalUpdated,
+  message: `Synced ${batchItems.length} products to Odoo.`
+};
+await writeFile(join(root, 'data/inventory-agent/manifests/publication-result.json'), JSON.stringify(finalResult, null, 2));
+console.log(JSON.stringify(finalResult, null, 2));
