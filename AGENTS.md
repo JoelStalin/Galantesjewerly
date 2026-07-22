@@ -12,6 +12,11 @@ Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** pro
 
 > 📚 **Infraestructura de Producción**: GCP VM `galantes-prod-vm` (us-central1-a, IP 136.114.48.210). Docker Compose con 5 servicios: web (Next.js), odoo, postgres, nginx, cloudflared. No usar Termux ni Android — la producción corre 100% en GCP.
 
+## Mandatory Single-Instance & Single-Schema Architecture Rules
+- **Single GCP Instance Rule:** Production MUST strictly run on EXACTLY ONE GCP VM instance (`galantes-prod-vm`, zone `us-central1-a`). No secondary VMs, external staging instances, or multi-host configurations are permitted.
+- **Single Database Schema Rule:** Production MUST strictly use ONLY ONE database schema (`galantes_prod`). All services, Odoo connections, and API endpoints must point strictly to `galantes_prod`. Secondary schemas or fallback DBs are strictly forbidden.
+- **1-to-1 Product-Photo Mapping Rule:** Every catalog item published must be assigned a unique title and unique SKU (`default_code`) derived from its visual cluster ID (e.g. `GAL-1093`), ensuring every single photo from Google Drive maps 1-to-1 to its exact visual image with zero generic title collisions.
+
 ## Product image safety
 - Never ship client code that can surface a broken product image in shop, cart, or PDP views.
 - If Odoo has no product image, the API must return a deterministic fallback asset instead of `404`, `500`, or an empty string.
