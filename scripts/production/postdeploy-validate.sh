@@ -54,6 +54,7 @@ check_image() {
   echo '```text'
   check_http "https://galantesjewelry.com/api/health" "public-health" || true
   check_http "https://galantesjewelry.com/shop" "public-shop" || true
+  check_http "https://odoo.galantesjewelry.com/web/login" "public-odoo-login" || true
   check_image "https://galantesjewelry.com/api/image?id=image-1776959050826-portada.webp" "public-hero-image" 1000 || true
   check_image "https://galantesjewelry.com/api/image?id=image-1776722792843-logo.webp" "public-logo-image" 1000 || true
   check_image "https://galantesjewelry.com/api/image?id=favicon-1776722808533-favicon-32x32.png" "public-favicon-image" 500 || true
@@ -80,6 +81,7 @@ check_image() {
 
 if grep -q 'public-health 200' "$OUT_FILE" \
   && grep -q 'public-shop 200' "$OUT_FILE" \
+  && grep -q 'public-odoo-login 200' "$OUT_FILE" \
   && grep -q 'internal-odoo 200' "$OUT_FILE" \
   && grep -q 'public-hero-image http=200' "$OUT_FILE" \
   && grep -q 'public-logo-image http=200' "$OUT_FILE" \
