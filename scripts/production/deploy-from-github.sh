@@ -31,6 +31,7 @@ CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
 
 needs_web=false
 needs_odoo=false
+needs_nginx=false
 
 if [ "$FORCE_REBUILD" = "true" ]; then
   needs_web=true
@@ -43,6 +44,10 @@ fi
 
 if printf '%s\n' "$CHANGES" | grep -qE '^(odoo|docker-compose.production.yml)'; then
   needs_odoo=true
+fi
+
+if printf '%s\n' "$CHANGES" | grep -qE '^(infra/nginx/|docker-compose.production.yml)'; then
+  needs_nginx=true
 fi
 
 log "Verifying critical CMS/product images are durable in Odoo"
@@ -61,6 +66,12 @@ if [ "$needs_odoo" = "true" ]; then
   [ -n "$POSTGRES_PASSWORD" ] || fail "POSTGRES_PASSWORD is required for Odoo addon update"
   compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d "$PRODUCTION_DB" -u galantes_jewelry --stop-after-init --no-http --db_password "$POSTGRES_PASSWORD"
   compose up -d --no-deps odoo
+fi
+
+if [ "$needs_nginx" = "true" ]; then
+  log "Validating and recreating Nginx for versioned routing changes"
+  compose run --rm --no-deps nginx nginx -t
+  compose up -d --no-deps nginx
 fi
 
 ensure_tunnel_running
