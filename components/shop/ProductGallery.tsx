@@ -130,7 +130,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
               <div
                 data-testid="product-image-magnifier"
                 aria-hidden="true"
-                className="pointer-events-none absolute z-20 rounded-full border border-white/75 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ring-1 ring-black/10"
+                className="pointer-events-none absolute z-10 rounded-full border border-white/75 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ring-1 ring-black/10"
                 style={{
                   width: `${MAGNIFIER_SIZE}px`,
                   height: `${MAGNIFIER_SIZE}px`,
@@ -149,7 +149,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
                 <button
                   type="button"
                   onClick={goToPrevious}
-                  className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-primary shadow-lg transition hover:bg-white"
+                  className="absolute left-3 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-primary shadow-lg transition hover:bg-white"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -157,7 +157,7 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
                 <button
                   type="button"
                   onClick={goToNext}
-                  className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-primary shadow-lg transition hover:bg-white"
+                  className="absolute right-3 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-primary shadow-lg transition hover:bg-white"
                   aria-label="Next image"
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -165,14 +165,14 @@ export function ProductGallery({ mainImage, gallery, productName }: ProductGalle
               </>
             )}
 
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/60 via-black/20 to-transparent px-4 pb-4 pt-10 text-white">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/60 via-black/20 to-transparent px-4 pb-4 pt-10 text-white">
               <span className="text-[11px] font-bold uppercase tracking-[0.24em]">
                 Image {activeIdx + 1} of {totalImages}
               </span>
               <button
                 type="button"
                 onClick={() => setZoomOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs font-semibold backdrop-blur-sm transition hover:bg-white/25"
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs font-semibold backdrop-blur-sm transition hover:bg-white/25"
                 aria-label="Zoom image"
               >
                 <Search className="h-4 w-4" />
