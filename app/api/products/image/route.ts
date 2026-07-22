@@ -30,9 +30,7 @@ async function fallbackImageResponse(status = 200) {
 async function driveImageResponse(productId: number) {
   // Production catalog currently exposes the 24 imported products as ids 138..161.
   // The Drive import stores four ordered photos per product; the first is the card image.
-  const index = productId >= 61 && productId <= 75
-    ? productId - 61
-    : productId >= 138 && productId <= 161
+  const index = productId >= 138 && productId <= 161
       ? productId - 138
       : -1;
   if (index < 0 || index > 23) return null;
@@ -58,11 +56,6 @@ export async function GET(request: Request) {
   if (!Number.isFinite(productId) || productId <= 0) {
     return fallbackImageResponse(200);
   }
-
-  // Imported production catalog ids must use their verified Drive primary
-  // image; an Odoo record with a stale branding image must not win.
-  const importedImage = await driveImageResponse(productId);
-  if (importedImage) return importedImage;
 
   const config = getOdooConfig();
   if (!config.isReady) {
