@@ -55,6 +55,11 @@ export async function GET(request: Request) {
     return fallbackImageResponse(200);
   }
 
+  // Imported production catalog ids must use their verified Drive primary
+  // image; an Odoo record with a stale branding image must not win.
+  const importedImage = await driveImageResponse(productId);
+  if (importedImage) return importedImage;
+
   const config = getOdooConfig();
   if (!config.isReady) {
     return fallbackImageResponse(200);
