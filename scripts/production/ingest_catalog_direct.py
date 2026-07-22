@@ -1,66 +1,48 @@
 import json
 import base64
-import os
-from pathlib import Path
+import glob
 
-dry_run_file = Path('/tmp/odoo-dry-run.json')
-if not dry_run_file.exists():
-    print("Missing /tmp/odoo-dry-run.json")
+chunk_files = sorted(glob.glob('/tmp/base64-chunks/chunk-*.json'))
+if not chunk_files:
+    print("No chunk files found in /tmp/base64-chunks/")
     exit(1)
 
-with open(dry_run_file, 'r', encoding='utf-8') as f:
-    data = json.load(f)
-
-payloads = data.get('payloads', [])
-print(f"Processing {len(payloads)} unique products via Odoo ORM in galantes_prod...")
+print(f"Found {len(chunk_files)} chunk files. Processing products...")
 
 Product = self.env['product.template'].sudo()
-Gallery = self.env['galantes.product.gallery'].sudo() if 'galantes.product.gallery' in self.env else None
-
 created = 0
 updated = 0
+total_items = 0
 
-for item in payloads:
-    vals = dict(item.get('vals', {}))
+for cfile in chunk_files:
+    with open(cfile, 'r', encoding='utf-8') as f:
+        items = json.load(f)
     
-    cluster_id = item.get('clusterId', 'item')
-    sku = vals.get('default_code') or f"GAL-{cluster_id}"
-    cat_label = (item.get('categoryLabel') or 'Jewelry').title()
-    
-    # Assign unique 1-to-1 product name per cluster photo
-    vals['name'] = f"Galantes {cat_label} {sku.replace('GAL-', '#')}"
-    vals['default_code'] = sku
-    vals['type'] = 'consu'
-    vals['sale_ok'] = True
-    vals['available_on_website'] = True
-    vals['is_published'] = True
-    
-    primary_path = item.get('primaryImagePath')
-    if primary_path and os.path.exists(primary_path):
-        with open(primary_path, 'rb') as img_f:
-            vals['image_1920'] = base64.b64encode(img_f.read()).decode('utf-8')
-    
-    existing = Product.search([('default_code', '=', sku)], limit=1)
-    if existing:
-        existing.write(vals)
-        prod_rec = existing
-        updated += 1
-    else:
-        prod_rec = Product.create(vals)
-        created += 1
-    
-    gallery_paths = item.get('galleryImagePaths', [])
-    if gallery_paths and Gallery:
-        for idx, gpath in enumerate(gallery_paths):
-            if os.path.exists(gpath):
-                with open(gpath, 'rb') as g_f:
-                    gb64 = base64.b64encode(g_f.read()).decode('utf-8')
-                    Gallery.create({
-                        'product_id': prod_rec.id,
-                        'name': f"{sku}_gallery_{idx + 1}",
-                        'image': gb64,
-                        'sequence': idx + 1,
-                    })
+    total_items += len(items)
+    for item in items:
+        vals = dict(item.get('vals', {}))
+        cluster_id = item.get('clusterId', 'item')
+        sku = vals.get('default_code') or f"GAL-{cluster_id}"
+        cat_label = (item.get('categoryLabel') or 'Jewelry').title()
+        
+        vals['name'] = f"Galantes {cat_label} {sku.replace('GAL-', '#')}"
+        vals['default_code'] = sku
+        vals['type'] = 'consu'
+        vals['sale_ok'] = True
+        vals['available_on_website'] = True
+        vals['is_published'] = True
+        
+        b64_img = item.get('primaryImageBase64')
+        if b64_img:
+            vals['image_1920'] = b64_img
+        
+        existing = Product.search([('default_code', '=', sku)], limit=1)
+        if existing:
+            existing.write(vals)
+            updated += 1
+        else:
+            Product.create(vals)
+            created += 1
 
 self.env.cr.commit()
-print(f"SUCCESS: 1-to-1 ingestion complete! {created} created, {updated} updated out of {len(payloads)} total distinct photos.")
+print(f"SUCCESS: 1-to-1 Base64 ingestion complete! {created} created, {updated} updated out of {total_items} total products.")
