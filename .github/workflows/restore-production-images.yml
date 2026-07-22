@@ -68,9 +68,15 @@ jobs:
             sudo docker cp scripts/odoo/restore_images_from_files.py galantes_odoo:/tmp/restore_images_from_files.py
             POSTGRES_PASSWORD="$(awk -F= '$1 == "POSTGRES_PASSWORD" {print substr($0, length($1) + 2)}' .env.gcp | tail -n 1)"
             test -n "$POSTGRES_PASSWORD"
+            PRODUCTION_DB="$(awk -F= '/^(ODOO_DB|ODOO_DATABASE)=/{gsub(/\r/,"",$2); print $2; exit}' .env.gcp)"
+            if [ -z "$PRODUCTION_DB" ]; then
+              echo "ODOO_DB/ODOO_DATABASE is missing from .env.gcp" >&2
+              exit 1
+            fi
+            echo "Restoring images into configured Odoo database: $PRODUCTION_DB"
             sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
               -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
               -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
-              odoo odoo shell -d galantes_prod --no-http --db_password "$POSTGRES_PASSWORD" < scripts/odoo/restore_images_from_files.py
+              odoo odoo shell -d "$PRODUCTION_DB" --no-http --db_password "$POSTGRES_PASSWORD" < scripts/odoo/restore_images_from_files.py
             scripts/production/verify-image-durability.sh
             scripts/production/postdeploy-validate.sh
