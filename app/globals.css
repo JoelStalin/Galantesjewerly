@@ -12,7 +12,7 @@
   --color-surface: #fffdf9;
   --color-foreground: #141414;
 
-  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-outfit), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-serif: Georgia, "Times New Roman", ui-serif, serif;
 }
 

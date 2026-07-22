@@ -7,11 +7,20 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def get_driver(profile_cmd="Profile 9"):
     options = webdriver.ChromeOptions()
-    user_data_dir = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data")
+    # ChromeDriver regressions on Windows can fail when a parent User Data
+    # directory is combined with --profile-directory. Point directly at the
+    # existing Profile 9 directory instead; this preserves the real profile.
+    user_data_dir = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data\Profile 9")
 
     options.add_argument(f"user-data-dir={user_data_dir}")
-    options.add_argument(f"profile-directory={profile_cmd}")
     options.add_argument("--start-maximized")
+    # Chrome 150 can fail before creating DevToolsActivePort when Selenium
+    # attaches to a persistent Windows profile. Let Chrome allocate its own
+    # debugging port and avoid GPU/shared-memory startup races.
+    options.add_argument("--remote-debugging-port=0")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--headless=new")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
 
