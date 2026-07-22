@@ -31,7 +31,10 @@ CHANGES="$(git diff --name-only "$PREV_HEAD" "$TARGET_SHA" || true)"
 
 needs_web=false
 needs_odoo=false
-needs_nginx=false
+# Always validate/recreate Nginx during a production deploy. The running
+# container may be stale or unhealthy even when the current commit only
+# changes deployment scripts.
+needs_nginx=true
 
 if [ "$FORCE_REBUILD" = "true" ]; then
   needs_web=true
