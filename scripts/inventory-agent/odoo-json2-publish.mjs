@@ -50,7 +50,7 @@ const categoryTitles = {
   jewelry: 'Joya Fina Galantes',
 };
 
-const STREAM_CHUNK_SIZE = 5;
+const STREAM_CHUNK_SIZE = 1;
 let totalCreated = 0;
 let totalUpdated = 0;
 let totalFailed = 0;
