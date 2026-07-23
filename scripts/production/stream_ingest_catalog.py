@@ -1,5 +1,6 @@
 import json
 import io
+import os
 import base64
 import time
 import requests
@@ -50,7 +51,7 @@ def compress_image_to_b64(file_path: Path) -> str | None:
         print(f"Warning: Image compression failed for {file_path}: {exc}")
         return None
 
-url = "https://odoo.galantesjewelry.com/api/products/ingest"
+url = os.getenv("ODOO_INGEST_URL", "http://localhost:8069/api/products/ingest")
 success_count = 0
 fail_count = 0
 
