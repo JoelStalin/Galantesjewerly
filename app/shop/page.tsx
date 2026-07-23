@@ -93,15 +93,11 @@ export default async function ShopPage({
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-primary text-white py-12 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-serif font-bold mb-3">
+      <section className="bg-primary text-white py-7 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto text-left">
+          <h1 className="text-3xl md:text-4xl font-serif font-bold">
             Shop Fine Jewelry
           </h1>
-          <p className="text-base md:text-lg opacity-85 max-w-2xl mx-auto">
-            Discover bridal pieces, nautical-inspired designs, timeless gifts,
-            and custom creations.
-          </p>
         </div>
       </section>
 

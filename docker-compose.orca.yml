@@ -6,6 +6,8 @@ services:
     depends_on:
       - orca-core
       - orca-dns
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:8080:80"
       - "127.0.0.1:443:443"
@@ -15,7 +17,7 @@ services:
 
   orca-dns:
     image: coredns/coredns:1.11.3
-    container_name: galantes-orca-dns
+    container_name: getupsoft-orca-dns
     restart: unless-stopped
     command: -conf /etc/coredns/Corefile
     volumes:
@@ -29,12 +31,17 @@ services:
       context: ../..
       dockerfile: 06_E_Commerce_Lux/Galantesjewelry/docker/orca.Dockerfile
     container_name: getupsoft-orca-core
+    env_file:
+      - .env.orca.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     ports:
       - "4173:4173"
     environment:
       ORCA_UI_PORT: "4173"
       ORCA_TENANT_MODE: "multi_company"
+      HERMES_BASE_URL: "http://host.docker.internal:8642/v1"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4173/api/n8n/workflows"]
       interval: 10s

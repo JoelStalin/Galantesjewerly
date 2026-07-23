@@ -1,10 +1,11 @@
 import { existsSync } from 'fs';
-import { readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { createOdooClient, getOdooConfig } from '@/src/config/odooClient.js';
 
-const FALLBACK_PRODUCT_IMAGE = path.join(process.cwd(), 'public', 'assets', 'images', 'logo-square.png');
+const FALLBACK_PRODUCT_IMAGE = path.join(process.cwd(), 'public', 'assets', 'images', 'odoo-placeholder.png');
+const DRIVE_PRIMARY_DIR = path.join(process.cwd(), 'data', 'drive_inventory_20260722');
 
 function toBinaryBody(buffer: Buffer) {
   return new Uint8Array(buffer);
@@ -13,7 +14,7 @@ function toBinaryBody(buffer: Buffer) {
 async function fallbackImageResponse(status = 200) {
   const fallbackPath = existsSync(FALLBACK_PRODUCT_IMAGE)
     ? FALLBACK_PRODUCT_IMAGE
-    : path.join(process.cwd(), 'public', 'assets', 'branding', 'logo.png');
+    : path.join(process.cwd(), 'public', 'assets', 'images', 'logo-square.png');
   const fileBuffer = await readFile(fallbackPath);
 
   return new NextResponse(toBinaryBody(fileBuffer), {
@@ -21,9 +22,30 @@ async function fallbackImageResponse(status = 200) {
     headers: {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=300',
-      'X-Galantes-Image-Fallback': 'product',
+      'X-Galantes-Image-Fallback': 'product-placeholder',
     },
   });
+}
+
+async function driveImageResponse(productId: number) {
+  // Production catalog currently exposes the 24 imported products as ids 138..161.
+  // The Drive import stores four ordered photos per product; the first is the card image.
+  const index = productId >= 138 && productId <= 161
+      ? productId - 138
+      : -1;
+  if (index < 0 || index > 23) return null;
+  try {
+    const names = (await readdir(DRIVE_PRIMARY_DIR)).filter(x => x.endsWith('.jpg')).sort();
+    const name = names[index * 4];
+    if (!name) return null;
+    const imageBuffer = await readFile(path.join(DRIVE_PRIMARY_DIR, name));
+    return new NextResponse(toBinaryBody(imageBuffer), {
+      headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'X-Galantes-Image-Source': 'drive-import' },
+    });
+  } catch (error) {
+    console.error('[ProductImage] Drive import image unavailable:', productId, error);
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -50,6 +72,8 @@ export async function GET(request: Request) {
 
     const imageBase64 = records[0]?.image_1920;
     if (!imageBase64 || typeof imageBase64 !== 'string') {
+      const driveResponse = await driveImageResponse(productId);
+      if (driveResponse) return driveResponse;
       return fallbackImageResponse(200);
     }
 
@@ -67,6 +91,8 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[ProductImage] Failed to load product image from Odoo:', productId, error);
+    const driveResponse = await driveImageResponse(productId);
+    if (driveResponse) return driveResponse;
     return fallbackImageResponse(200);
   }
 }

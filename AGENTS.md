@@ -10,7 +10,14 @@ Cuando el asistente (tú) deba escribir, modificar o ejecutar un script de prueb
 
 Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** proactivamente después de cada implementación, cambio de infraestructura o despliegue. Asimismo, debes **aplicar todos los ajustes (settings) requeridos** de forma autónoma en el repositorio para asegurar que el ambiente quede funcionando de extremo a extremo antes de dar por concluida cualquier misión.
 
-> 📚 **Infraestructura de Producción**: GCP VM `galantes-prod-vm` (us-central1-a, IP 136.114.48.210). Docker Compose con 5 servicios: web (Next.js), odoo, postgres, nginx, cloudflared. No usar Termux ni Android — la producción corre 100% en GCP.
+> 📚 **Infraestructura de Producción**: GCP VM `instance-20260627-052612` (us-central1-b, IP 34.28.101.62). Docker Compose con los servicios de producción: web (Next.js `galantes_web_v4`), odoo (`galantes_odoo`), postgres (`galantes_db`), nginx (`galantes_nginx`), certbot. No usar Termux ni Android — la producción corre 100% en GCP.
+
+## Mandatory Single-Instance & Single-Schema Architecture Rules
+- **Canonical Production GCP Instance Rule:** Production MUST strictly run on EXACTLY ONE GCP VM instance: **`instance-20260627-052612`** (zone `us-central1-b`).
+- **FORBIDDEN INSTANCE RULE:** NO AGENT may ever use or target `galantes-prod-vm`. `galantes-prod-vm` is strictly prohibited and abandoned. All production SSH, deployments, DB operations, and API ingestion MUST target `instance-20260627-052612`.
+- **Single Database Schema Rule:** Production MUST strictly use ONLY ONE database schema (`galantes_prod`). All services, Odoo connections, and API endpoints must point strictly to `galantes_prod`. Secondary schemas or fallback DBs are strictly forbidden.
+- **1-to-1 Product-Photo Mapping Rule:** Every catalog item published must be assigned a unique title and unique SKU (`default_code`) derived from its visual cluster ID (e.g. `GAL-1093`), ensuring every single photo from Google Drive maps 1-to-1 to its exact visual image with zero generic title collisions.
+- **No Service Products Rule:** All catalog products in Odoo production MUST strictly be consumable goods (`type = 'consu'`). No product template may ever be uploaded, created, or converted into a service (`type = 'service'`).
 
 ## Product image safety
 - Never ship client code that can surface a broken product image in shop, cart, or PDP views.
@@ -158,3 +165,14 @@ Esto no reemplaza Selenium E2E: las pruebas funcionales con Selenium siguen usan
 - If Google quota exceeded: queue appointment for retry
 - If memory corrupted: rebuild from task-ledger + docs
 <!-- END:appointment-system-rules -->
+
+<!-- BEGIN:shared-agent-memory-rule -->
+# Multi-Agent Shared Memory & Task Ledger Protocol (GetUpSoft / Orca)
+
+## Mandatory Multi-Agent Rules
+1. **Identify Yourself**: Each agent session MUST have a unique `agent_id` (e.g., `antigravity-main`, `codex-worker-01`, `claude-dev-02`).
+2. **Check Shared Memory & Ledger First**: At the start of every session, read `C:\Users\yoeli\.agents_shared_memory\ACTIVE_TASKS.md` and `TASKS_LEDGER.json` to see active agents and claimed tasks.
+3. **Claim & Mark Active Tasks**: Never work on a task currently locked by another `agent_id`. Claim your `task_id` using `sync_memory.py start-task` or by writing to `TASKS_LEDGER.json`.
+4. **Update Progress & Hand-Off**: Before ending a turn, hitting token limits, or context switching, update your task progress in `TASKS_LEDGER.json` and `ACTIVE_SESSION.md` so peer agents can collaborate smoothly on the same project without duplicating effort.
+5. **Brand & Ecosystem Identity**: Remember GetUpSoft (mother company), Orca (automation engine), Galantes Jewelry (e-commerce client). Use Google AI Studio / Antigravity (never Vertex AI).
+<!-- END:shared-agent-memory-rule -->

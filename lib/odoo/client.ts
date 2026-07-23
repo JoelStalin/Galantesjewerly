@@ -603,11 +603,6 @@ const LUXURY_FALLBACK_PRODUCTS: ShopProduct[] = [
     currency: 'USD',
     availability: 'in_stock',
     imageUrl: `/api/products/image?id=11&v=${PRODUCT_IMAGE_VERSION}`,
-    gallery: [
-      '/assets/products/compass-rose-pendant.png',
-      '/assets/products/lighthouse-guardian-charm.png',
-      '/assets/products/sirens-pearl-necklace.png',
-    ],
     category: 'Ready to Ship',
     buyUrl: '#',
     isFeatured: true
