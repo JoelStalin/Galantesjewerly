@@ -10,11 +10,11 @@ Cuando el asistente (tú) deba escribir, modificar o ejecutar un script de prueb
 
 Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** proactivamente después de cada implementación, cambio de infraestructura o despliegue. Asimismo, debes **aplicar todos los ajustes (settings) requeridos** de forma autónoma en el repositorio para asegurar que el ambiente quede funcionando de extremo a extremo antes de dar por concluida cualquier misión.
 
-> 📚 **Infraestructura de Producción**: GCP VM `instance-20260627-052612` (us-central1-b, IP 34.28.101.62). Docker Compose con los servicios de producción: web (Next.js `galantes_web_v4`), odoo (`galantes_odoo`), postgres (`galantes_db`), nginx (`galantes_nginx`), certbot. No usar Termux ni Android — la producción corre 100% en GCP.
+> 📚 **Infraestructura de Producción**: GCP VM `galantes-prod-vm` (us-central1-a, IP 35.202.20.127). Docker Compose con los servicios de producción: web (Next.js `galantes_web_v4`), odoo (`galantes_odoo`), postgres (`galantes_db`), nginx (`galantes_nginx`), certbot. No usar Termux ni Android — la producción corre 100% en GCP.
 
 ## Mandatory Single-Instance & Single-Schema Architecture Rules
-- **Canonical Production GCP Instance Rule:** Production MUST strictly run on EXACTLY ONE GCP VM instance: **`instance-20260627-052612`** (zone `us-central1-b`).
-- **FORBIDDEN INSTANCE RULE:** NO AGENT may ever use or target `galantes-prod-vm`. `galantes-prod-vm` is strictly prohibited and abandoned. All production SSH, deployments, DB operations, and API ingestion MUST target `instance-20260627-052612`.
+- **Canonical Production GCP Instance Rule:** Production MUST strictly run on EXACTLY ONE GCP VM instance: **`galantes-prod-vm`** (zone `us-central1-a`).
+- **DEPRECATED INSTANCE RULE:** `instance-20260627-052612` is deprecated and must not be targeted for new deployments. All production SSH, deployments, DB operations, and API ingestion MUST target `galantes-prod-vm`.
 - **Single Database Schema Rule:** Production MUST strictly use ONLY ONE database schema (`galantes_prod`). All services, Odoo connections, and API endpoints must point strictly to `galantes_prod`. Secondary schemas or fallback DBs are strictly forbidden.
 - **1-to-1 Product-Photo Mapping Rule:** Every catalog item published must be assigned a unique title and unique SKU (`default_code`) derived from its visual cluster ID (e.g. `GAL-1093`), ensuring every single photo from Google Drive maps 1-to-1 to its exact visual image with zero generic title collisions.
 - **No Service Products Rule:** All catalog products in Odoo production MUST strictly be consumable goods (`type = 'consu'`). No product template may ever be uploaded, created, or converted into a service (`type = 'service'`).
