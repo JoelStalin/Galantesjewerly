@@ -4,7 +4,7 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import { createOdooClient, getOdooConfig } from '@/src/config/odooClient.js';
 
-const FALLBACK_PRODUCT_IMAGE = path.join(process.cwd(), 'public', 'assets', 'images', 'logo-square.png');
+const FALLBACK_PRODUCT_IMAGE = path.join(process.cwd(), 'public', 'assets', 'images', 'odoo-placeholder.png');
 const DRIVE_PRIMARY_DIR = path.join(process.cwd(), 'data', 'drive_inventory_20260722');
 
 function toBinaryBody(buffer: Buffer) {
@@ -14,7 +14,7 @@ function toBinaryBody(buffer: Buffer) {
 async function fallbackImageResponse(status = 200) {
   const fallbackPath = existsSync(FALLBACK_PRODUCT_IMAGE)
     ? FALLBACK_PRODUCT_IMAGE
-    : path.join(process.cwd(), 'public', 'assets', 'branding', 'logo.png');
+    : path.join(process.cwd(), 'public', 'assets', 'images', 'logo-square.png');
   const fileBuffer = await readFile(fallbackPath);
 
   return new NextResponse(toBinaryBody(fileBuffer), {
@@ -22,7 +22,7 @@ async function fallbackImageResponse(status = 200) {
     headers: {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=300',
-      'X-Galantes-Image-Fallback': 'product',
+      'X-Galantes-Image-Fallback': 'product-placeholder',
     },
   });
 }
