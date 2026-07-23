@@ -420,6 +420,7 @@ class OdooClient {
           'Content-Type': 'application/json',
           ...options.headers,
         },
+        cache: 'no-store',
         signal: controller.signal,
       });
 

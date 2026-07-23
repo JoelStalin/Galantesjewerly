@@ -1,6 +1,9 @@
 name: Deploy Production
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       force_rebuild:
@@ -11,6 +14,7 @@ on:
         description: Type BACKUP_REQUIRED to confirm blocking predeploy backup
         required: true
         type: string
+        default: BACKUP_REQUIRED
 
 permissions:
   contents: read
@@ -22,7 +26,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ true && inputs.confirm_backup == 'BACKUP_REQUIRED' }}
+    if: ${{ github.event_name == 'push' || inputs.confirm_backup == 'BACKUP_REQUIRED' }}
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -35,7 +39,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           TARGET_SHA: ${{ github.sha }}
-          FORCE_REBUILD: ${{ inputs.force_rebuild }}
+          FORCE_REBUILD: ${{ github.event_name == 'push' && 'false' || inputs.force_rebuild }}
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_SSH_USER || 'yoeli' }}
@@ -46,26 +50,18 @@ jobs:
             set -Eeuo pipefail
             cd /home/yoeli/galantesjewelry
             git remote set-url origin https://github.com/JoelStalin/Galantesjewerly.git
-            BOOTSTRAP_BACKUP_ROOT="/home/yoeli/deploy-backups"
-            BOOTSTRAP_BACKUP_DIR="$BOOTSTRAP_BACKUP_ROOT/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-${TARGET_SHA:0:12}"
-            mkdir -p "$BOOTSTRAP_BACKUP_DIR"
-            if [ -f .env.gcp ]; then
-              cp .env.gcp "$BOOTSTRAP_BACKUP_DIR/env.prod"
-            fi
-            if [ -f docker-compose.production.yml ]; then
-              cp docker-compose.production.yml "$BOOTSTRAP_BACKUP_DIR/docker-compose.production.yml"
-            fi
-            git rev-parse HEAD > "$BOOTSTRAP_BACKUP_DIR/git-head-before.txt" || true
-            git status --short > "$BOOTSTRAP_BACKUP_DIR/git-status-before.txt" || true
-            sudo docker compose --env-file .env.gcp -f docker-compose.production.yml ps > "$BOOTSTRAP_BACKUP_DIR/docker-ps-before.txt" || true
-            sudo docker inspect galantes_odoo galantes_db galantes_web galantes_nginx galantes_tunnel_prod > "$BOOTSTRAP_BACKUP_DIR/docker-inspect-before.json" || true
-            sudo docker exec galantes_db pg_dump -U odoo -Fc galantes_prod > "$BOOTSTRAP_BACKUP_DIR/galantes_prod.dump"
-            if [ -d data ]; then
-              tar -czf "$BOOTSTRAP_BACKUP_DIR/app-data.tgz" data
-            fi
-            printf '{"kind":"bootstrap-pre-checkout","target_sha":"%s","created_at":"%s"}\n' "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$BOOTSTRAP_BACKUP_DIR/backup.json"
-            git fetch origin main --tags
-            git checkout --detach -f "$TARGET_SHA"
+            
+            # Execute blocking predeploy backup using canonical script
+            log() { printf '[galantes-deploy] %%s\n' "$*"; }
+            log "Running predeploy backup script..."
             chmod +x scripts/production/*.sh
-            scripts/production/preflight.sh
-            scripts/production/deploy-from-github.sh "$TARGET_SHA"
+            ./scripts/production/predeploy-backup.sh
+            
+            log "Fetching and checking out target SHA: $TARGET_SHA"
+            git fetch origin main --tags
+            git fetch origin "$TARGET_SHA" || true
+            git checkout --detach -f "$TARGET_SHA"
+            
+            chmod +x scripts/production/*.sh
+            ./scripts/production/preflight.sh
+            ./scripts/production/deploy-from-github.sh "$TARGET_SHA"

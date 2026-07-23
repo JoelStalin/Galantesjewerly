@@ -30,6 +30,16 @@ log "Backing up PostgreSQL database $PRODUCTION_DB"
 compose exec -T db sh -lc "PGPASSWORD='$POSTGRES_PASSWORD' pg_dump -U odoo -Fc '$PRODUCTION_DB'" > "$BACKUP_DIR/$PRODUCTION_DB.dump"
 [ -s "$BACKUP_DIR/$PRODUCTION_DB.dump" ] || fail "Database dump is empty"
 
+# Validate that the backup has been written successfully and is less than 5 minutes old
+DUMP_FILE="$BACKUP_DIR/$PRODUCTION_DB.dump"
+mtime="$(stat -c %Y "$DUMP_FILE")"
+now_epoch="$(date +%s)"
+age="$((now_epoch - mtime))"
+if [ "$age" -gt 300 ]; then
+  fail "Database dump file is stale: $age seconds old (must be less than 5 minutes/300 seconds)"
+fi
+log "Database dump fresh check passed: age is $age seconds"
+
 log "Backing up app data directory"
 if [ -d data ]; then
   tar -czf "$BACKUP_DIR/app-data.tgz" data
