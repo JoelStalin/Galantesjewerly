@@ -16,6 +16,7 @@ Además, como regla estricta: **SIEMPRE debes realizar pruebas funcionales** pro
 - **Single GCP Instance Rule:** Production MUST strictly run on EXACTLY ONE GCP VM instance (`galantes-prod-vm`, zone `us-central1-a`). No secondary VMs, external staging instances, or multi-host configurations are permitted.
 - **Single Database Schema Rule:** Production MUST strictly use ONLY ONE database schema (`galantes_prod`). All services, Odoo connections, and API endpoints must point strictly to `galantes_prod`. Secondary schemas or fallback DBs are strictly forbidden.
 - **1-to-1 Product-Photo Mapping Rule:** Every catalog item published must be assigned a unique title and unique SKU (`default_code`) derived from its visual cluster ID (e.g. `GAL-1093`), ensuring every single photo from Google Drive maps 1-to-1 to its exact visual image with zero generic title collisions.
+- **No Service Products Rule:** All catalog products in Odoo production MUST strictly be consumable goods (`type = 'consu'`). No product template may ever be uploaded, created, or converted into a service (`type = 'service'`).
 
 ## Product image safety
 - Never ship client code that can surface a broken product image in shop, cart, or PDP views.

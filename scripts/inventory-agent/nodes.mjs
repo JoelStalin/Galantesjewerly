@@ -1484,11 +1484,13 @@ async function descriptionGenerate() {
 }
 
 function getPythonCommand() {
-  return process.env.INVENTORY_AGENT_PYTHON || 'python';
+  if (process.env.INVENTORY_AGENT_PYTHON) return process.env.INVENTORY_AGENT_PYTHON;
+  return path.resolve(root, '..', '..', '.venv', 'Scripts', 'python.exe');
 }
 
 async function runPythonTool(args) {
-  const child = spawn(getPythonCommand(), args, {
+  const pythonCmd = await getPythonCommand();
+  const child = spawn(pythonCmd, args, {
     cwd: root,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

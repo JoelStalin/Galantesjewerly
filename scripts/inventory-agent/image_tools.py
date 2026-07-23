@@ -68,25 +68,29 @@ def is_heic(file: dict[str, Any]) -> bool:
 
 
 def convert_heic(_: argparse.Namespace) -> int:
-    try:
-        from PIL import Image
-        from pillow_heif import register_heif_opener
-    except Exception as exc:
-        payload = {
-            "ok": False,
-            "error": str(exc),
-            "missingRequired": ["pillow-heif"],
-            "install": 'python -m pip install "pillow-heif"',
-        }
-        write_json(MANIFESTS / "heic-conversion.json", payload)
-        print(json.dumps(payload, indent=2))
-        return 1
-
     downloads_path = MANIFESTS / "downloads.json"
     if not downloads_path.exists():
         raise FileNotFoundError("Missing downloads.json. Run drive:download first.")
 
-    register_heif_opener()
+    downloads = load_json(downloads_path)
+    heic_files = [f for f in downloads.get("files", []) if is_heic(f)]
+
+    if heic_files:
+        try:
+            from PIL import Image
+            from pillow_heif import register_heif_opener
+            register_heif_opener()
+        except Exception as exc:
+            payload = {
+                "ok": False,
+                "error": str(exc),
+                "missingRequired": ["pillow-heif"],
+                "install": 'python -m pip install "pillow-heif"',
+            }
+            write_json(MANIFESTS / "heic-conversion.json", payload)
+            print(json.dumps(payload, indent=2))
+            return 1
+
     CONVERTED.mkdir(parents=True, exist_ok=True)
     downloads = load_json(downloads_path)
     normalized_files = []
