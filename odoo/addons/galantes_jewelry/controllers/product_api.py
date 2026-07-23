@@ -466,6 +466,81 @@ class ProductAPIController(http.Controller):
             'service': 'odoo-api',
         })
 
+    @http.route('/api/products/ingest', auth='public', methods=['POST'], type='http', csrf=False)
+    def ingest_single_product(self, **kwargs):
+        """Ingest a single product or small batch of products with image directly via HTTP."""
+        try:
+            try:
+                body = json.loads(request.httprequest.data.decode('utf-8'))
+            except Exception:
+                body = {}
+
+            items = body.get('products') if isinstance(body.get('products'), list) else [body]
+            Product = request.env['product.template'].sudo()
+            
+            created_count = 0
+            updated_count = 0
+            results = []
+
+            for item in items:
+                sku = item.get('sku') or item.get('default_code') or item.get('vals', {}).get('default_code')
+                name = item.get('name') or item.get('vals', {}).get('name') or 'Joya Fina Galantes'
+                if not name and not sku:
+                    continue
+
+                vals = dict(item.get('vals', {}))
+                vals['name'] = name
+                vals['type'] = 'consu'  # Mandatory consumable product, NEVER a service
+                vals['sale_ok'] = True
+                vals['available_on_website'] = True
+                vals['is_published'] = True
+
+                if item.get('price'):
+                    vals['list_price'] = float(item['price'])
+                if item.get('cost'):
+                    vals['standard_price'] = float(item['cost'])
+                if item.get('description'):
+                    vals['description_sale'] = item['description']
+
+                primary_b64 = item.get('primaryImageBase64') or item.get('image_1920')
+                if primary_b64:
+                    vals['image_1920'] = primary_b64
+
+                key = sku or f"GAL-{name}"
+                vals['default_code'] = key
+
+                existing = Product.search([('default_code', '=', key)], limit=1) if key else None
+                if not existing:
+                    existing = Product.search([('name', '=', name)], limit=1)
+
+                if existing:
+                    existing.write(vals)
+                    prod_rec = existing
+                    updated_count += 1
+                else:
+                    prod_rec = Product.create(vals)
+                    created_count += 1
+
+                results.append({
+                    'id': prod_rec.id,
+                    'sku': prod_rec.default_code,
+                    'name': prod_rec.name,
+                    'action': 'updated' if existing else 'created',
+                })
+
+            return request.make_json_response({
+                'success': True,
+                'created': created_count,
+                'updated': updated_count,
+                'items': results,
+            })
+        except Exception as e:
+            _logger.exception("Error in ingest_single_product")
+            return request.make_json_response({
+                'success': False,
+                'error': str(e),
+            }, status=500)
+
     @http.route('/api/products/bulk', auth='public', methods=['POST'], type='http', csrf=False)
     def bulk_create_products(self, **kwargs):
         """Bulk ingest or update product templates in Odoo."""
