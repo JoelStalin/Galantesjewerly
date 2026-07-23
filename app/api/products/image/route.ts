@@ -57,42 +57,40 @@ export async function GET(request: Request) {
     return fallbackImageResponse(200);
   }
 
-  const config = getOdooConfig();
-  if (!config.isReady) {
-    return fallbackImageResponse(200);
-  }
+  const odooBaseUrl = (process.env.ODOO_BASE_URL || 'http://odoo:8069').replace(/\/+$/, '');
 
+  // 1. Primary: Fetch direct public web/image endpoint from Odoo backend
   try {
-    const odoo = createOdooClient(config);
-    const records = await odoo.searchRead('product.template', {
-      domain: [['id', '=', productId]],
-      fields: ['id', 'image_1920', 'write_date'],
-      limit: 1,
-    }) as Array<{ image_1920?: string | false | null; write_date?: string }>;
-
-    const imageBase64 = records[0]?.image_1920;
-    if (!imageBase64 || typeof imageBase64 !== 'string') {
-      const driveResponse = await driveImageResponse(productId);
-      if (driveResponse) return driveResponse;
-      return fallbackImageResponse(200);
-    }
-
-    const imageBuffer = Buffer.from(imageBase64, 'base64');
-    if (imageBuffer.length === 0) {
-      return fallbackImageResponse(200);
-    }
-
-    return new NextResponse(toBinaryBody(imageBuffer), {
-      headers: {
-        'Content-Type': 'image/webp',
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-        ETag: `"product-${productId}-${records[0]?.write_date || imageBuffer.length}"`,
-      },
+    const odooImageUrl = `${odooBaseUrl}/web/image/product.template/${productId}/image_1920`;
+    const res = await fetch(odooImageUrl, {
+      headers: { 'User-Agent': 'galantes-jewelry-storefront/1.0' },
+      next: { revalidate: 86400 },
     });
+
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') || 'image/png';
+      const arrayBuf = await res.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuf);
+
+      // Verify it's a real product image (Odoo's default 1x1 placeholder is < 500 bytes)
+      if (imageBuffer.length > 500 && contentType.startsWith('image/')) {
+        return new NextResponse(toBinaryBody(imageBuffer), {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+            'X-Galantes-Image-Source': 'odoo-web-image',
+          },
+        });
+      }
+    }
   } catch (error) {
-    console.error('[ProductImage] Failed to load product image from Odoo:', productId, error);
-    const driveResponse = await driveImageResponse(productId);
-    if (driveResponse) return driveResponse;
-    return fallbackImageResponse(200);
+    console.warn('[ProductImage] Direct Odoo web/image fetch failed:', productId, error);
   }
+
+  // 2. Secondary: Fallback to Drive import local images
+  const driveResponse = await driveImageResponse(productId);
+  if (driveResponse) return driveResponse;
+
+  // 3. Fallback to clean product placeholder
+  return fallbackImageResponse(200);
 }
