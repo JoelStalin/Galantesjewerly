@@ -118,7 +118,7 @@ services:
     command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
     volumes:
       - ./infra/cloudflare/config_prod.yml:/etc/cloudflared/config.yml:ro
-      - /home/yoeli/.cloudflared/0caea30f-6bbe-499e-8e25-7fe87c9658ac.json:/etc/cloudflared/credentials.json:ro
+      - /home/yoeli/.cloudflared/6b4f4dd8-e649-4b34-a80a-7a32551fa41f.json:/etc/cloudflared/credentials.json:ro
     logging:
       driver: "json-file"
       options:
