@@ -5,7 +5,7 @@ import { useCart } from '@/context/shop/CartContext';
 import type { ShopProduct } from '@/lib/odoo/client';
 
 interface ProductCTAProps {
-  product: Pick<ShopProduct, 'id' | 'slug' | 'name' | 'price' | 'imageUrl' | 'availability'>;
+  product: Pick<ShopProduct, 'id' | 'slug' | 'name' | 'price' | 'imageUrl' | 'availability' | 'stock'>;
 }
 
 /**
@@ -13,12 +13,21 @@ interface ProductCTAProps {
  * Adds the product to the local cart (consistent with the ProductCard behaviour).
  */
 export function ProductCTA({ product }: ProductCTAProps) {
-  const { addItem } = useCart();
+  const { items, addItem } = useCart();
 
   const isOutOfStock = product.availability === 'out_of_stock';
   const isPreorder   = product.availability === 'preorder';
 
   const handleAddToCart = () => {
+    const existing = items.find((i) => i.id === product.id);
+    const currentQty = existing ? existing.quantity : 0;
+    const maxStock = product.stock !== undefined ? product.stock : 999;
+
+    if (currentQty + 1 > maxStock) {
+      alert(`Sorry, you cannot add more items. Only ${maxStock} unit(s) are in stock.`);
+      return;
+    }
+
     addItem({
       id:        product.id,
       slug:      product.slug,
@@ -27,6 +36,7 @@ export function ProductCTA({ product }: ProductCTAProps) {
       quantity:  1,
       product_id: product.id,
       image_url: product.imageUrl,
+      stock:     product.stock,
     });
   };
 

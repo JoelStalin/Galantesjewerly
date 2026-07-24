@@ -52,7 +52,14 @@ export default function CartPage() {
                     >-</button>
                     <span className="px-4 py-1 text-sm font-bold">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => {
+                        const maxStock = item.stock !== undefined ? item.stock : 999;
+                        if (item.quantity + 1 > maxStock) {
+                          alert(`Sorry, only ${maxStock} unit(s) are available.`);
+                          return;
+                        }
+                        updateQuantity(item.id, item.quantity + 1);
+                      }}
                       className="px-3 py-1 hover:bg-gray-100 transition-colors border-l border-primary/20"
                     >+</button>
                   </div>

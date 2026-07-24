@@ -48,6 +48,7 @@ export type ShopProduct = {
   buyUrl: string;
   publicUrl?: string;
   isFeatured?: boolean;
+  stock?: number;
 };
 
 export type ProductGalleryImage = {
