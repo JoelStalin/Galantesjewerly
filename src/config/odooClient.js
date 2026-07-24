@@ -317,7 +317,7 @@ function createOdooClient(overrides = {}) {
                 method: 'execute_kw',
                 args: [
                   config.database,
-                  1,
+                  2,
                   config.authToken || config.password,
                   model,
                   method,
@@ -328,7 +328,8 @@ function createOdooClient(overrides = {}) {
               id: Math.floor(Math.random() * 1000000),
             });
           } else {
-            body = JSON.stringify(payload);
+            const { args, kwargs, ...json2Payload } = payload;
+            body = JSON.stringify(json2Payload);
           }
 
           const response = await fetchImpl(url, {
