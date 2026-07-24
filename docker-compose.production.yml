@@ -115,10 +115,7 @@ services:
     restart: unless-stopped
     networks:
       - galante-net
-    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
-    volumes:
-      - ./infra/cloudflare/config_prod.yml:/etc/cloudflared/config.yml:ro
-      - /home/yoeli/.cloudflared/6b4f4dd8-e649-4b34-a80a-7a32551fa41f.json:/etc/cloudflared/credentials.json:ro
+    command: tunnel --no-autoupdate run --token eyJhIjoiOGNiYmRkZWFkYjc5OTA1MmRjYzA4NDQzMzJlZDkzZDMiLCJ0IjoiMGNhZWEzMGYtNmJiZS00OTllLThlMjUtN2ZlODdjOTY1OGFjIiwicyI6InYvNS9wd2VwZ3BpcHpKTzJ0RWR2UlpkRU1zVnFvNVRSbndPNm16aUg1cTQ9In0=
     logging:
       driver: "json-file"
       options:
