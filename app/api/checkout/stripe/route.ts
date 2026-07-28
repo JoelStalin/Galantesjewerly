@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { OdooService } from '@/lib/odoo/services';
+import { validateCartForCheckout } from '@/lib/cart-policy';
 
 type CheckoutItem = {
   id?: string;
@@ -34,11 +35,14 @@ export async function POST(request: Request) {
       };
     };
 
-    // 1. Calculate total (Server-side validation)
-    const amount = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    if (!items.length) {
-      throw new Error('The cart is empty.');
-    }
+    // 1. Re-read stock and prices from Odoo. Never trust browser totals.
+    const requestedIds = (items || []).map((item) => Number(item.product_id || item.id));
+    const stock = await OdooService.getCheckoutStock(requestedIds);
+    const validated = validateCartForCheckout(
+      (items || []).map((item) => ({ productId: item.product_id || item.id, quantity: item.quantity, clientPrice: item.price })),
+      stock,
+    );
+    const amount = validated.total;
 
     // 2. Sync with Odoo (Guest or Auth)
     const partnerId = await OdooService.findOrCreateCustomer({
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
       return {
         product_id: productId,
         product_uom_qty: item.quantity,
-        price_unit: item.price,
+        price_unit: validated.items[index].price,
       };
     });
 

@@ -317,6 +317,21 @@ export const OdooService = {
   /**
    * Creates a Sales Order in Odoo
    */
+  async getCheckoutStock(productIds: number[]) {
+    const ids = [...new Set(productIds)].filter((id) => Number.isInteger(id) && id > 0);
+    if (!ids.length) return [];
+    const rows = await client.call('product.template', 'search_read', {
+      domain: [['id', 'in', ids], ['active', '=', true], ['available_on_website', '=', true]],
+      fields: ['id', 'qty_available', 'list_price', 'type'],
+      limit: ids.length,
+    }) as Array<{ id: number; qty_available: number; list_price: number; type: string }>;
+    return rows.filter((row) => row.type !== 'service').map((row) => ({
+      productId: Number(row.id),
+      stock: Number(row.qty_available),
+      price: Number(row.list_price),
+    }));
+  },
+
   async createOrder(partnerId: number, lines: OrderLine[]) {
     try {
       const orderLines = lines.map(line => [0, 0, {

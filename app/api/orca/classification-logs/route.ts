@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
+import { fetchFromOrcaCore } from '@/lib/orca/orca-client';
 import { getClassificationLogs, reviewClassificationLog, recordClassificationLog } from '@/lib/orca/classification-feedback';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const tenantId = request.headers.get('x-orca-tenant') || 'galantesjewelry';
-    const logs = getClassificationLogs(tenantId);
-    return NextResponse.json({ success: true, tenant_id: tenantId, data: logs });
+    // Attempt fetching from central Orca Core engine first
+    const res = await fetchFromOrcaCore('/api/orca/classification-logs', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json({ success: true, source: 'orca-core', data: data.data || [] });
+    }
+  } catch (e) {
+    // Fallback to local tenant store if central engine is offline
+  }
+
+  try {
+    const logs = getClassificationLogs('galantesjewelry');
+    return NextResponse.json({ success: true, source: 'local-store', data: logs });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -13,12 +24,26 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const tenantId = request.headers.get('x-orca-tenant') || 'galantesjewelry';
     const body = await request.json();
 
+    // Attempt forwarding review/record to main Orca Core engine first
+    try {
+      const endpoint = body.action === 'review' ? '/api/orca/classification-logs/review' : '/api/orca/classification-logs';
+      const res = await fetchFromOrcaCore(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json({ success: true, source: 'orca-core', data });
+      }
+    } catch (e) {
+      // Fallback to local store
+    }
+
     if (body.action === 'record') {
-      const newLog = recordClassificationLog(body.log, tenantId);
-      return NextResponse.json({ success: true, tenant_id: tenantId, data: newLog });
+      const newLog = recordClassificationLog(body.log, 'galantesjewelry');
+      return NextResponse.json({ success: true, source: 'local-store', data: newLog });
     }
 
     if (body.action === 'review') {
@@ -27,12 +52,12 @@ export async function POST(request: Request) {
         corrected_category: body.corrected_category,
         corrected_tags: body.corrected_tags,
         reviewer_notes: body.reviewer_notes,
-      }, tenantId);
+      }, 'galantesjewelry');
 
       if (!updated) {
-        return NextResponse.json({ success: false, error: 'Log not found for this tenant' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'Log not found' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, tenant_id: tenantId, data: updated });
+      return NextResponse.json({ success: true, source: 'local-store', data: updated });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
