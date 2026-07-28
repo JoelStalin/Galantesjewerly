@@ -3,6 +3,7 @@ import path from 'node:path';
 
 export interface ImageClassificationLog {
   id: string;
+  tenant_id: string;
   cluster_id: string;
   image_url: string;
   image_filename: string;
@@ -20,24 +21,21 @@ export interface ImageClassificationLog {
   };
 }
 
-export interface FewShotExample {
-  image_description: string;
-  category: string;
-  tags: string[];
+export function getTenantLogsFile(tenantId: string = 'galantesjewelry'): string {
+  const baseDir = path.resolve(process.cwd(), `data/orca/tenants/${tenantId}/logs`);
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+  }
+  return path.join(baseDir, 'orca-classification-feedback.json');
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'data/inventory-agent');
-const FEEDBACK_FILE = path.join(DATA_DIR, 'orca-classification-feedback.json');
-
-export function ensureFeedbackFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(FEEDBACK_FILE)) {
-    // Seed with initial realistic classification logs if file doesn't exist
+export function ensureFeedbackFile(tenantId: string = 'galantesjewelry'): void {
+  const feedbackFile = getTenantLogsFile(tenantId);
+  if (!fs.existsSync(feedbackFile)) {
     const initialLogs: ImageClassificationLog[] = [
       {
-        id: 'cls-1001',
+        id: `cls-${tenantId}-1001`,
+        tenant_id: tenantId,
         cluster_id: 'GAL-1001',
         image_url: '/assets/products/gold-ring.jpg',
         image_filename: 'cluster-1001-1.jpg',
@@ -50,12 +48,13 @@ export function ensureFeedbackFile(): void {
         admin_feedback: {
           corrected_category: 'Rings',
           corrected_tags: ['18K Gold', 'Cluster Ring', 'Diamonds'],
-          reviewer_notes: 'Accurate classification confirmed.',
+          reviewer_notes: 'Accurate classification confirmed by Galantes Admin.',
           reviewed_at: new Date().toISOString(),
         },
       },
       {
-        id: 'cls-1002',
+        id: `cls-${tenantId}-1002`,
+        tenant_id: tenantId,
         cluster_id: 'GAL-1002',
         image_url: '/assets/products/gold-necklace.jpg',
         image_filename: 'cluster-1002-1.jpg',
@@ -68,36 +67,42 @@ export function ensureFeedbackFile(): void {
         admin_feedback: {
           corrected_category: 'Necklaces',
           corrected_tags: ['Layered Gold', '18K Gold', 'Necklace'],
-          reviewer_notes: 'Reclassified from Pendant to Layered Necklace.',
+          reviewer_notes: 'Reclassified from Pendant to Layered Necklace by Galantes Admin.',
           reviewed_at: new Date().toISOString(),
         },
       },
     ];
-    fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(initialLogs, null, 2), 'utf8');
+    fs.writeFileSync(feedbackFile, JSON.stringify(initialLogs, null, 2), 'utf8');
   }
 }
 
-export function getClassificationLogs(): ImageClassificationLog[] {
-  ensureFeedbackFile();
+export function getClassificationLogs(tenantId: string = 'galantesjewelry'): ImageClassificationLog[] {
+  ensureFeedbackFile(tenantId);
   try {
-    const raw = fs.readFileSync(FEEDBACK_FILE, 'utf8');
-    return JSON.parse(raw) as ImageClassificationLog[];
+    const feedbackFile = getTenantLogsFile(tenantId);
+    const raw = fs.readFileSync(feedbackFile, 'utf8');
+    const logs = JSON.parse(raw) as ImageClassificationLog[];
+    return logs.filter((l) => l.tenant_id === tenantId || !l.tenant_id);
   } catch (e) {
-    console.error('Failed to read classification logs:', e);
+    console.error(`Failed to read classification logs for tenant ${tenantId}:`, e);
     return [];
   }
 }
 
-export function recordClassificationLog(log: Omit<ImageClassificationLog, 'id' | 'timestamp' | 'status'>): ImageClassificationLog {
-  const logs = getClassificationLogs();
+export function recordClassificationLog(
+  log: Omit<ImageClassificationLog, 'id' | 'timestamp' | 'status'>,
+  tenantId: string = 'galantesjewelry'
+): ImageClassificationLog {
+  const logs = getClassificationLogs(tenantId);
   const newLog: ImageClassificationLog = {
     ...log,
-    id: `cls-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    tenant_id: tenantId,
+    id: `cls-${tenantId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     timestamp: new Date().toISOString(),
     status: 'pending_review',
   };
   logs.unshift(newLog);
-  fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(logs, null, 2), 'utf8');
+  fs.writeFileSync(getTenantLogsFile(tenantId), JSON.stringify(logs, null, 2), 'utf8');
   return newLog;
 }
 
@@ -108,9 +113,10 @@ export function reviewClassificationLog(
     corrected_category?: string;
     corrected_tags?: string[];
     reviewer_notes?: string;
-  }
+  },
+  tenantId: string = 'galantesjewelry'
 ): ImageClassificationLog | null {
-  const logs = getClassificationLogs();
+  const logs = getClassificationLogs(tenantId);
   const index = logs.findIndex((l) => l.id === id);
   if (index === -1) return null;
 
@@ -120,25 +126,25 @@ export function reviewClassificationLog(
     admin_feedback: {
       corrected_category: review.corrected_category || logs[index].predicted_category,
       corrected_tags: review.corrected_tags || logs[index].predicted_tags,
-      reviewer_notes: review.reviewer_notes,
+      reviewer_notes: review.reviewer_notes || `Reviewed by ${tenantId} Administrator`,
       reviewed_at: new Date().toISOString(),
     },
   };
 
-  fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(logs, null, 2), 'utf8');
+  fs.writeFileSync(getTenantLogsFile(tenantId), JSON.stringify(logs, null, 2), 'utf8');
   return logs[index];
 }
 
-export function generateFewShotPromptContext(): string {
-  const logs = getClassificationLogs();
+export function generateFewShotPromptContext(tenantId: string = 'galantesjewelry'): string {
+  const logs = getClassificationLogs(tenantId);
   const reviewed = logs.filter((l) => l.status === 'approved' || l.status === 'corrected');
   if (reviewed.length === 0) return '';
 
   const examples = reviewed.slice(0, 10).map((item) => {
     const finalCategory = item.admin_feedback?.corrected_category || item.predicted_category;
     const finalTags = item.admin_feedback?.corrected_tags || item.predicted_tags;
-    return `[Verified Example] Image File: ${item.image_filename} | Cluster: ${item.cluster_id} -> Category: "${finalCategory}" | Tags: [${finalTags.join(', ')}]`;
+    return `[Tenant ${tenantId} Verified Example] Image File: ${item.image_filename} | Cluster: ${item.cluster_id} -> Category: "${finalCategory}" | Tags: [${finalTags.join(', ')}]`;
   });
 
-  return `\n--- HUMAN-VERIFIED FEW-SHOT EXAMPLES FOR LM ACCURACY ---\n${examples.join('\n')}\n-----------------------------------------------------\n`;
+  return `\n--- TENANT (${tenantId}) HUMAN-VERIFIED FEW-SHOT EXAMPLES FOR LM ACCURACY ---\n${examples.join('\n')}\n-----------------------------------------------------\n`;
 }

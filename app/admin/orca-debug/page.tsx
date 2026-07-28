@@ -154,15 +154,19 @@ export default function OrcaDebugPage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <h1 className="text-2xl md:text-3xl font-serif text-amber-400 flex items-center gap-3">
-              <Cpu className="w-8 h-8 text-amber-400" /> Orca Interactive Workflow Debugger
+              <Cpu className="w-8 h-8 text-amber-400" /> Orca Workflow Debugger & AI Feedback
             </h1>
           </div>
           <p className="text-sm text-slate-400 mt-1">
-            Node Breakpoint Execution Engine & Vision AI Classification Feedback Loop (n8n-compatible)
+            Client Tenant: <strong className="text-amber-400 font-semibold">Galantes Jewelry (galantesjewelry)</strong> | Role: <span className="text-slate-300 font-medium">Tenant Admin</span>
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            Tenant: galantesjewelry
+          </div>
           <div className="px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
             Engine: {debugState.status}
