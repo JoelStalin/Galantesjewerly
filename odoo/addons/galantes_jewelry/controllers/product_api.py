@@ -88,6 +88,7 @@ class ProductAPIController(http.Controller):
             'buyUrl': product.buy_url,
             'publicUrl': product.public_url,
             'isFeatured': product.is_featured,
+            'stock': int(product.qty_available),
         }
 
     def _get_best_seller_products(self, Product, limit):

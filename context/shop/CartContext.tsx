@@ -47,12 +47,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = (newItem: CartItem) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === newItem.id);
+      const maxStock = newItem.stock !== undefined ? newItem.stock : (existing?.stock !== undefined ? existing.stock : 999);
       if (existing) {
+        const targetQty = Math.min(existing.quantity + newItem.quantity, maxStock);
         return prev.map((i) =>
-          i.id === newItem.id ? { ...i, quantity: i.quantity + newItem.quantity } : i
+          i.id === newItem.id ? { ...i, quantity: targetQty, stock: maxStock } : i
         );
       }
-      return [...prev, newItem];
+      const initialQty = Math.min(newItem.quantity, maxStock);
+      return [...prev, { ...newItem, quantity: initialQty }];
     });
   };
 
@@ -66,7 +69,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity } : i))
+      prev.map((i) => {
+        if (i.id === id) {
+          const maxStock = i.stock !== undefined ? i.stock : 999;
+          return { ...i, quantity: Math.min(quantity, maxStock) };
+        }
+        return i;
+      })
     );
   };
 

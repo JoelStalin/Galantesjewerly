@@ -45,23 +45,65 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex justify-between items-end mt-4">
-                  <div className="flex items-center border border-primary/20 rounded">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="px-3 py-1 hover:bg-gray-100 transition-colors border-r border-primary/20"
-                    >-</button>
-                    <span className="px-4 py-1 text-sm font-bold">{item.quantity}</span>
-                    <button
-                      onClick={() => {
-                        const maxStock = item.stock !== undefined ? item.stock : 999;
-                        if (item.quantity + 1 > maxStock) {
-                          alert(`Sorry, only ${maxStock} unit(s) are available.`);
-                          return;
-                        }
-                        updateQuantity(item.id, item.quantity + 1);
-                      }}
-                      className="px-3 py-1 hover:bg-gray-100 transition-colors border-l border-primary/20"
-                    >+</button>
+                  <div>
+                    <div className="flex items-center border border-primary/20 rounded">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="px-3 py-1 hover:bg-gray-100 transition-colors border-r border-primary/20 font-bold"
+                        aria-label="Decrease quantity"
+                      >-</button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={item.stock !== undefined ? item.stock : 999}
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          const maxStock = item.stock !== undefined ? item.stock : 999;
+                          if (!isNaN(val)) {
+                            const clamped = Math.max(1, Math.min(val, maxStock));
+                            updateQuantity(item.id, clamped);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          const maxStock = item.stock !== undefined ? item.stock : 999;
+                          if (isNaN(val) || val < 1) {
+                            updateQuantity(item.id, 1);
+                          } else if (val > maxStock) {
+                            updateQuantity(item.id, maxStock);
+                          }
+                        }}
+                        className="w-14 text-center text-sm font-bold border-none focus:ring-0 py-1 bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={item.stock !== undefined && item.quantity >= item.stock}
+                        onClick={() => {
+                          const maxStock = item.stock !== undefined ? item.stock : 999;
+                          if (item.quantity + 1 > maxStock) {
+                            alert(`Sorry, only ${maxStock} unit(s) are available in stock.`);
+                            return;
+                          }
+                          updateQuantity(item.id, item.quantity + 1);
+                        }}
+                        className={`px-3 py-1 transition-colors border-l border-primary/20 font-bold ${
+                          item.stock !== undefined && item.quantity >= item.stock
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'hover:bg-gray-100'
+                        }`}
+                        aria-label="Increase quantity"
+                      >+</button>
+                    </div>
+                    {item.stock !== undefined && (
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Stock: <span className="font-semibold">{item.stock}</span> available
+                        {item.quantity >= item.stock && (
+                          <span className="text-amber-600 font-bold ml-1.5">(Max limit reached)</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => removeItem(item.id)}
