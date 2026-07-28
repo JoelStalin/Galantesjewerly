@@ -9,7 +9,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:80:80"
       - "127.0.0.1:443:443"
     volumes:
       - ./docker/nginx.local.conf:/etc/nginx/nginx.conf:ro
