@@ -68,16 +68,12 @@ jobs:
             sudo docker cp scripts/odoo/restore_images_from_files.py galantes_odoo:/tmp/restore_images_from_files.py
             POSTGRES_PASSWORD="$(awk -F= '$1 == "POSTGRES_PASSWORD" {print substr($0, length($1) + 2)}' .env.gcp | tail -n 1)"
             test -n "$POSTGRES_PASSWORD"
-            ACTIVE_WEB="galantes_web_v4"
-            if ! sudo docker inspect "$ACTIVE_WEB" >/dev/null 2>&1; then
-              ACTIVE_WEB="galantes_web"
-            fi
-            PRODUCTION_DB="$(sudo docker inspect "$ACTIVE_WEB" --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '/^ODOO_DB=/{print $2; exit}' | tr -d '\r')"
+            PRODUCTION_DB="$(sudo docker exec galantes_odoo sh -c "awk -F= '/^[[:space:]]*db_name[[:space:]]*=/{gsub(/[[:space:]]/,\"\",\$2); print \$2; exit}' /etc/odoo/odoo.conf" | tr -d '\r')"
             if [ -z "$PRODUCTION_DB" ]; then
-              echo "ODOO_DB is missing from active web container $ACTIVE_WEB" >&2
+              echo "db_name is missing from active Odoo configuration" >&2
               exit 1
             fi
-            echo "Restoring images into database used by $ACTIVE_WEB: $PRODUCTION_DB"
+            echo "Restoring images into database configured by active Odoo: $PRODUCTION_DB"
             sudo docker compose --env-file .env.gcp -f docker-compose.production.yml exec -T \
               -e GALANTES_BLOBS_DIR=/tmp/galantes-blobs \
               -e OVERWRITE_PRODUCT_IMAGES="$OVERWRITE_PRODUCT_IMAGES" \
