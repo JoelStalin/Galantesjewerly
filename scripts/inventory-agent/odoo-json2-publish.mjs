@@ -48,6 +48,12 @@ const categoryTitles = {
   pendants: 'Dije Elegante Galantes',
   pendant: 'Dije Elegante Galantes',
   jewelry: 'Joya Fina Galantes',
+  bracelet_or_necklace: 'Joya Fina Galantes',
+  ring_or_earring: 'Joya Fina Galantes',
+  brooch: 'Broche Elegante Galantes',
+  charm: 'Dije Elegante Galantes',
+  watch: 'Reloj Elegante Galantes',
+  unknown: 'Joya Fina Galantes',
 };
 
 const STREAM_CHUNK_SIZE = 1;
@@ -62,7 +68,9 @@ for (let i = 0; i < payloads.length; i += STREAM_CHUNK_SIZE) {
   for (const item of rawChunk) {
     const clusterId = item.clusterId || 'item';
     const sku = item.vals?.default_code || `GAL-${clusterId}`;
-    const catKey = (item.categoryLabel || 'jewelry').toLowerCase().trim();
+    const catKey = String(item.categoryLabel || 'jewelry').toLowerCase().trim()
+      .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+      .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/\s+/g, '_');
     const title = categoryTitles[catKey] || 'Joya Fina Galantes';
 
     let primaryImageBase64 = null;

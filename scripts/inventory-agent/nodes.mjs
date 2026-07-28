@@ -1078,6 +1078,7 @@ async function odooDryRun() {
   const approved = await readJson('data/inventory-agent/manifests/approved-products.json');
   const mlClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json');
   const reviewedClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json');
+  const galleryReady = await readJson('data/inventory-agent/manifests/gallery-ready-products.json', { products: [] });
   // Review manifests may re-cluster and change display IDs. Approved rows use
   // the stable ml-cluster-* IDs from review-queue.csv, so Odoo dry-run must
   // resolve them against the base manifest.
@@ -1087,13 +1088,36 @@ async function odooDryRun() {
   if (!approved) throw new Error('Missing approved-products.json. Run review:import first.');
   if (!clusters) throw new Error('Missing product-clusters.json. Run product:cluster first.');
   const clusterById = new Map((clusters.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
+  const sourceClusterById = new Map((mlClusters?.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
+  // The visual review may regenerate cluster IDs (reviewed-cluster-*), while
+  // approved-products.csv still references the original ml-cluster-* IDs.
+  // Resolve by image identity so gallery decisions are not silently lost.
+  const reviewedClusterByFileId = new Map();
+  for (const reviewedCluster of reviewedClusters?.clusters || []) {
+    for (const file of reviewedCluster.files || []) {
+      if (file.id) reviewedClusterByFileId.set(file.id, reviewedCluster);
+    }
+  }
+  const galleryReadyByImagePath = new Map();
+  for (const galleryProduct of galleryReady.products || []) {
+    for (const imagePath of [galleryProduct.primaryImagePath, ...(galleryProduct.galleryImagePaths || [])]) {
+      if (imagePath) galleryReadyByImagePath.set(imagePath, galleryProduct);
+    }
+  }
   const payloads = [];
   const errors = [];
   const visualReview = await readJson('data/inventory-agent/review/antigravity-cluster-review.json', { reviews: [] });
   const visualReviewByCluster = new Map((visualReview.reviews || []).map((review) => [review.clusterId, review]));
   const allowed = new Set(dto.writeAllowlist || []);
   for (const product of approved.approved || []) {
-    const cluster = clusterById.get(product.clusterId);
+    const sourceCluster = sourceClusterById.get(product.clusterId) || clusterById.get(product.clusterId);
+    const galleryProduct = (sourceCluster?.files || [])
+      .map((file) => galleryReadyByImagePath.get(file.localPath))
+      .find(Boolean);
+    const reviewedCluster = (sourceCluster?.files || [])
+      .map((file) => reviewedClusterByFileId.get(file.id))
+      .find(Boolean);
+    const cluster = reviewedCluster || sourceCluster;
     if (!cluster) {
       errors.push({ clusterId: product.clusterId, error: 'Cluster not found.' });
       continue;
@@ -1107,10 +1131,15 @@ async function odooDryRun() {
       standard_price: Number(product.cost),
       description_sale: product.description || '',
     };
-    const reviewDecision = visualReviewByCluster.get(product.clusterId);
+    const reviewDecision = galleryProduct
+      ? { sameProduct: true, confidence: galleryProduct.confidence }
+      : visualReviewByCluster.get(cluster.clusterId)
+      || visualReviewByCluster.get(product.clusterId);
     const clusterIsMultiImage = (cluster.files || []).length > 1;
     const galleryApproved = clusterIsMultiImage && reviewDecision?.sameProduct === true && Number(reviewDecision.confidence) >= 0.75;
-    const galleryFiles = galleryApproved ? cluster.files.slice(1) : [];
+    const galleryFiles = galleryProduct
+      ? (galleryProduct.galleryImagePaths || []).map((localPath) => ({ localPath }))
+      : (galleryApproved ? cluster.files.slice(1) : []);
     const publicationDto = new ProductPublicationDTO(fieldRegistry, {
       clusterId: product.clusterId,
       vals,
@@ -1135,7 +1164,7 @@ async function odooDryRun() {
       model: dto.model,
       vals,
       approvedStock,
-      categoryLabel: product.category || null,
+      categoryLabel: product.category || product.suggestedCategory || null,
       materialLabel: product.material || null,
       primaryImagePath: cluster.files[0]?.localPath || null,
       galleryImagePaths: galleryFiles.map((file) => file.localPath),
