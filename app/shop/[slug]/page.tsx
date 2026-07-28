@@ -175,6 +175,7 @@ export default async function ProductPage({ params }: Props) {
               price:        product.price,
               imageUrl:     product.imageUrl,
               availability: product.availability,
+              stock:        product.stock,
             }} />
 
             {/* Trust badges */}

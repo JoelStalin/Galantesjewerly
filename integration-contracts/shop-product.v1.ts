@@ -72,6 +72,7 @@ export type ShopProduct = {
 
   /** Whether the product is pinned to featured sections */
   isFeatured?: boolean;
+  stock?: number;
 };
 
 export type CategoryData = {

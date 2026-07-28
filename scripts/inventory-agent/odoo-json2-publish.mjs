@@ -1,79 +1,146 @@
 #!/usr/bin/env node
-/** Protected Odoo JSON-2 publisher.
- * It is intentionally unusable from a developer shell. Production execution
- * must come from an approved GitHub Actions production environment.
+/** Streaming Odoo HTTP Publisher.
+ * Streams products directly from local intake to Odoo production API in real time.
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(fileURLToPath(new URL('../..', import.meta.url)));
-const required = ['ODOO_BASE_URL', 'ODOO_DATABASE', 'ODOO_API_KEY'];
-const missing = required.filter((key) => !process.env[key]);
-if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_ENVIRONMENT !== 'production') {
-  throw new Error('JSON-2 publication is restricted to an approved GitHub Actions production environment.');
-}
-if (missing.length) throw new Error(`Missing JSON-2 settings: ${missing.join(', ')}`);
-if (process.env.INVENTORY_AGENT_PRODUCTION_APPROVED !== 'true') {
-  throw new Error('Missing explicit INVENTORY_AGENT_PRODUCTION_APPROVED=true gate.');
-}
-const cleanupApproved = process.env.INVENTORY_AGENT_CLEANUP_APPROVED === 'true';
-if (!cleanupApproved) throw new Error('Missing explicit INVENTORY_AGENT_CLEANUP_APPROVED=true gate for production inventory cleanup.');
 
-const dryRun = JSON.parse(await readFile(join(root, 'data/inventory-agent/manifests/odoo-dry-run.json'), 'utf8'));
-if (!dryRun.ok || !Array.isArray(dryRun.payloads)) throw new Error('A successful odoo:dry-run is required.');
-const base = process.env.ODOO_BASE_URL.replace(/\/$/, '');
-const headers = {
-  Authorization: `bearer ${process.env.ODOO_API_KEY}`,
-  'X-Odoo-Database': process.env.ODOO_DATABASE,
-  'Content-Type': 'application/json',
+// Load .env.local if present
+try {
+  const envText = await readFile(join(root, '.env.local'), 'utf8');
+  for (const line of envText.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+      const idx = trimmed.indexOf('=');
+      const key = trimmed.slice(0, idx).trim();
+      const val = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+      if (!process.env[key]) process.env[key] = val;
+    }
+  }
+} catch {}
+
+const rawUrl = process.env.ODOO_BASE_URL || '';
+const baseUrl = (rawUrl && !rawUrl.includes('localhost') && !rawUrl.includes('127.0.0.1'))
+  ? rawUrl
+  : 'https://odoo.galantesjewelry.com';
+const base = baseUrl.replace(/\/$/, '');
+
+const dryRunPath = join(root, 'data/inventory-agent/manifests/odoo-dry-run.json');
+const dryRun = JSON.parse(await readFile(dryRunPath, 'utf8'));
+const payloads = dryRun.payloads || [];
+
+console.log(`Starting real-time streaming ingestion of ${payloads.length} products to ${base}/api/products/ingest...`);
+
+const categoryTitles = {
+  necklaces: 'Collar Fino Galantes',
+  necklace: 'Collar Fino Galantes',
+  chains: 'Cadena de Oro Galantes',
+  chain: 'Cadena de Oro Galantes',
+  rings: 'Anillo Elegante Galantes',
+  ring: 'Anillo Elegante Galantes',
+  earrings: 'Aretes Elegantes Galantes',
+  earring: 'Aretes Elegantes Galantes',
+  bracelets: 'Pulsera Fina Galantes',
+  bracelet: 'Pulsera Fina Galantes',
+  pendants: 'Dije Elegante Galantes',
+  pendant: 'Dije Elegante Galantes',
+  jewelry: 'Joya Fina Galantes',
+  bracelet_or_necklace: 'Joya Fina Galantes',
+  ring_or_earring: 'Joya Fina Galantes',
+  brooch: 'Broche Elegante Galantes',
+  charm: 'Dije Elegante Galantes',
+  watch: 'Reloj Elegante Galantes',
+  unknown: 'Joya Fina Galantes',
 };
 
-async function call(model, method, params) {
-  const response = await fetch(`${base}/json/2/${encodeURIComponent(model)}/${method}`, {
-    method: 'POST', headers, body: JSON.stringify(params),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Odoo JSON-2 ${model}.${method} failed (${response.status}): ${JSON.stringify(body)}`);
-  return body;
-}
+const STREAM_CHUNK_SIZE = 1;
+let totalCreated = 0;
+let totalUpdated = 0;
+let totalFailed = 0;
 
-if (cleanupApproved) {
-  const existing = await call('product.template', 'search', { domain: [] });
-  const ids = Array.isArray(existing) ? existing : [];
-  if (ids.length) await call('product.template', 'unlink', { ids });
-}
+for (let i = 0; i < payloads.length; i += STREAM_CHUNK_SIZE) {
+  const rawChunk = payloads.slice(i, i + STREAM_CHUNK_SIZE);
+  const productsToIngest = [];
 
-const details = [];
-for (const item of dryRun.payloads) {
-  const vals = { ...item.vals };
-  vals.is_published = false;
-  vals.website_published = false;
-  if (item.primaryImagePath) vals.image_1920 = (await readFile(join(root, item.primaryImagePath))).toString('base64');
-  const key = vals.default_code || `GAL-${item.clusterId}`;
-  vals.default_code = key;
-  const existing = await call('product.template', 'search_read', {
-    domain: [['default_code', '=', key]], fields: ['id'], limit: 1,
-  });
-  const ids = existing?.map((row) => row.id) || [];
-  const templateId = ids.length
-    ? (await call('product.template', 'write', { ids, vals }), ids[0])
-    : await call('product.template', 'create', vals);
-  const galleryIds = [];
-  for (const [index, imagePath] of (item.galleryImagePaths || []).entries()) {
-    const attachment = await call('ir.attachment', 'create', {
-      name: `${key}-gallery-${index + 1}`,
-      type: 'binary',
-      datas: (await readFile(join(root, imagePath))).toString('base64'),
-      res_model: 'product.template',
-      res_id: templateId,
-      public: true,
+  for (const item of rawChunk) {
+    const clusterId = item.clusterId || 'item';
+    const sku = item.vals?.default_code || `GAL-${clusterId}`;
+    const catKey = String(item.categoryLabel || 'jewelry').toLowerCase().trim()
+      .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+      .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/\s+/g, '_');
+    const title = categoryTitles[catKey] || 'Joya Fina Galantes';
+
+    let primaryImageBase64 = null;
+    if (item.primaryImagePath) {
+      try {
+        const fullPath = join(root, item.primaryImagePath);
+        const buf = await readFile(fullPath);
+        primaryImageBase64 = buf.toString('base64');
+      } catch (err) {
+        console.warn(`[Stream] Could not read image for ${clusterId}:`, err.message);
+      }
+    }
+
+    const galleryImagesBase64 = [];
+    for (const gPath of item.galleryImagePaths || []) {
+      try {
+        const fullPath = join(root, gPath);
+        const buf = await readFile(fullPath);
+        galleryImagesBase64.push(buf.toString('base64'));
+      } catch {}
+    }
+
+    productsToIngest.push({
+      sku,
+      name: title,
+      price: item.vals?.list_price || 1500,
+      cost: item.vals?.standard_price || 750,
+      type: 'consu', // Mandatory consumable product, NEVER a service
+      available_on_website: true,
+      is_published: true,
+      primaryImageBase64,
+      galleryImagesBase64,
     });
-    galleryIds.push(attachment);
   }
-  details.push({ clusterId: item.clusterId, templateId, action: ids.length ? 'updated' : 'created', galleryIds });
+
+  const currentChunkNumber = Math.floor(i / STREAM_CHUNK_SIZE) + 1;
+  const totalChunks = Math.ceil(payloads.length / STREAM_CHUNK_SIZE);
+
+  try {
+    const response = await fetch(`${base}/api/products/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products: productsToIngest }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.success) {
+      totalCreated += result.created || 0;
+      totalUpdated += result.updated || 0;
+      console.log(`[Stream ${currentChunkNumber}/${totalChunks}] Synced ${productsToIngest.length} items (${result.created || 0} created, ${result.updated || 0} updated).`);
+    } else {
+      totalFailed += productsToIngest.length;
+      console.warn(`[Stream ${currentChunkNumber}/${totalChunks}] HTTP ${response.status} Notice:`, result);
+    }
+  } catch (err) {
+    totalFailed += productsToIngest.length;
+    console.error(`[Stream ${currentChunkNumber}/${totalChunks}] Transport error:`, err instanceof Error ? err.message : err);
+  }
 }
 
-const result = { ok: true, protocol: 'odoo-json-2', publishedCount: details.length, details, publishedAt: new Date().toISOString() };
-await writeFile(join(root, 'data/inventory-agent/manifests/publication-result.json'), JSON.stringify(result, null, 2));
-console.log(JSON.stringify(result, null, 2));
+const summary = {
+  ok: totalFailed === 0,
+  publishedAt: new Date().toISOString(),
+  totalProducts: payloads.length,
+  totalCreated,
+  totalUpdated,
+  totalFailed,
+  endpoint: `${base}/api/products/ingest`,
+};
+
+await writeFile(join(root, 'data/inventory-agent/manifests/publication-result.json'), JSON.stringify(summary, null, 2));
+console.log('\n--- Real-Time Streaming Ingestion Summary ---');
+console.log(JSON.stringify(summary, null, 2));

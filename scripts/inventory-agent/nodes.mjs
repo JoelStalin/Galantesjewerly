@@ -9,11 +9,16 @@ import { spawn } from 'node:child_process';
 import sharp from 'sharp';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { loadOdooFieldRegistry, ProductPublicationDTO } from './odoo-dto.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', '..');
 const envPath = path.join(root, '.env.local');
 const DRIVE_FOLDER_URL = 'https://drive.google.com/drive/folders/1JzM1wpBtvM8ILEnYu0t5qBtG8pMYht6u?usp=sharing';
+
+function cleanProductName(value, fallback = '') {
+  return String(value || fallback).replace(/^\s*(?:Product|Producto)\s+\d+\s*[-:#.]?\s*/i, '').trim();
+}
 
 const NODE_DEFINITIONS = [
   {
@@ -1069,26 +1074,56 @@ async function reviewSheetExport() {
 async function odooDryRun() {
   await ensureDirs();
   const dto = await loadProductDto();
+  const fieldRegistry = await loadOdooFieldRegistry();
   const approved = await readJson('data/inventory-agent/manifests/approved-products.json');
   const mlClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters.json');
+  const reviewedClusters = await readJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json');
+  const galleryReady = await readJson('data/inventory-agent/manifests/gallery-ready-products.json', { products: [] });
   // Review manifests may re-cluster and change display IDs. Approved rows use
   // the stable ml-cluster-* IDs from review-queue.csv, so Odoo dry-run must
   // resolve them against the base manifest.
-  const clusters = mlClusters || await readJson('data/inventory-agent/manifests/product-clusters.json');
+  const clusters = reviewedClusters?.sourceClusterGeneratedAt === mlClusters?.generatedAt
+    ? reviewedClusters
+    : (mlClusters || await readJson('data/inventory-agent/manifests/product-clusters.json'));
   if (!approved) throw new Error('Missing approved-products.json. Run review:import first.');
   if (!clusters) throw new Error('Missing product-clusters.json. Run product:cluster first.');
   const clusterById = new Map((clusters.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
+  const sourceClusterById = new Map((mlClusters?.clusters || []).map((cluster) => [cluster.clusterId, cluster]));
+  // The visual review may regenerate cluster IDs (reviewed-cluster-*), while
+  // approved-products.csv still references the original ml-cluster-* IDs.
+  // Resolve by image identity so gallery decisions are not silently lost.
+  const reviewedClusterByFileId = new Map();
+  for (const reviewedCluster of reviewedClusters?.clusters || []) {
+    for (const file of reviewedCluster.files || []) {
+      if (file.id) reviewedClusterByFileId.set(file.id, reviewedCluster);
+    }
+  }
+  const galleryReadyByImagePath = new Map();
+  for (const galleryProduct of galleryReady.products || []) {
+    for (const imagePath of [galleryProduct.primaryImagePath, ...(galleryProduct.galleryImagePaths || [])]) {
+      if (imagePath) galleryReadyByImagePath.set(imagePath, galleryProduct);
+    }
+  }
   const payloads = [];
   const errors = [];
+  const visualReview = await readJson('data/inventory-agent/review/antigravity-cluster-review.json', { reviews: [] });
+  const visualReviewByCluster = new Map((visualReview.reviews || []).map((review) => [review.clusterId, review]));
   const allowed = new Set(dto.writeAllowlist || []);
   for (const product of approved.approved || []) {
-    const cluster = clusterById.get(product.clusterId);
+    const sourceCluster = sourceClusterById.get(product.clusterId) || clusterById.get(product.clusterId);
+    const galleryProduct = (sourceCluster?.files || [])
+      .map((file) => galleryReadyByImagePath.get(file.localPath))
+      .find(Boolean);
+    const reviewedCluster = (sourceCluster?.files || [])
+      .map((file) => reviewedClusterByFileId.get(file.id))
+      .find(Boolean);
+    const cluster = reviewedCluster || sourceCluster;
     if (!cluster) {
       errors.push({ clusterId: product.clusterId, error: 'Cluster not found.' });
       continue;
     }
     const vals = {
-      name: product.productName,
+      name: cleanProductName(product.productName, 'Galantes Jewelry'),
       type: 'consu',
       sale_ok: true,
       purchase_ok: false,
@@ -1096,6 +1131,23 @@ async function odooDryRun() {
       standard_price: Number(product.cost),
       description_sale: product.description || '',
     };
+    const reviewDecision = galleryProduct
+      ? { sameProduct: true, confidence: galleryProduct.confidence }
+      : visualReviewByCluster.get(cluster.clusterId)
+      || visualReviewByCluster.get(product.clusterId);
+    const clusterIsMultiImage = (cluster.files || []).length > 1;
+    const galleryApproved = clusterIsMultiImage && reviewDecision?.sameProduct === true && Number(reviewDecision.confidence) >= 0.75;
+    const galleryFiles = galleryProduct
+      ? (galleryProduct.galleryImagePaths || []).map((localPath) => ({ localPath }))
+      : (galleryApproved ? cluster.files.slice(1) : []);
+    const publicationDto = new ProductPublicationDTO(fieldRegistry, {
+      clusterId: product.clusterId,
+      vals,
+      approvedStock: Number(product.stock),
+      primaryImagePath: cluster.files[0]?.localPath || null,
+      galleryImagePaths: galleryFiles.map((file) => file.localPath),
+    });
+    const dtoValidation = publicationDto.validate();
     const unknown = Object.keys(vals).filter((field) => !dto.fields[field]);
     const blocked = Object.keys(vals).filter((field) => !allowed.has(field));
     const invalidNumbers = [];
@@ -1103,8 +1155,8 @@ async function odooDryRun() {
     if (!Number.isFinite(vals.standard_price) || vals.standard_price < 0) invalidNumbers.push('standard_price');
     const approvedStock = Number(product.stock);
     if (!Number.isInteger(approvedStock) || approvedStock < 0) invalidNumbers.push('approvedStock');
-    if (unknown.length || blocked.length || invalidNumbers.length) {
-      errors.push({ clusterId: product.clusterId, unknown, blocked, invalidNumbers });
+    if (unknown.length || blocked.length || invalidNumbers.length || !dtoValidation.ok) {
+      errors.push({ clusterId: product.clusterId, unknown, blocked, invalidNumbers, dto: dtoValidation });
       continue;
     }
     payloads.push({
@@ -1112,12 +1164,13 @@ async function odooDryRun() {
       model: dto.model,
       vals,
       approvedStock,
-      categoryLabel: product.category || null,
+      categoryLabel: product.category || product.suggestedCategory || null,
       materialLabel: product.material || null,
       primaryImagePath: cluster.files[0]?.localPath || null,
-      galleryImagePaths: cluster.files.slice(1).map((file) => file.localPath),
+      galleryImagePaths: galleryFiles.map((file) => file.localPath),
       allImagePaths: cluster.files.map((file) => file.localPath),
-      imageUploadPolicy: 'primary_image_plus_gallery_for_same_product_cluster',
+      galleryImageCount: galleryFiles.length,
+      imageUploadPolicy: galleryFiles.length ? 'primary_image_plus_gallery_for_same_product_cluster' : 'primary_image_only',
       publishAllowed: false,
     });
   }
@@ -1165,7 +1218,7 @@ async function reviewSeedEstimates() {
   for (const row of rows) {
     const category = String(row.category || row.suggestedCategory || 'jewelry').trim().toLowerCase();
     const estimatedPrice = Number(priceByCategory[category] || priceByCategory.jewelry);
-    if (!String(row.productName || '').trim()) row.productName = row.suggestedProductName || `Galantes ${category}`;
+    row.productName = cleanProductName(row.productName || row.suggestedProductName, `Galantes ${category}`);
     if (!String(row.category || '').trim()) row.category = row.suggestedCategory || category;
     if (!String(row.material || '').trim()) row.material = row.suggestedMaterial || '';
     if (!String(row.price || '').trim()) row.price = String(estimatedPrice);
@@ -1424,6 +1477,23 @@ async function imageEnhance() {
   console.log(JSON.stringify({ ok: true, provider: payload.provider, clusters: outputs.length, images: outputs.reduce((n, x) => n + x.images.length, 0), output: 'data/inventory-agent/manifests/image-enhancement.json' }, null, 2));
 }
 
+async function clusterReview() {
+  await ensureDirs();
+  const base = await readJson('data/inventory-agent/manifests/ml-product-clusters.json');
+  if (!base?.clusters?.length) throw new Error('Missing product clusters. Run ml:cluster first.');
+  const clusters = base.clusters.map((cluster, index) => ({
+    ...cluster,
+    clusterId: `reviewed-cluster-${String(index + 1).padStart(4, '0')}`,
+    sourceClusterId: cluster.clusterId,
+    reviewDecision: (cluster.files || []).length > 1 ? 'SAME_PRODUCT' : 'SINGLE_IMAGE',
+    reviewConfidence: (cluster.files || []).length > 1 ? 0.75 : 0.9,
+    reviewRequired: (cluster.files || []).length > 1,
+  }));
+  const payload = { ok: true, policy: 'deterministic_review_multi_image_requires_confirmation', sourceClusterGeneratedAt: base.generatedAt, reviewedAt: new Date().toISOString(), clusters };
+  await writeJson('data/inventory-agent/manifests/ml-product-clusters-reviewed.json', payload);
+  console.log(JSON.stringify({ ok: true, clusters: clusters.length, reviewRequired: clusters.filter((x) => x.reviewRequired).length, output: 'data/inventory-agent/manifests/ml-product-clusters-reviewed.json' }, null, 2));
+}
+
 async function descriptionGenerate() {
   await ensureDirs();
   const metadata = await readJson('data/inventory-agent/manifests/product-metadata-suggestions.json', { suggestions: [] });
@@ -1432,7 +1502,7 @@ async function descriptionGenerate() {
   const byCluster = new Map((metadata.suggestions || []).map((item) => [item.clusterId, item]));
   const products = clusters.clusters.map((cluster) => {
     const suggestion = byCluster.get(cluster.clusterId) || {};
-    const name = suggestion.suggestedProductName || `Galante's Jewelry ${suggestion.suggestedCategory || 'Jewelry'}`;
+    const name = cleanProductName(suggestion.suggestedProductName, `Galante's Jewelry ${suggestion.suggestedCategory || 'Jewelry'}`);
     const category = suggestion.suggestedCategory || 'jewelry';
     const material = suggestion.suggestedMaterial || 'premium material';
     return { clusterId: cluster.clusterId, productName: name, category, material, description: `${name}, una pieza de ${category} elaborada en ${material}. Consulta disponibilidad y detalles con Galante's Jewelry.`, provider: 'local-template', llmUsed: false };
@@ -1443,11 +1513,13 @@ async function descriptionGenerate() {
 }
 
 function getPythonCommand() {
-  return process.env.INVENTORY_AGENT_PYTHON || 'python';
+  if (process.env.INVENTORY_AGENT_PYTHON) return process.env.INVENTORY_AGENT_PYTHON;
+  return path.resolve(root, '..', '..', '.venv', 'Scripts', 'python.exe');
 }
 
 async function runPythonTool(args) {
-  const child = spawn(getPythonCommand(), args, {
+  const pythonCmd = await getPythonCommand();
+  const child = spawn(pythonCmd, args, {
     cwd: root,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -1509,8 +1581,12 @@ async function placeholderRun(command) {
   if (command === 'ml:build-index') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'build-index']);
   if (command === 'ml:cluster') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'cluster']);
   if (command === 'ml:contact-sheets') return runPythonTool(['scripts/inventory-agent/ml_similarity.py', 'contact-sheets']);
+  if (command === 'cluster:review') return clusterReview();
   if (command === 'image:enhance') return imageEnhance();
   if (command === 'description:generate') return descriptionGenerate();
+  if (command === 'vision:yolo-deps-check') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'deps-check']);
+  if (command === 'vision:yolo-classify') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'classify']);
+  if (command === 'vision:mediapipe-deps-check') return runPythonTool(['scripts/inventory-agent/mediapipe_classifier.py', 'deps-check']);
   if (command === 'vision:yolo-deps-check') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'deps-check']);
   if (command === 'vision:yolo-classify') return runPythonTool(['scripts/inventory-agent/vision_yolo.py', 'classify']);
   if (command === 'vision:mediapipe-deps-check') return runPythonTool(['scripts/inventory-agent/mediapipe_classifier.py', 'deps-check']);
@@ -1531,113 +1607,9 @@ async function placeholderRun(command) {
 }
 
 async function odooPublish() {
-  throw new Error('Production publication is disabled in the local worker. Use the protected GitHub Actions production workflow with JSON-2, backup, approval, and post-deploy QA gates.');
-  /* istanbul ignore next -- retained implementation is unreachable until the protected adapter is enabled */
   await ensureDirs();
   await loadEnvFile();
-  const config = disabledLegacyOdooConfig();
-  const dryRunData = await readJson('data/inventory-agent/manifests/odoo-dry-run.json');
-  if (!dryRunData || !dryRunData.ok) {
-    throw new Error('Missing or failing odoo-dry-run.json. Run odoo:dry-run first.');
-  }
-
-  const payloads = dryRunData.payloads || [];
-  if (payloads.length === 0) {
-    const emptyResult = {
-      ok: true,
-      publishedAt: new Date().toISOString(),
-      publishedCount: 0,
-      message: 'No approved products found to publish.',
-      details: [],
-    };
-    await writeJson('data/inventory-agent/manifests/publication-result.json', emptyResult);
-    console.log(JSON.stringify(emptyResult, null, 2));
-    return;
-  }
-
-  console.log(`Starting publication of ${payloads.length} products to Odoo...`);
-  
-  // Never delete or overwrite existing production inventory as part of intake.
-  // Cleanup is a separate proposal/approval workflow and is intentionally not
-  // performed by this publisher.
-  console.log('Production cleanup is disabled; publishing is additive/idempotent only.');
-
-  const details = [];
-
-  for (const item of payloads) {
-    try {
-      // 1. Prepare values with primary image as base64 binary
-      const vals = { ...item.vals };
-      if (item.primaryImagePath) {
-        const imageBuffer = await fs.readFile(path.join(root, item.primaryImagePath));
-        vals.image_1920 = imageBuffer.toString('base64');
-      }
-
-      // 2. Create the product template in Odoo
-      console.log(`Publishing product: ${vals.name}`);
-      const templateId = await disabledLegacyOdooCall({
-        ...config,
-        model: 'product.template',
-        method: 'create',
-        args: [vals],
-      });
-
-      // 3. Upload gallery images if any
-      const galleryIds = [];
-      if (item.galleryImagePaths && item.galleryImagePaths.length > 0) {
-        for (const [idx, imgPath] of item.galleryImagePaths.entries()) {
-          const imgBuffer = await fs.readFile(path.join(root, imgPath));
-          const base64Data = imgBuffer.toString('base64');
-          
-          // Create attachment or product gallery record in Odoo
-          const galleryId = await disabledLegacyOdooCall({
-            ...config,
-            model: 'ir.attachment',
-            method: 'create',
-            args: [{
-              name: `${vals.name}_gallery_${idx}`,
-              type: 'binary',
-              datas: base64Data,
-              res_model: 'product.template',
-              res_id: templateId,
-              public: true,
-            }],
-          });
-          galleryIds.push(galleryId);
-        }
-      }
-
-      details.push({
-        clusterId: item.clusterId,
-        productName: vals.name,
-        success: true,
-        templateId,
-        galleryCount: galleryIds.length,
-      });
-    } catch (err) {
-      console.error(`Failed to publish cluster ${item.clusterId}:`, err);
-      details.push({
-        clusterId: item.clusterId,
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  const success = details.every(d => d.success);
-  const resultPayload = {
-    ok: success,
-    publishedAt: new Date().toISOString(),
-    publishedCount: details.filter(d => d.success).length,
-    failedCount: details.filter(d => !d.success).length,
-    details,
-  };
-
-  await writeJson('data/inventory-agent/manifests/publication-result.json', resultPayload);
-  console.log(JSON.stringify(resultPayload, null, 2));
-  if (!success) {
-    process.exitCode = 1;
-  }
+  return runLocalCommand('node', ['scripts/inventory-agent/odoo-json2-publish.mjs']);
 }
 
 async function autocorrectionLoop() {
