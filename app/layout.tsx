@@ -50,9 +50,15 @@ async function loadSiteSettings(): Promise<SiteSettings> {
       ...(odooSettings ?? {})
     };
 
-    // Keep social buttons visible even if upstream systems return empty strings.
+    const isGenericMyCompany = (val?: string) => !val || val.toLowerCase().trim() === 'my company';
+
+    const brandName = isGenericMyCompany(merged.brand_name) ? "Galante's Jewelry" : merged.brand_name;
+    const siteTitle = isGenericMyCompany(merged.site_title) ? "Galante's Jewelry by the Sea" : merged.site_title;
+
     return {
       ...merged,
+      brand_name: brandName,
+      site_title: siteTitle,
       instagram_url: merged.instagram_url || FALLBACK_SETTINGS.instagram_url,
       facebook_url: merged.facebook_url || FALLBACK_SETTINGS.facebook_url,
       whatsapp_number: merged.whatsapp_number || FALLBACK_SETTINGS.whatsapp_number,
