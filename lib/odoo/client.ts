@@ -322,7 +322,7 @@ class OdooClient {
       return data;
     } catch (error) {
       console.error('Failed to fetch featured products:', error);
-      return [];
+      return LUXURY_FALLBACK_PRODUCTS.slice(0, limit);
     }
   }
 
@@ -346,7 +346,8 @@ class OdooClient {
       return data;
     } catch (error) {
       console.error('Failed to fetch collection products:', error);
-      return this.getFeaturedProducts(limit);
+      const featured = await this.getFeaturedProducts(limit);
+      return featured.length > 0 ? featured : LUXURY_FALLBACK_PRODUCTS.slice(0, limit);
     }
   }
 
