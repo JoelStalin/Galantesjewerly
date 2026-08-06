@@ -98,7 +98,25 @@ export function ShopControls({
 
   if (layout === 'sidebar') {
     return (
-      <div className="space-y-7 text-left">
+      <div className="space-y-5 text-left">
+        {/* Mobile Filter Toggle */}
+        <div className="flex items-center justify-between lg:hidden border-b border-gray-100 pb-3">
+          <button
+            type="button"
+            onClick={() => setShowFilters((value) => !value)}
+            className="flex items-center gap-2 text-sm font-semibold text-primary bg-gray-50 border border-gray-200 rounded px-4 py-2 hover:bg-gray-100 transition-colors"
+          >
+            <span>Filters &amp; Refine</span>
+            <span aria-hidden>{showFilters ? '▲' : '▼'}</span>
+          </button>
+          {totalCount > 0 && (
+            <p className="text-xs text-gray-500 font-medium">
+              {totalCount} piece{totalCount !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+
+        <div className={`space-y-7 ${showFilters ? 'block' : 'hidden lg:block'}`}>
         <section>
           <label htmlFor="shop-sidebar-search" className={sidebarLabelClass}>
             Search
@@ -221,6 +239,7 @@ export function ShopControls({
             </button>
           </section>
         )}
+        </div>
       </div>
     );
   }

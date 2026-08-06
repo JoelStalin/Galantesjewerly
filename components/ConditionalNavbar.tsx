@@ -18,5 +18,6 @@ export function ConditionalNavbar({ settings, user }: ConditionalNavbarProps) {
 
   if (isAdmin) return null;
 
-  return <Navbar settings={settings} user={user} forceSolid={Boolean(isCustomerAuth)} isFixed={!isHome} />;
+  // On non-home pages (like /shop, /collections, etc.), force solid background for high-contrast mobile legibility.
+  return <Navbar settings={settings} user={user} forceSolid={!isHome} isFixed={!isHome} />;
 }

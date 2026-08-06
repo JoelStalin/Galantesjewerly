@@ -93,7 +93,7 @@ export default async function ShopPage({
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-primary text-white py-7 px-6 md:px-12">
+      <section className="bg-primary text-white pt-24 pb-8 px-6 md:px-12">
         <div className="max-w-7xl mx-auto text-left">
           <h1 className="text-3xl md:text-4xl font-serif font-bold">
             Shop Fine Jewelry

@@ -21,6 +21,67 @@ export interface ImageClassificationLog {
   };
 }
 
+export interface StockReorderEvaluation {
+  product_id: string;
+  product_name: string;
+  current_stock: number;
+  min_threshold: number;
+  unit_price: number;
+  is_low_stock: boolean;
+  is_high_value: boolean;
+  strategy: 'NO_ACTION' | 'AUTOMATIC_REORDER_DRAFT' | 'HUMAN_APPROVAL_REQUIRED';
+  reason: string;
+}
+
+export function evaluateStockReorderStrategy(
+  item: { product_id: string; product_name: string; current_stock: number; min_threshold?: number; unit_price: number },
+  highValueThreshold: number = 500
+): StockReorderEvaluation {
+  const minThreshold = item.min_threshold !== undefined ? item.min_threshold : 5;
+  const isLowStock = item.current_stock <= minThreshold;
+  const isHighValue = item.unit_price >= highValueThreshold;
+
+  if (!isLowStock) {
+    return {
+      product_id: item.product_id,
+      product_name: item.product_name,
+      current_stock: item.current_stock,
+      min_threshold: minThreshold,
+      unit_price: item.unit_price,
+      is_low_stock: false,
+      is_high_value: isHighValue,
+      strategy: 'NO_ACTION',
+      reason: `Stock (${item.current_stock}) is above minimum threshold (${minThreshold}).`,
+    };
+  }
+
+  if (isHighValue) {
+    return {
+      product_id: item.product_id,
+      product_name: item.product_name,
+      current_stock: item.current_stock,
+      min_threshold: minThreshold,
+      unit_price: item.unit_price,
+      is_low_stock: true,
+      is_high_value: true,
+      strategy: 'HUMAN_APPROVAL_REQUIRED',
+      reason: `High-value item ($${item.unit_price}) is below minimum stock threshold (${minThreshold}). Requires Admin sign-off before reordering.`,
+    };
+  }
+
+  return {
+    product_id: item.product_id,
+    product_name: item.product_name,
+    current_stock: item.current_stock,
+    min_threshold: minThreshold,
+    unit_price: item.unit_price,
+    is_low_stock: true,
+    is_high_value: false,
+    strategy: 'AUTOMATIC_REORDER_DRAFT',
+    reason: `Low-value item ($${item.unit_price}) is below minimum stock threshold (${minThreshold}). Automatic reorder draft created.`,
+  };
+}
+
 export function getTenantLogsFile(tenantId: string = 'galantesjewelry'): string {
   const baseDir = path.resolve(process.cwd(), `data/orca/tenants/${tenantId}/logs`);
   if (!fs.existsSync(baseDir)) {
