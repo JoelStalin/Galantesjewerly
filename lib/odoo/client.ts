@@ -322,7 +322,7 @@ class OdooClient {
       return data;
     } catch (error) {
       console.error('Failed to fetch featured products:', error);
-      return [];
+      return LUXURY_FALLBACK_PRODUCTS.slice(0, limit);
     }
   }
 
@@ -346,7 +346,12 @@ class OdooClient {
       return data;
     } catch (error) {
       console.error('Failed to fetch collection products:', error);
-      return this.getFeaturedProducts(limit);
+      try {
+        const fallbackList = await this.getProducts({ page: 1, page_size: limit });
+        return fallbackList.data && fallbackList.data.length > 0 ? fallbackList.data : LUXURY_FALLBACK_PRODUCTS.slice(0, limit);
+      } catch {
+        return LUXURY_FALLBACK_PRODUCTS.slice(0, limit);
+      }
     }
   }
 
