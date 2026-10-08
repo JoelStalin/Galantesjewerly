@@ -8,6 +8,11 @@
   "worker": "local-script-worker",
   "nodes": [
     {"id":"inventory-command","type":"trigger","label":"Inventory command","command":"status"},
+    {"id":"whatsapp-intake","type":"trigger","label":"WhatsApp Intake (+1 786-246-2664)","command":"whatsapp:listen"},
+    {"id":"whatsapp-visual-match","type":"worker","label":"WhatsApp 95% Visual Match & Compare","command":"whatsapp:compare"},
+    {"id":"whatsapp-metadata-nlp","type":"worker","label":"English Grammar & Metadata Parser","command":"whatsapp:parse-english"},
+    {"id":"whatsapp-backlog-dispatch","type":"decision","label":"Galantes Backlog Dispatch","command":"whatsapp:route-backlog"},
+    {"id":"orca-learning-feedback","type":"worker","label":"Orca Continuous Learning Feedback","command":"orca:record-decision"},
     {"id":"local-intake","type":"worker","label":"Local Drive intake","command":"run-local-intake"},
     {"id":"image-processing","type":"worker","label":"Image conversion and features","command":"image:features"},
     {"id":"product-clustering","type":"worker","label":"Product and gallery clustering","command":"ml:cluster"},
@@ -22,6 +27,12 @@
     {"id":"completion-report","type":"report","label":"Evidence and status report","command":"status"}
   ],
   "edges": [
+    {"from":"whatsapp-intake","to":"whatsapp-visual-match"},
+    {"from":"whatsapp-visual-match","to":"whatsapp-metadata-nlp"},
+    {"from":"whatsapp-visual-match","to":"whatsapp-backlog-dispatch"},
+    {"from":"whatsapp-metadata-nlp","to":"orca-learning-feedback"},
+    {"from":"whatsapp-backlog-dispatch","to":"orca-learning-feedback"},
+    {"from":"orca-learning-feedback","to":"review-ui"},
     {"from":"inventory-command","to":"local-intake"},
     {"from":"local-intake","to":"image-processing"},
     {"from":"image-processing","to":"product-clustering"},
