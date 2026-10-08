@@ -31,13 +31,9 @@ tests/e2e/artifacts/
 
 # Local configuration and environment variables
 .env
-.env.local
-.env.orca.local
-.env.gcp
-.env.cloudflare
-.env.backup*
-data/inventory-agent/models/*.tflite
-.env.obsidian.example
+.env.*
+!.env.example
+!.env.gcp.example
 secrets/
 
 # Temporary and build logs
