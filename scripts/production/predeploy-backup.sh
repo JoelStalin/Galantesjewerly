@@ -87,10 +87,20 @@ backup_volume "galantesjewelry_odoo-data" "odoo-data.tgz"
 
 # Keep an explicit filestore archive in addition to the complete Odoo volume.
 # Odoo stores filestore either directly at /var/lib/odoo/filestore or beneath
-# a database directory; archive the complete directory with its path preserved.
+# ~/.local/share/Odoo/filestore or a database directory.
 log "Backing up Odoo filestore"
 docker_cmd run --rm -v galantesjewelry_odoo-data:/volume:ro -v "$BACKUP_DIR:/backup" alpine:3.20 \
-  sh -ec 'test -d /volume/filestore || { echo "Odoo filestore directory missing" >&2; exit 1; }; tar -czf /backup/odoo-filestore.tgz -C /volume filestore'
+  sh -ec '
+    if [ -d /volume/filestore ]; then
+      FILESTORE_DIR="/volume/filestore"
+    elif [ -d /volume/.local/share/Odoo/filestore ]; then
+      FILESTORE_DIR="/volume/.local/share/Odoo/filestore"
+    else
+      echo "Odoo filestore directory missing" >&2
+      exit 1
+    fi
+    tar -czf /backup/odoo-filestore.tgz -C "$(dirname "$FILESTORE_DIR")" "$(basename "$FILESTORE_DIR")"
+  '
 [ -s "$BACKUP_DIR/odoo-filestore.tgz" ] || fail "Odoo filestore archive is empty"
 log "Odoo filestore backup complete"
 
