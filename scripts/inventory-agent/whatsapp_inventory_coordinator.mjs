@@ -16,7 +16,10 @@ const SENDER_NUMBER = '+1 786-246-2664';
 async function runVisualCompare(imagePath, threshold = 0.95) {
   return new Promise((resolve, reject) => {
     const pythonScript = path.join(__dirname, 'compare_whatsapp_image.py');
-    const proc = spawn('python', [pythonScript, '--image', imagePath, '--threshold', String(threshold)]);
+    const isWindows = process.platform === 'win32';
+    const pyCmd = isWindows ? 'py' : 'python3';
+    const pyArgs = isWindows ? ['-3.12', pythonScript, '--image', imagePath, '--threshold', String(threshold)] : [pythonScript, '--image', imagePath, '--threshold', String(threshold)];
+    const proc = spawn(pyCmd, pyArgs);
     let stdout = '';
     let stderr = '';
 
