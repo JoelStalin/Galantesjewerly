@@ -51,17 +51,16 @@ jobs:
             cd /home/yoeli/galantesjewelry
             git remote set-url origin https://github.com/JoelStalin/Galantesjewerly.git
             
-            # Execute blocking predeploy backup using canonical script
             log() { printf '[galantes-deploy] %%s\n' "$*"; }
-            log "Running predeploy backup script..."
-            chmod +x scripts/production/*.sh
-            ./scripts/production/predeploy-backup.sh
-            
             log "Fetching and checking out target SHA: $TARGET_SHA"
             git fetch origin main --tags
             git fetch origin "$TARGET_SHA" || true
             git checkout --detach -f "$TARGET_SHA"
             
+            # Execute blocking predeploy backup using canonical script
+            log "Running predeploy backup script..."
             chmod +x scripts/production/*.sh
+            ./scripts/production/predeploy-backup.sh
+            
             ./scripts/production/preflight.sh
             ./scripts/production/deploy-from-github.sh "$TARGET_SHA"
