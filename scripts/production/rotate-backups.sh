@@ -29,7 +29,9 @@ for backup in "${backups[@]}"; do
     continue
   fi
 
-  if [ "$index" -le "$KEEP_BACKUPS" ] && [ "$age" -le "$keep_seconds" ] && [ "${free_mb:-0}" -ge "$MIN_FREE_MB" ]; then
+  # Only keep additional backups up to KEEP_BACKUPS if disk has plenty of headroom (>= 8GB)
+  # to leave sufficient space for Docker image builds.
+  if [ "$index" -le "$KEEP_BACKUPS" ] && [ "$age" -le "$keep_seconds" ] && [ "${free_mb:-0}" -ge 8192 ]; then
     log "Keeping backup: $resolved"
     continue
   fi

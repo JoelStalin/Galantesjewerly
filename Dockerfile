@@ -46,7 +46,7 @@ RUN set -eux; \
     for dir in components context controllers docs infra integration-contracts lib automation; do \
       copy_first "/project/$dir" "$dir" "Galantesjewelry/$dir"; \
     done; \
-    cp -a node_modules /project/node_modules
+    mv node_modules /project/node_modules
 
 ARG NODE_OPTIONS=--max-old-space-size=4096
 ENV NEXT_TELEMETRY_DISABLED=1
