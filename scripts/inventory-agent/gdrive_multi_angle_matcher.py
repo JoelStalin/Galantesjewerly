@@ -169,6 +169,10 @@ def search_google_drive_multi_angle(
     in_width = in_geom.get("estimated_width_mm", 6.0)
     in_shape = in_geom.get("shape", "Solitaire")
 
+    with open(m_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    products = data.get("products", [])
     scored_clusters = []
     total_angles_evaluated = 0
 
