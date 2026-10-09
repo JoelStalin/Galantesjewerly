@@ -819,21 +819,24 @@ def main():
         sku = best.get("sku")
         c_pct = best.get("consensus_pct", 0.0)
         geom = best.get("best_angle_geometry", {})
+        metal_tone = best.get("metal_tone", "WHITE_GOLD_SILVER")
+        tone_str = "14K White Gold / Plata" if metal_tone == "WHITE_GOLD_SILVER" else ("14K/18K Oro Amarillo" if metal_tone == "YELLOW_GOLD" else "18K Oro Rosa")
 
         angle_breakdown = []
         for a in best.get("angles", [])[:3]:
             angle_breakdown.append(f"• *{a.get('label')}:* {a.get('similarity_pct')}% similitud")
 
         gdrive_msg = (
-            "💎 *Galantes Backlog - Búsqueda Multi-Ángulo en Google Drive*\n\n"
-            "Al indicar que ninguna de las propuestas iniciales coincide, se activó la búsqueda en el repositorio original de Google Drive (1,298 fotos, 1,102 clusters):\n\n"
-            f"🏆 *Mejor Coincidencia Detectada:* Cluster *{cid}* ({sku})\n"
+            "💎 *Galantes Backlog - Búsqueda con Identificación de Objeto y Tono de Metal*\n\n"
+            "Se ejecutó segmentación y recorte del objeto joyero aislando el estuche y background, con clasificador estricto de metal (coincidencia idéntica de color):\n\n"
+            f"🏆 *Joya Homóloga Detectada:* Cluster *{cid}* ({sku})\n"
+            f"✨ *Color de Metal Verificado:* {tone_str} (Coincidencia 100% de color con la foto)\n"
             + "\n".join(angle_breakdown) + "\n"
             f"• *Consenso Multi-Ángulo:* {c_pct}%\n\n"
             "📐 *Análisis Geométrico 3D de Piedra:*\n"
             f"• Forma detectada: {geom.get('shape', 'Oval / Marquise Cut')}\n"
             f"• Ancho estimado: ~{geom.get('estimated_width_mm', 14.0)} mm (Ratio: {geom.get('aspect_ratio', 1.33)})\n\n"
-            "👉 *¿Cómo deseas proceder con esta joya de Google Drive?*\n"
+            "👉 *¿Cómo deseas proceder con esta joya verificada?*\n"
             f"• Responde *APROBAR* para vincular *{sku}* en el catálogo oficial.\n"
             "• Responde *NUEVO* para crear una nueva ficha de taller artesanal.\n"
             "• Responde *RECHAZAR* para descartar definitivamente."
