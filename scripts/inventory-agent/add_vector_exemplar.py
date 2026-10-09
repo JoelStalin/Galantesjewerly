@@ -10,7 +10,10 @@ import argparse
 import json
 import time
 from pathlib import Path
-from ml_similarity import image_vector, load_json, save_json
+from ml_similarity import image_vector, load_json, write_json
+
+def save_json(path: Path, data: any) -> None:
+    write_json(path, data)
 
 
 def main():
