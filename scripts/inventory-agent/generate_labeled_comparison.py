@@ -30,7 +30,8 @@ def fit_image(img_path: str, target_size: int = 400) -> Image.Image:
 
         img = Image.open(p).convert("RGB")
         # Aspect fit into square target_size x target_size
-        img.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+        resample_filter = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', getattr(Image, 'ANTIALIAS', 1))
+        img.thumbnail((target_size, target_size), resample_filter)
         
         card = Image.new("RGB", (target_size, target_size), (18, 18, 20))
         offset_x = (target_size - img.width) // 2
@@ -116,7 +117,7 @@ def generate_comparison_montage(
     # 3. Footer Prompt Banner
     footer_y = canvas_height - 60
     draw.rectangle([padding, footer_y, canvas_width - padding, footer_y + 44], fill=(28, 32, 40))
-    prompt_msg = "Galante's Inventory Assistant • Reply '1', '2' or 'NO' to send to Backlog"
+    prompt_msg = "Galante's Inventory Assistant | Reply '1', '2' or 'NO' to send to Backlog"
     draw.text((padding + 20, footer_y + 14), prompt_msg, fill=(210, 215, 225))
     
     # Save output

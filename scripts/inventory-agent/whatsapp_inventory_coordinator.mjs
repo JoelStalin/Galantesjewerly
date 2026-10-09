@@ -120,30 +120,33 @@ export async function processIncomingWhatsAppItem({
       alternativeCandidates: topCandidates,
     });
 
-    const replyMsg = `✅ *Auto-Matched (${(similarity * 100).toFixed(1)}%)*\n` +
-      `Product: *${sku}*\n` +
-      `Title: ${parsedMetadata.title}\n` +
-      `Price: $${parsedMetadata.price}\n` +
-      `Stock: ${parsedMetadata.stock}\n` +
-      `Category: ${parsedMetadata.category}\n` +
-      `Inventory updated in Odoo.`;
+    const backlogProposal = `👑 *Galantes Backlog - High Confidence Match (${(similarity * 100).toFixed(1)}%)*\n` +
+      `• Intake Source: ${sender}\n` +
+      `• Matched SKU: *${sku}*\n` +
+      `• Title (EN): ${parsedMetadata.title}\n` +
+      `• Price: $${parsedMetadata.price}\n` +
+      `• Stock: ${parsedMetadata.stock}\n` +
+      `• Category: ${parsedMetadata.category}\n` +
+      `• Catalog URL: https://galantesjewelry.com/shop/${bestMatch?.slug || 'the-islamorada-solitaire'}\n\n` +
+      `👉 Reply *APPROVE* to confirm and send link to client, or *DISCARD* to reject.`;
 
     if (page) {
-      await sendTextMessage(page, sender, replyMsg).catch((err) => {
-        console.warn(`[WhatsApp Coordinator] Error sending reply: ${err.message}`);
+      await sendTextMessage(page, BACKLOG_GROUP, backlogProposal).catch((err) => {
+        console.warn(`[WhatsApp Coordinator] Error sending proposal to backlog: ${err.message}`);
       });
     }
 
     return {
-      action: 'auto_matched',
+      action: 'pending_backlog_approval',
       matchedProduct: bestMatch,
       similarity,
       parsedMetadata,
-      replyMsg,
+      backlogProposal,
+      originalSender: sender,
     };
   }
 
-  // Tier 2: Confidence 70% - 94% (Ambiguous - Request Human Selection with Labeled Collage)
+  // Tier 2: Confidence 70% - 94% (Ambiguous - Request Human Selection with Labeled Collage in Backlog)
   if (status === 'ambiguous' || (similarity >= 0.70 && similarity < 0.95)) {
     console.log(`[WhatsApp Tier 2] Ambiguous match (${(similarity * 100).toFixed(1)}%). Generating labeled comparison collage...`);
 
@@ -152,14 +155,15 @@ export async function processIncomingWhatsAppItem({
     const cand1 = topCandidates[0] ? `Option 1: SKU ${topCandidates[0].sku} (${(topCandidates[0].similarity * 100).toFixed(1)}%)` : '';
     const cand2 = topCandidates[1] ? `Option 2: SKU ${topCandidates[1].sku} (${(topCandidates[1].similarity * 100).toFixed(1)}%)` : '';
 
-    const reviewCaption = `🔍 *Verification Needed: Similar Item Detected*\n` +
+    const reviewCaption = `🔍 *Galantes Backlog - Human Decision Required*\n` +
+      `• Intake Source: ${sender}\n` +
       `${cand1}\n${cand2}\n` +
       `• Proposed Title (EN): ${parsedMetadata.title}\n` +
-      `Reply *1* or *2* to confirm match, or *NO* to route to backlog.`;
+      `Reply *1* or *2* to confirm match, or *NO* to route to backlog intake.`;
 
     if (page && collagePath) {
-      await sendImageWithCaption(page, sender, collagePath, reviewCaption).catch((err) => {
-        console.warn(`[WhatsApp Coordinator] Error sending comparison: ${err.message}`);
+      await sendImageWithCaption(page, BACKLOG_GROUP, collagePath, reviewCaption).catch((err) => {
+        console.warn(`[WhatsApp Coordinator] Error sending comparison to backlog: ${err.message}`);
       });
     }
 
