@@ -762,6 +762,8 @@ def main():
                 print(f"ID {p.get('id')}: SKU={p.get('default_code')} | Name={p.get('name')} | Cat={p.get('category_name')} | Price={p.get('list_price')} | HasImage={p.get('has_image')}")
         except Exception as e:
             print("Raw SQL output:", raw)
+            print("Stderr:", res.stderr)
+            print("Returncode:", res.returncode)
             print("Error parsing json:", e)
 
 if __name__ == "__main__":
