@@ -21,9 +21,13 @@ for backup in "${backups[@]}"; do
     *) fail "Unsafe backup path: $resolved" ;;
   esac
 
-  mtime="$(stat -c %Y "$resolved")"
-  age="$((now_epoch - mtime))"
-  if [ "$index" -le "$KEEP_BACKUPS" ] || [ "$age" -le "$keep_seconds" ]; then
+  free_mb="$(df -Pm "$ROOT" | awk 'NR == 2 {print $4}')"
+  if [ "$index" -le 2 ]; then
+    log "Keeping backup: $resolved"
+    continue
+  fi
+
+  if [ "$index" -le "$KEEP_BACKUPS" ] && [ "$age" -le "$keep_seconds" ] && [ "${free_mb:-0}" -ge "$MIN_FREE_MB" ]; then
     log "Keeping backup: $resolved"
     continue
   fi
