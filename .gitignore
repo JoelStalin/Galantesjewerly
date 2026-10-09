@@ -52,3 +52,6 @@ test_error.png
 # Miscellaneous OS metadata
 .DS_Store
 Thumbs.db
+
+# Runtime data
+data/
