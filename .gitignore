@@ -28,6 +28,8 @@ tests/e2e/.runtime/
 **/extensions_crx_cache/
 tests/e2e/artifacts/
 /test-results/
+.chrome_profile_whatsapp/
+**/chrome_profile/
 
 # Local configuration and environment variables
 .env
