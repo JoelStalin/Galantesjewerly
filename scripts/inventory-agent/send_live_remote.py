@@ -410,12 +410,55 @@ def main():
                 src: img.src.substring(0, 100),
                 alt: img.alt,
                 w: img.naturalWidth,
-                h: img.naturalHeight
-            }));
             return { copyables, allMainImgs };
         })()"""
         res = eval_js(detail_js)
         print(json.dumps(res, indent=2))
+
+    elif cmd == "download_intake_image":
+        import base64
+        view_chat("Galantesjewelry")
+        time.sleep(1)
+        extract_js = """(async () => {
+            const allImgs = Array.from(document.querySelectorAll('#main img[src^="blob:"]'));
+            if (!allImgs.length) return { ok: false, error: 'no blob images found' };
+            const lastImg = allImgs[allImgs.length - 1];
+            const src = lastImg.src;
+
+            // Find associated text
+            const parentRow = lastImg.closest('div[role="row"]') || lastImg.closest('div.copyable-text') || lastImg.parentElement;
+            const copyable = parentRow ? parentRow.querySelector('div.copyable-text') : null;
+            const text = copyable ? copyable.innerText : lastImg.alt || '';
+
+            const resp = await fetch(src);
+            const blob = await resp.blob();
+            const b64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+
+            return {
+                ok: true,
+                src,
+                text,
+                b64Size: b64.length,
+                b64Data: b64
+            };
+        })()"""
+        res = eval_js(extract_js)
+        data = res.get("result", {})
+        if not data.get("ok"):
+            print("Failed to extract image:", res)
+            return
+
+        out_path = sys.argv[2] if len(sys.argv) > 2 else "/tmp/intake_image.jpg"
+        b64 = data["b64Data"]
+        img_bytes = base64.b64decode(b64)
+        with open(out_path, "wb") as f:
+            f.write(img_bytes)
+        print(f"Successfully downloaded intake image to {out_path} ({len(img_bytes)} bytes)")
+        print(f"Associated message: {data.get('text')}")
 
 if __name__ == "__main__":
     main()
