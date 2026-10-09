@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const root = process.cwd();
-const statusFile = path.join(root, 'data', 'inventory-agent', 'evidence', 'whatsapp-session-status.json');
-const qrFile = path.join(root, 'data', 'inventory-agent', 'evidence', 'whatsapp-live-qr.png');
-const sessionActiveFile = path.join(root, 'data', 'inventory-agent', 'evidence', 'whatsapp-web-session-active.png');
+const dataDir = process.env.APP_DATA_DIR || path.join(process.cwd(), 'data');
+const statusFile = path.join(dataDir, 'inventory-agent', 'evidence', 'whatsapp-session-status.json');
+const qrFile = path.join(dataDir, 'inventory-agent', 'evidence', 'whatsapp-live-qr.png');
+const sessionActiveFile = path.join(dataDir, 'inventory-agent', 'evidence', 'whatsapp-web-session-active.png');
 
 export async function GET(request: Request) {
   try {
