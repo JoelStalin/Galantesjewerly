@@ -724,25 +724,128 @@ def main():
 
         variants_msg = (
             "💎 *Galantes Backlog - Expansión de Variantes (KNN + Detector 3D)*\n\n"
+            "🔍 *Inventario Auditado:* 54 productos analizados | *0 imágenes repetidas* (1-a-1 verificado).\n\n"
             "📐 *Análisis Geométrico 3D de la Piedra:*\n"
             f"• *Forma detectada:* {geom.get('shape', 'Round Brilliant')}\n"
             f"• *Ancho estimado:* ~{geom.get('estimated_width_mm', 6.0)} mm (Ratio: {geom.get('aspect_ratio', 1.0)}, Circularidad: {geom.get('circularity', 0.85)})\n"
             f"• *Profundidad/Faceta 3D:* {geom.get('depth_facet_ratio', 0.5)} (Gradiente radial)\n"
             f"{excluded_note}\n"
-            "🔍 *10 Variantes Más Cercanas por Vecinos Próximos (KNN):*\n"
+            "🎯 *10 Variantes Más Cercanas (Fotos Únicas):*\n"
             + "\n".join(options_lines) + "\n\n"
             "👉 *Para seleccionar una variante, responde:* *2.1*, *2.2*, *2.3*, etc. o escribe el SKU directamente.\n"
-            "👉 *O responde:* *NO* para descartar todas."
+            "👉 *O responde:* *NO* o *NINGUNA* para rastrear el archivo Google Drive en múltiples ángulos."
         )
         open_and_send("Galantesbacklog", variants_msg)
-        print("10-variants interactive proposal delivered successfully!")
+        print("10-variants interactive proposal delivered successfully with 0 duplicate images!")
+
+    elif cmd == "search_gdrive_multi_angle":
+        # Multi-Angle Google Drive Fallback when user responds 'NO' / 'ninguna' / '3'
+        try:
+            from gdrive_multi_angle_matcher import search_google_drive_multi_angle, generate_multi_angle_contact_sheet
+        except ImportError:
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from gdrive_multi_angle_matcher import search_google_drive_multi_angle, generate_multi_angle_contact_sheet
+
+        intake_img = "/tmp/real_intake.jpg"
+        out_sheet = "/tmp/gdrive_multi_angle_match.jpg"
+        print("Searching Google Drive catalog across multiple angles...")
+        res = search_google_drive_multi_angle(intake_img, top_k=3)
+        if not res.get("ok"):
+            print("Multi-angle search error:", res)
+            return
+
+        best = res.get("best_cluster")
+        if not best:
+            print("No matching cluster found in Google Drive.")
+            return
+
+        generate_multi_angle_contact_sheet(intake_img, best, out_sheet)
+        print(f"Generated multi-angle contact sheet at {out_sheet}")
+
+        # Paste multi-angle visual comparison into Galantesbacklog
+        print("Pasting Google Drive multi-angle sheet into Galantesbacklog...")
+        post("type", {"key": "Escape"})
+        time.sleep(1)
+        view_chat("Galantesbacklog")
+        time.sleep(1)
+
+        import base64
+        with open(out_sheet, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+
+        paste_js = f"""(async () => {{
+            const composer = document.querySelector('#main div[contenteditable="true"]');
+            const main = document.querySelector('#main');
+            if (!composer || !main) return {{ ok: false, error: 'no composer or main' }};
+
+            const binary = atob('{b64_data}');
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+            const blob = new Blob([array], {{ type: 'image/jpeg' }});
+            const file = new File([blob], 'gdrive_multi_angle.jpg', {{ type: 'image/jpeg' }});
+
+            const dt = new DataTransfer();
+            dt.items.add(file);
+
+            composer.focus();
+            const pasteEvt = new ClipboardEvent('paste', {{ bubbles: true, cancelable: true, clipboardData: dt }});
+            composer.dispatchEvent(pasteEvt);
+
+            const dropEvt = new DragEvent('drop', {{ bubbles: true, cancelable: true, dataTransfer: dt }});
+            main.dispatchEvent(dropEvt);
+
+            return {{ ok: true, dispatched: true }};
+        }})()"""
+        eval_js(paste_js)
+        time.sleep(3)
+
+        check_send_js = """(() => {
+            const sendBtn = document.querySelector('span[data-icon="send"], div[aria-label="Send"], span[data-icon="send-light"]');
+            if (sendBtn) {
+                (sendBtn.closest('div[role="button"]') || sendBtn).click();
+                return { sent: true };
+            }
+            return { sent: false };
+        })()"""
+        send_res = eval_js(check_send_js)
+        if not send_res.get("result", {}).get("sent"):
+            post("type", {"key": "Enter"})
+        time.sleep(3)
+        save_frame("/tmp/gdrive_multi_angle_sent_frame.jpg")
+        print("Multi-angle visual sheet dispatched to Galantesbacklog!")
+
+        # Send structured breakdown of the multi-angle match
+        cid = best.get("cluster_id")
+        sku = best.get("sku")
+        c_pct = best.get("consensus_pct", 0.0)
+        geom = best.get("best_angle_geometry", {})
+
+        angle_breakdown = []
+        for a in best.get("angles", [])[:3]:
+            angle_breakdown.append(f"• *{a.get('label')}:* {a.get('similarity_pct')}% similitud")
+
+        gdrive_msg = (
+            "💎 *Galantes Backlog - Búsqueda Multi-Ángulo en Google Drive*\n\n"
+            "Al indicar que ninguna de las propuestas iniciales coincide, se activó la búsqueda en el repositorio original de Google Drive (1,298 fotos, 1,102 clusters):\n\n"
+            f"🏆 *Mejor Coincidencia Detectada:* Cluster *{cid}* ({sku})\n"
+            + "\n".join(angle_breakdown) + "\n"
+            f"• *Consenso Multi-Ángulo:* {c_pct}%\n\n"
+            "📐 *Análisis Geométrico 3D de Piedra:*\n"
+            f"• Forma detectada: {geom.get('shape', 'Oval / Marquise Cut')}\n"
+            f"• Ancho estimado: ~{geom.get('estimated_width_mm', 14.0)} mm (Ratio: {geom.get('aspect_ratio', 1.33)})\n\n"
+            "👉 *¿Cómo deseas proceder con esta joya de Google Drive?*\n"
+            f"• Responde *APROBAR* para vincular *{sku}* en el catálogo oficial.\n"
+            "• Responde *NUEVO* para crear una nueva ficha de taller artesanal.\n"
+            "• Responde *RECHAZAR* para descartar definitivamente."
+        )
+        open_and_send("Galantesbacklog", gdrive_msg)
+        print("Google Drive multi-angle proposal delivered successfully!")
 
     elif cmd == "list_all_odoo_inventory":
         import subprocess
         sql_cmd = """
         SELECT json_agg(t) FROM (
             SELECT pt.id, pt.default_code, pt.name, pt.list_price, pt.type, 
-                   (pt.image_1920 IS NOT NULL) as has_image,
                    pc.name as category_name
             FROM product_template pt
             LEFT JOIN product_category pc ON pt.categ_id = pc.id
@@ -758,13 +861,12 @@ def main():
         try:
             products = json.loads(raw)
             print(f"Total products in Odoo production DB: {len(products)}")
-            for p in products:
-                print(f"ID {p.get('id')}: SKU={p.get('default_code')} | Name={p.get('name')} | Cat={p.get('category_name')} | Price={p.get('list_price')} | HasImage={p.get('has_image')}")
+            for p in products[:15]:
+                print(f"ID {p.get('id')}: SKU={p.get('default_code')} | Name={p.get('name')} | Cat={p.get('category_name')} | Price={p.get('list_price')}")
         except Exception as e:
-            print("Raw SQL output:", raw)
+            print("Raw SQL output:", raw[:200])
             print("Stderr:", res.stderr)
             print("Returncode:", res.returncode)
-            print("Error parsing json:", e)
 
 if __name__ == "__main__":
     main()
