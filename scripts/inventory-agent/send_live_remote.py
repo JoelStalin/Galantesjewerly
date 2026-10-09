@@ -393,20 +393,26 @@ def main():
     elif cmd == "inspect_chat_detail":
         view_chat("Galantesjewelry")
         time.sleep(1)
-        detail_js = """(async () => {
-            const msgs = Array.from(document.querySelectorAll('#main div.message-in, #main div.message-out')).slice(-10).map((m, idx) => {
-                const textEl = m.querySelector('div.copyable-text');
-                const text = textEl ? textEl.innerText : m.innerText;
-                const img = m.querySelector('img[src^="blob:"]');
-                return {
-                    idx,
-                    isOut: m.classList.contains('message-out'),
-                    text: text || '',
-                    hasImg: Boolean(img),
-                    imgSrc: img ? img.src : null
-                };
+        detail_js = """(() => {
+            const copyables = Array.from(document.querySelectorAll('#main div.copyable-text')).slice(-10).map((el, i) => {
+                const text = el.innerText || '';
+                const parent = el.closest('div[role="row"]') || el.parentElement;
+                const imgs = parent ? Array.from(parent.querySelectorAll('img')).map(img => ({
+                    src: img.src.substring(0, 100),
+                    alt: img.alt,
+                    w: img.naturalWidth,
+                    h: img.naturalHeight
+                })) : [];
+                return { idx: i, text, imgs };
             });
-            return { msgs };
+            const allMainImgs = Array.from(document.querySelectorAll('#main img')).map((img, idx) => ({
+                idx,
+                src: img.src.substring(0, 100),
+                alt: img.alt,
+                w: img.naturalWidth,
+                h: img.naturalHeight
+            }));
+            return { copyables, allMainImgs };
         })()"""
         res = eval_js(detail_js)
         print(json.dumps(res, indent=2))
