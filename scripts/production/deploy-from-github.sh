@@ -93,7 +93,7 @@ ensure_tunnel_running
 "$SCRIPT_DIR/postdeploy-validate.sh"
 "$SCRIPT_DIR/rotate-backups.sh"
 
-docker_cmd builder prune -af --filter until=72h || true
-docker_cmd image prune -af --filter until=168h || true
+docker_cmd builder prune -af || true
+docker_cmd image prune -af --filter until=24h || true
 
 log "Production deploy complete for $TARGET_SHA"
