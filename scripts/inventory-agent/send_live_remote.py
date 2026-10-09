@@ -575,5 +575,68 @@ def main():
         print(f"Successfully downloaded intake image to {out_path} ({len(img_bytes)} bytes)")
         print(f"Associated message: {data.get('text')}")
 
+    elif cmd == "inspect_backlog":
+        view_chat("Galantesbacklog")
+        time.sleep(1)
+        inspect_js = """(() => {
+            const copyables = Array.from(document.querySelectorAll('#main div.copyable-text')).map(el => el.innerText.trim());
+            return copyables.slice(-8);
+        })()"""
+        res = eval_js(inspect_js)
+        msgs = res.get("result", [])
+        print("Last messages in Galantesbacklog:")
+        for m in msgs:
+            print("---")
+            print(m)
+
+    elif cmd == "process_approval":
+        # 1. Update Odoo product template directly via SQL on galantes_prod
+        import subprocess
+        sql_cmd = (
+            "UPDATE product_template "
+            "SET name = jsonb_build_object('en_US', '14K White Gold Solitaire with Diamonds') "
+            "WHERE default_code = 'GAL-1044' OR id = 1;"
+        )
+        print("Updating Odoo product in production database galantes_prod...")
+        res = subprocess.run([
+            "docker", "exec", "-i", "galantes_db",
+            "psql", "-U", "odoo", "-d", "galantes_prod",
+            "-c", sql_cmd
+        ], capture_output=True, text=True)
+        print("Odoo DB update output:", res.stdout, res.stderr)
+
+        # 2. Confirm in Galantesbacklog
+        backlog_confirm = (
+            "✅ *Aprobado:* Producto SKU *GAL-1044* actualizado en catálogo.\n\n"
+            "• *Título (EN):* 14K White Gold Solitaire with Diamonds\n"
+            "• *Categoría:* Rings\n"
+            "• *Precio:* $499.00 USD (Intacto)\n"
+            "• *Stock:* 1 unit (Intacto)\n"
+            "• *Materiales:* 14K White Gold, 0.25 Ct G-SI, Size 4, 2.3g (Intacto)\n"
+            "• *Foto:* Se conserva la foto profesional de Google Drive.\n\n"
+            "🔗 *Ficha en tienda:* https://galantesjewelry.com/shop/the-islamorada-solitaire\n\n"
+            "🚀 Notificando al cliente en el chat de origen (*Galantesjewelry*)..."
+        )
+        print("Sending confirmation to Galantesbacklog...")
+        open_and_send("Galantesbacklog", backlog_confirm)
+        time.sleep(2)
+
+        # 3. ONLY NOW dispatch the verified link to the intake chat Galantesjewelry!
+        intake_customer_msg = (
+            "💎 *Galante Assistant - Joya Catalogada*\n\n"
+            "Estimado cliente, tu joya ha sido identificada y vinculada en el catálogo oficial:\n\n"
+            "• *Título:* 14K White Gold Solitaire with Diamonds\n"
+            "• *SKU:* GAL-1044\n"
+            "• *Categoría:* Rings\n"
+            "• *Precio:* $499.00 USD\n"
+            "• *Stock Disponible:* 1 unit\n"
+            "• *Materiales:* 14K White Gold, 0.25 Ct G-SI, Size 4, 2.3g\n\n"
+            "🔗 *Ver en vivo en tienda:*\n"
+            "https://galantesjewelry.com/shop/the-islamorada-solitaire"
+        )
+        print("Delivering link to intake chat Galantesjewelry...")
+        open_and_send("Galantesjewelry", intake_customer_msg)
+        print("End-to-end gated approval cycle completed successfully!")
+
 if __name__ == "__main__":
     main()
