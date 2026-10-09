@@ -69,6 +69,7 @@ log "Verifying critical CMS/product images are durable in Odoo"
 
 if [ "$needs_web" = "true" ]; then
   log "Building web image"
+  docker_cmd builder prune -af >/dev/null 2>&1 || true
   compose build web
   log "Recreating web only"
   compose up -d --no-deps web
