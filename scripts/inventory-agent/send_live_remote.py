@@ -737,5 +737,32 @@ def main():
         open_and_send("Galantesbacklog", variants_msg)
         print("10-variants interactive proposal delivered successfully!")
 
+    elif cmd == "list_all_odoo_inventory":
+        import subprocess
+        sql_cmd = """
+        SELECT json_agg(t) FROM (
+            SELECT pt.id, pt.default_code, pt.name, pt.list_price, pt.type, 
+                   (pt.image_1920 IS NOT NULL) as has_image,
+                   pc.name as category_name
+            FROM product_template pt
+            LEFT JOIN product_category pc ON pt.categ_id = pc.id
+            ORDER BY pt.id
+        ) t;
+        """
+        res = subprocess.run([
+            "docker", "exec", "-i", "galantes_db",
+            "psql", "-U", "odoo", "-d", "galantes_prod",
+            "-t", "-A", "-c", sql_cmd
+        ], capture_output=True, text=True)
+        raw = res.stdout.strip()
+        try:
+            products = json.loads(raw)
+            print(f"Total products in Odoo production DB: {len(products)}")
+            for p in products:
+                print(f"ID {p.get('id')}: SKU={p.get('default_code')} | Name={p.get('name')} | Cat={p.get('category_name')} | Price={p.get('list_price')} | HasImage={p.get('has_image')}")
+        except Exception as e:
+            print("Raw SQL output:", raw)
+            print("Error parsing json:", e)
+
 if __name__ == "__main__":
     main()
