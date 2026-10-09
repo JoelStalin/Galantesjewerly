@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 const PORT = 4000;
 const SESSION_DIR = process.env.SESSION_DIR || '/app/data/whatsapp-session';
@@ -80,6 +80,15 @@ async function startFrameLoop() {
       } else {
         sessionState = 'waiting_page';
       }
+
+      // Auto-dismiss any onboarding/update modals
+      await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button, div[role="button"]'));
+        const cont = btns.find(b => b.textContent && b.textContent.trim().toLowerCase() === 'continue');
+        if (cont) cont.click();
+        const closeX = document.querySelector('span[data-icon="x"]');
+        if (closeX) closeX.click();
+      }).catch(() => {});
     } catch (e) {
       // transient screenshot error while navigating
     }
@@ -190,6 +199,141 @@ app.post('/action', async (req, res) => {
       }
 
       return res.json({ ok: true, message: 'Phone pairing triggered', num });
+    }
+
+    if (action === 'get_chats') {
+      const chats = await page.evaluate(() => {
+        const titles = [];
+        document.querySelectorAll('#pane-side span[title]').forEach(s => {
+          const t = s.getAttribute('title');
+          if (t && !titles.includes(t)) titles.push(t);
+        });
+        return titles;
+      });
+      return res.json({ ok: true, chats });
+    }
+
+    if (action === 'eval') {
+      const { code } = req.body;
+      const result = await page.evaluate(code);
+      return res.json({ ok: true, result });
+    }
+
+    if (action === 'send_chat') {
+      const { target, text } = req.body;
+      const cleanPhone = String(target || '').replace(/[^\d]/g, '');
+
+      // 1. Open chat
+      if (/^\d{7,15}$/.test(cleanPhone)) {
+        await page.goto(`https://web.whatsapp.com/send?phone=${cleanPhone}`, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+      } else {
+        // Search group or contact by name in DOM or search box
+        const directFound = await page.evaluate((groupQuery) => {
+          const spans = Array.from(document.querySelectorAll('#pane-side span[title]'));
+          const match = spans.find(s => {
+            const t = s.getAttribute('title');
+            return t && t.toLowerCase().includes(groupQuery.toLowerCase());
+          });
+          if (match) {
+            match.click();
+            return true;
+          }
+          return false;
+        }, target);
+
+        if (!directFound) {
+          const searchInput = await page.$('div[contenteditable="true"][data-tab="3"], input[data-tab="3"]');
+          if (searchInput) {
+            await searchInput.click();
+            await page.evaluate((el, query) => {
+              el.focus();
+              document.execCommand('selectAll', false, null);
+              document.execCommand('delete', false, null);
+              document.execCommand('insertText', false, query);
+            }, searchInput, target);
+            await new Promise(r => setTimeout(r, 1500));
+            await page.keyboard.press('Enter');
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 1200));
+
+      // 2. Type in composer
+      const composer = await page.waitForSelector('#main div[contenteditable="true"]', { timeout: 30000 });
+      if (!composer) {
+        return res.status(404).json({ ok: false, error: 'Chat composer not found' });
+      }
+
+      await composer.click();
+      await page.evaluate((el, msg) => {
+        el.focus();
+        document.execCommand('selectAll', false, null);
+        document.execCommand('insertText', false, msg);
+      }, composer, text);
+      await new Promise(r => setTimeout(r, 400));
+      await page.keyboard.press('Enter');
+      await new Promise(r => setTimeout(r, 1000));
+
+      return res.json({ ok: true, sent: true, target, text });
+    }
+
+    if (action === 'send_image') {
+      const { target, filePath, caption } = req.body;
+      if (target) {
+        await page.evaluate((groupQuery) => {
+          const spans = Array.from(document.querySelectorAll('#pane-side span[title]'));
+          const match = spans.find(s => s.getAttribute('title') && s.getAttribute('title').toLowerCase().includes(groupQuery.toLowerCase()));
+          if (match) {
+            const row = match.closest('div[role="listitem"]') || match.closest('div[role="row"]') || match.closest('div[tabindex="-1"]') || match;
+            row.scrollIntoView({ behavior: 'instant', block: 'center' });
+            row.click();
+          }
+        }, target);
+        await new Promise(r => setTimeout(r, 1200));
+      }
+
+      let fileInput = await page.$('footer input[type="file"], input[accept="image/*"], #main input[type="file"]');
+      if (!fileInput) {
+        const attachBtn = await page.$('button[aria-label="Attach"], button[title="Attach"], span[data-icon="plus"]');
+        if (attachBtn) {
+          await attachBtn.click();
+          await new Promise(r => setTimeout(r, 800));
+          fileInput = await page.$('footer input[type="file"], input[accept="image/*"], #main input[type="file"]');
+        }
+      }
+
+      if (!fileInput) {
+        return res.status(404).json({ ok: false, error: 'Chat file input not found' });
+      }
+
+      await fileInput.uploadFile(filePath);
+      await new Promise(r => setTimeout(r, 2500));
+
+      if (caption) {
+        const box = await page.waitForSelector('div[contenteditable="true"][data-tab="10"], div[contenteditable="true"][data-tab="6"], div[role="textbox"]', { timeout: 10000 }).catch(() => null);
+        if (box) {
+          await box.click();
+          await page.evaluate((el, text) => {
+            el.focus();
+            document.execCommand('selectAll', false, null);
+            document.execCommand('delete', false, null);
+            document.execCommand('insertText', false, text);
+          }, box, caption);
+          await new Promise(r => setTimeout(r, 600));
+        }
+      }
+
+      const sendBtn = await page.waitForSelector('span[data-icon="send"], div[aria-label="Send"], span[data-icon="send-light"]', { timeout: 10000 }).catch(() => null);
+      if (sendBtn) {
+        await sendBtn.click();
+      } else {
+        await page.keyboard.press('Enter');
+      }
+      await new Promise(r => setTimeout(r, 2500));
+      latestFrame = await page.screenshot({ type: 'jpeg', quality: 75 }).catch(() => null);
+      return res.json({ ok: true, sent: true, filePath, target });
     }
 
     res.status(400).json({ ok: false, error: 'Unknown action' });

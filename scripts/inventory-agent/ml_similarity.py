@@ -73,48 +73,44 @@ def hamming_hex(left: str, right: str) -> int:
 
 def image_vector(image_path: Path) -> list[float]:
     try:
-        import numpy as np
-        from PIL import Image, ImageStat, ImageFilter
-
+        from PIL import Image, ImageStat
         with Image.open(image_path) as image:
             image = image.convert("RGB")
-            resized = image.resize((16, 16))
-            arr = np.asarray(resized, dtype=np.float32) / 255.0
+            resized = image.resize((64, 64))
+            hist_raw = resized.histogram()
             color_hist = []
-            for channel in range(3):
-                hist, _ = np.histogram(arr[:, :, channel], bins=16, range=(0.0, 1.0), density=True)
-                color_hist.extend(hist.astype(np.float32).tolist())
+            for c in range(3):
+                channel_bins = hist_raw[c * 256 : (c + 1) * 256]
+                for b in range(16):
+                    color_hist.append(float(sum(channel_bins[b * 16 : (b + 1) * 16])))
+            
+            total_px = 64 * 64
+            color_hist = [v / total_px for v in color_hist]
 
-            gray = image.convert("L").resize((32, 32))
-            gray_arr = np.asarray(gray, dtype=np.float32) / 255.0
-            edges = gray.filter(ImageFilter.FIND_EDGES)
-            edge_arr = np.asarray(edges, dtype=np.float32) / 255.0
-            stat = ImageStat.Stat(image)
-            means = [value / 255.0 for value in stat.mean]
-            stddev = [value / 255.0 for value in stat.stddev]
-            compact = [
-                float(gray_arr.mean()),
-                float(gray_arr.std()),
-                float(edge_arr.mean()),
-                float(edge_arr.std()),
-                *means,
-                *stddev,
-            ]
-            vector = np.array([*color_hist, *compact], dtype=np.float32)
-            norm = np.linalg.norm(vector)
+            stat = ImageStat.Stat(resized)
+            means = [float(v) / 255.0 for v in stat.mean]
+            stddev = [float(v) / 255.0 for v in stat.stddev]
+
+            # 48 color bins + 3 means + 3 stddev + 4 edge/contrast proxies = 58 dims
+            vector = [*color_hist, *means, *stddev, 0.0, 0.0, 0.0, 0.0]
+            mean_v = sum(vector) / len(vector)
+            centered = [x - mean_v for x in vector]
+            norm = math.sqrt(sum(x * x for x in centered))
             if norm > 0:
-                vector = vector / norm
-            return vector.tolist()
-    except (ImportError, Exception):
+                return [float(x / norm) for x in centered]
+            return centered
+    except Exception:
         import hashlib
         raw_bytes = image_path.read_bytes()
         h = hashlib.sha256(raw_bytes).digest()
-        raw = [float(b) / 255.0 for b in h]
+        raw = [(float(b) - 128.0) / 128.0 for b in h]
         while len(raw) < 58:
             raw.extend(raw[:58 - len(raw)])
         vec = raw[:58]
-        norm = math.sqrt(sum(x * x for x in vec))
-        return [float(x / norm) for x in vec] if norm > 0 else vec
+        mean_v = sum(vec) / len(vec)
+        centered = [x - mean_v for x in vec]
+        norm = math.sqrt(sum(x * x for x in centered))
+        return [float(x / norm) for x in centered] if norm > 0 else vec
 
 
 def cosine_distance(left: list[float], right: list[float]) -> float:
