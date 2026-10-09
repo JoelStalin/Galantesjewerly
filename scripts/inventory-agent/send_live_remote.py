@@ -390,5 +390,26 @@ def main():
         res = post("action", {"action": "get_chats"})
         print(json.dumps(res, indent=2))
 
+    elif cmd == "inspect_chat_detail":
+        view_chat("Galantesjewelry")
+        time.sleep(1)
+        detail_js = """(async () => {
+            const msgs = Array.from(document.querySelectorAll('#main div.message-in, #main div.message-out')).slice(-10).map((m, idx) => {
+                const textEl = m.querySelector('div.copyable-text');
+                const text = textEl ? textEl.innerText : m.innerText;
+                const img = m.querySelector('img[src^="blob:"]');
+                return {
+                    idx,
+                    isOut: m.classList.contains('message-out'),
+                    text: text || '',
+                    hasImg: Boolean(img),
+                    imgSrc: img ? img.src : null
+                };
+            });
+            return { msgs };
+        })()"""
+        res = eval_js(detail_js)
+        print(json.dumps(res, indent=2))
+
 if __name__ == "__main__":
     main()
