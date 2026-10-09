@@ -638,5 +638,104 @@ def main():
         open_and_send("Galantesjewelry", intake_customer_msg)
         print("End-to-end gated approval cycle completed successfully!")
 
+    elif cmd == "expand_variants_2":
+        # 1. Run 3D stone detector & KNN searcher
+        try:
+            from stone_geometry_knn import run_knn_variants_search, generate_variants_contact_sheet
+        except ImportError:
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from stone_geometry_knn import run_knn_variants_search, generate_variants_contact_sheet
+
+        intake_img = "/tmp/real_intake.jpg"
+        sheet_out = "/tmp/review_variants_grid.jpg"
+        knn_res = run_knn_variants_search(intake_img, category="Rings", target_k=10)
+        variants = knn_res.get("variants", [])
+        geom = knn_res.get("incoming_stone_geometry", {})
+        generate_variants_contact_sheet(intake_img, variants, sheet_out)
+        print(f"Generated 10-variants contact sheet at {sheet_out}")
+
+        # 2. Paste 10-variants sheet into Galantesbacklog
+        print("Pasting 10-variants contact sheet into Galantesbacklog...")
+        post("type", {"key": "Escape"})
+        time.sleep(1)
+        view_chat("Galantesbacklog")
+        time.sleep(1)
+
+        import base64
+        with open(sheet_out, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+
+        paste_js = f"""(async () => {{
+            const composer = document.querySelector('#main div[contenteditable="true"]');
+            const main = document.querySelector('#main');
+            if (!composer || !main) return {{ ok: false, error: 'no composer or main' }};
+
+            const binary = atob('{b64_data}');
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+            const blob = new Blob([array], {{ type: 'image/jpeg' }});
+            const file = new File([blob], 'variants_grid.jpg', {{ type: 'image/jpeg' }});
+
+            const dt = new DataTransfer();
+            dt.items.add(file);
+
+            composer.focus();
+            const pasteEvt = new ClipboardEvent('paste', {{ bubbles: true, cancelable: true, clipboardData: dt }});
+            composer.dispatchEvent(pasteEvt);
+
+            const dropEvt = new DragEvent('drop', {{ bubbles: true, cancelable: true, dataTransfer: dt }});
+            main.dispatchEvent(dropEvt);
+
+            return {{ ok: true, dispatched: true }};
+        }})()"""
+        eval_js(paste_js)
+        time.sleep(3)
+
+        check_send_js = """(() => {
+            const sendBtn = document.querySelector('span[data-icon="send"], div[aria-label="Send"], span[data-icon="send-light"]');
+            if (sendBtn) {
+                (sendBtn.closest('div[role="button"]') || sendBtn).click();
+                return { sent: true };
+            }
+            return { sent: false };
+        })()"""
+        send_res = eval_js(check_send_js)
+        if not send_res.get("result", {}).get("sent"):
+            post("type", {"key": "Enter"})
+        time.sleep(3)
+        save_frame("/tmp/variants_sheet_sent_frame.jpg")
+        print("Variants contact sheet dispatched to Galantesbacklog!")
+
+        # 3. Send structured message listing all 10 variants with 3D stone analysis
+        print("Sending 10-variants options list to Galantesbacklog...")
+        time.sleep(2)
+
+        options_lines = []
+        for i, v in enumerate(variants[:10]):
+            sku = v.get("sku")
+            sim = f"{v.get('similarity', 0.0) * 100:.1f}%"
+            name = v.get("name")
+            shape = v.get("stone_shape")
+            options_lines.append(f"• *2.{i+1}:* SKU *{sku}* ({sim}) - {name} [{shape}]")
+
+        excluded_note = ""
+        if knn_res.get("disapproved_excluded"):
+            excluded_note = f"\n🚫 *Descartados (desaprobados previamente):* {', '.join(knn_res['disapproved_excluded'])}\n"
+
+        variants_msg = (
+            "💎 *Galantes Backlog - Expansión de Variantes (KNN + Detector 3D)*\n\n"
+            "📐 *Análisis Geométrico 3D de la Piedra:*\n"
+            f"• *Forma detectada:* {geom.get('shape', 'Round Brilliant')}\n"
+            f"• *Ancho estimado:* ~{geom.get('estimated_width_mm', 6.0)} mm (Ratio: {geom.get('aspect_ratio', 1.0)}, Circularidad: {geom.get('circularity', 0.85)})\n"
+            f"• *Profundidad/Faceta 3D:* {geom.get('depth_facet_ratio', 0.5)} (Gradiente radial)\n"
+            f"{excluded_note}\n"
+            "🔍 *10 Variantes Más Cercanas por Vecinos Próximos (KNN):*\n"
+            + "\n".join(options_lines) + "\n\n"
+            "👉 *Para seleccionar una variante, responde:* *2.1*, *2.2*, *2.3*, etc. o escribe el SKU directamente.\n"
+            "👉 *O responde:* *NO* para descartar todas."
+        )
+        open_and_send("Galantesbacklog", variants_msg)
+        print("10-variants interactive proposal delivered successfully!")
+
 if __name__ == "__main__":
     main()
