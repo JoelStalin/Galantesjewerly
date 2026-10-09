@@ -42,7 +42,10 @@ log "Database dump fresh check passed: age is $age seconds"
 
 log "Backing up app data directory"
 if [ -d data ]; then
-  tar -czf "$BACKUP_DIR/app-data.tgz" data
+  tar -czf "$BACKUP_DIR/app-data.tgz" \
+    --exclude='data/inventory-agent/whatsapp-session' \
+    --exclude='data/blobs' \
+    data
 else
   tar -czf "$BACKUP_DIR/app-data.tgz" --files-from /dev/null
 fi
@@ -56,6 +59,7 @@ tar -czf "$BACKUP_DIR/project-source.tgz" \
   --exclude='./data/inventory-agent/raw' \
   --exclude='./data/inventory-agent/thumbs' \
   --exclude='./data/inventory-agent/vectors' \
+  --exclude='./data/inventory-agent/whatsapp-session' \
   --exclude='./deploy-backups' \
   .
 [ -s "$BACKUP_DIR/project-source.tgz" ] || fail "Project source snapshot is empty"
