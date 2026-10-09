@@ -34,12 +34,36 @@ services:
       - GMAIL_NOTIFICATION_TO=${GMAIL_NOTIFICATION_TO}
       - GMAIL_SMTP_USER=${GMAIL_SMTP_USER}
       - GMAIL_SMTP_PASS=${GMAIL_SMTP_PASS}
+      - WHATSAPP_BROWSER_URL=http://galantes_whatsapp_browser:4000
     volumes:
       - ./data:/app/data
     networks:
       - galante-net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  whatsapp_browser:
+    build:
+      context: ./scripts/live-browser
+      dockerfile: Dockerfile
+    image: galantes-whatsapp-browser:latest
+    container_name: galantes_whatsapp_browser
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    volumes:
+      - ./data/inventory-agent/whatsapp-session:/app/data/whatsapp-session
+    networks:
+      - galante-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/status || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
