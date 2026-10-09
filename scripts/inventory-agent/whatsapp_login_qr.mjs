@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', '..');
 
-// Default profile directory shared with Orca and CareerAI
+// Dedicated isolated profile for Galantes Jewelry WhatsApp (separate from CareerAI)
 const profileDir = path.resolve(
   process.env.WHATSAPP_WEB_PROFILE_DIR ||
-  'C:/Users/yoeli/Documents/GetUpSoft_Workspace/platform/orca/chrome_profile/whatsapp-web'
+  path.join(root, '.chrome_profile_whatsapp')
 );
 
 const outDir = path.join(root, 'data', 'inventory-agent', 'evidence');
@@ -56,8 +56,13 @@ while (!loggedIn) {
   poll++;
 
   try {
-    const chatListVisible = await page.locator('div[aria-label="Chat list"], div[data-testid="chat-list"]').first().isVisible().catch(() => false);
-    const qrVisible = await page.locator('canvas[aria-label*="Scan"], canvas[aria-label*="scan"], div[data-testid="qrcode"]').first().isVisible().catch(() => false);
+    const qrLocator = page.locator('canvas[aria-label*="Scan"], canvas[aria-label*="scan"], div[data-testid="qrcode"]').first();
+    const qrVisible = await qrLocator.isVisible().catch(() => false);
+
+    if (qrVisible) {
+      const qrShotPath = path.join(outDir, 'whatsapp-live-qr.png');
+      await qrLocator.screenshot({ path: qrShotPath }).catch(() => {});
+    }
 
     if (chatListVisible && !qrVisible) {
       loggedIn = true;

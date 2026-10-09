@@ -3,9 +3,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const root = path.resolve(__dirname, '..', '..');
 const profileDir = path.resolve(
   process.env.WHATSAPP_WEB_PROFILE_DIR ||
-  'C:/Users/yoeli/Documents/GetUpSoft_Workspace/platform/orca/chrome_profile/whatsapp-web'
+  path.join(root, '.chrome_profile_whatsapp')
 );
 
 let playwright;

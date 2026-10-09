@@ -19,8 +19,8 @@ export function resolveProfileDir(override) {
   if (process.env.WHATSAPP_WEB_PROFILE_DIR) {
     return path.resolve(process.env.WHATSAPP_WEB_PROFILE_DIR);
   }
-  // Default to user's dedicated orca whatsapp profile
-  return path.resolve(process.env.USERPROFILE || 'C:/Users/yoeli', '.orca/chrome_profile/whatsapp-web');
+  // Dedicated isolated profile for Galantes Jewelry WhatsApp
+  return path.resolve(__dirname, '..', '..', '..', '.chrome_profile_whatsapp');
 }
 
 export async function launchBrowser({ profileDir, headless = false, offscreen = false, forceVisible = false } = {}) {
