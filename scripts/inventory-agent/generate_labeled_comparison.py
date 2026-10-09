@@ -30,7 +30,8 @@ def fit_image(img_path: str, target_size: int = 400) -> Image.Image:
 
         img = Image.open(p).convert("RGB")
         # Aspect fit into square target_size x target_size
-        img.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+        resample_filter = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', getattr(Image, 'ANTIALIAS', 1))
+        img.thumbnail((target_size, target_size), resample_filter)
         
         card = Image.new("RGB", (target_size, target_size), (18, 18, 20))
         offset_x = (target_size - img.width) // 2
