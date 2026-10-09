@@ -1,0 +1,143 @@
+{
+  "id": "galantes-whatsapp-inventory-orchestrator-v1",
+  "name": "Galante's Jewelry - WhatsApp Autonomous Inventory & Active Learning",
+  "objective": "Orchestrates incoming jewelry media from WhatsApp (+1 786-246-2664), executes multi-tier visual matching, corrects grammar and extracts attributes strictly in English using Orca LLMs, routes ambiguous items with labeled comparison cards, dispatches unranked items to 'galantesbacklog', and updates vector exemplars via Active Learning.",
+  "status": "active",
+  "user_id": "root",
+  "settings": {
+    "targetPhone": "+1 786-246-2664",
+    "backlogGroup": "galantesbacklog",
+    "autoMatchThreshold": 0.95,
+    "ambiguousThreshold": 0.70,
+    "language": "en",
+    "catalogIndex": "data/inventory-agent/vectors/image-vectors.json",
+    "tenantDir": "data/orca/tenants/galantesjewelry",
+    "model": "deepseek-v4-pro"
+  },
+  "nodes": [
+    {
+      "id": "node-1-whatsapp-listener",
+      "name": "WhatsApp Inbound Listener",
+      "type": "orca-nodes-base.trigger",
+      "position": [100, 200],
+      "parameters": {
+        "channel": "whatsapp_web",
+        "whitelistedSender": "+1 786-246-2664",
+        "action": "listen_media_and_caption",
+        "engine": "careerai_persistent_browser"
+      }
+    },
+    {
+      "id": "node-2-visual-comparator",
+      "name": "Visual Similarity Matcher",
+      "type": "orca-nodes-base.pythonScript",
+      "position": [380, 200],
+      "parameters": {
+        "script": "scripts/inventory-agent/compare_whatsapp_image.py",
+        "inputImage": "{{node-1-whatsapp-listener.imagePath}}",
+        "threshold": 0.95,
+        "features": ["resnet_embeddings", "phash", "color_hist"]
+      }
+    },
+    {
+      "id": "node-3-orca-llm-normalizer",
+      "name": "Orca LLM English Grammar & Metadata Normalizer",
+      "type": "orca-nodes-base.aiPrompt",
+      "position": [660, 200],
+      "parameters": {
+        "model": "deepseek-v4-pro",
+        "fallbackModel": "llama3.2:3b",
+        "strictLanguage": "en",
+        "task": "Extract price, stock, category, karat, weight; correct grammatical errors and format luxury title in English.",
+        "inputCaption": "{{node-1-whatsapp-listener.caption}}"
+      }
+    },
+    {
+      "id": "node-4-decision-router",
+      "name": "Multi-Tier Decision Router",
+      "type": "orca-nodes-base.switch",
+      "position": [950, 200],
+      "parameters": {
+        "conditions": [
+          {
+            "tier": "tier_1_auto_match",
+            "condition": "{{node-2-visual-comparator.similarity}} >= 0.95",
+            "targetNode": "node-5-odoo-updater"
+          },
+          {
+            "tier": "tier_2_ambiguous",
+            "condition": "{{node-2-visual-comparator.similarity}} >= 0.70 && {{node-2-visual-comparator.similarity}} < 0.95",
+            "targetNode": "node-6-collage-generator"
+          },
+          {
+            "tier": "tier_3_backlog",
+            "condition": "{{node-2-visual-comparator.similarity}} < 0.70",
+            "targetNode": "node-7-backlog-dispatcher"
+          }
+        ]
+      }
+    },
+    {
+      "id": "node-5-odoo-updater",
+      "name": "Odoo ERP Product Stock & Price Updater",
+      "type": "orca-nodes-base.httpRequest",
+      "position": [1280, 80],
+      "parameters": {
+        "method": "POST",
+        "endpoint": "/api/odoo/product/update",
+        "payload": {
+          "sku": "{{node-2-visual-comparator.bestMatch.sku}}",
+          "price": "{{node-3-orca-llm-normalizer.price}}",
+          "stock": "{{node-3-orca-llm-normalizer.stock}}",
+          "description": "{{node-3-orca-llm-normalizer.description}}"
+        }
+      }
+    },
+    {
+      "id": "node-6-collage-generator",
+      "name": "Labeled Comparison Collage Generator",
+      "type": "orca-nodes-base.pythonScript",
+      "position": [1280, 250],
+      "parameters": {
+        "script": "scripts/inventory-agent/generate_labeled_comparison.py",
+        "original": "{{node-1-whatsapp-listener.imagePath}}",
+        "candidates": "{{node-2-visual-comparator.topCandidates}}",
+        "output": "data/inventory-agent/evidence/review_{{timestamp}}.jpg"
+      }
+    },
+    {
+      "id": "node-7-backlog-dispatcher",
+      "name": "Galantes Backlog Dispatcher",
+      "type": "orca-nodes-base.whatsappSend",
+      "position": [1280, 420],
+      "parameters": {
+        "recipient": "galantesbacklog",
+        "image": "{{node-1-whatsapp-listener.imagePath}}",
+        "caption": "📦 [Galantes Backlog] Proposal: {{node-3-orca-llm-normalizer.title}} • Est. Price: ${{node-3-orca-llm-normalizer.price}} • Reply CREATE or DISCARD"
+      }
+    },
+    {
+      "id": "node-8-active-learning-feedback",
+      "name": "Orca Active Learning Vector Enhancer",
+      "type": "orca-nodes-base.activeLearning",
+      "position": [1600, 250],
+      "parameters": {
+        "handler": "scripts/inventory-agent/orca_decision_learner.mjs",
+        "action": "append_exemplar_vector",
+        "tenant": "galantesjewelry",
+        "store": "data/orca/tenants/galantesjewelry/learning-feedback.jsonl"
+      }
+    }
+  ],
+  "edges": [
+    { "source": "node-1-whatsapp-listener", "target": "node-2-visual-comparator" },
+    { "source": "node-2-visual-comparator", "target": "node-3-orca-llm-normalizer" },
+    { "source": "node-3-orca-llm-normalizer", "target": "node-4-decision-router" },
+    { "source": "node-4-decision-router", "target": "node-5-odoo-updater", "condition": "tier_1_auto_match" },
+    { "source": "node-4-decision-router", "target": "node-6-collage-generator", "condition": "tier_2_ambiguous" },
+    { "source": "node-4-decision-router", "target": "node-7-backlog-dispatcher", "condition": "tier_3_backlog" },
+    { "source": "node-5-odoo-updater", "target": "node-8-active-learning-feedback" },
+    { "source": "node-6-collage-generator", "target": "node-8-active-learning-feedback" },
+    { "source": "node-7-backlog-dispatcher", "target": "node-8-active-learning-feedback" }
+  ]
+}
