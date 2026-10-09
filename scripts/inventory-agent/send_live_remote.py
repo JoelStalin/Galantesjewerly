@@ -8,6 +8,7 @@ import urllib.request
 import json
 import time
 import sys
+import os
 
 BASE_URL = "http://127.0.0.1:4000"
 
@@ -237,6 +238,120 @@ def main():
             };
         })()"""
         print(json.dumps(eval_js(info_js), indent=2))
+
+    elif cmd == "create_and_send_collage":
+        # 1. Generate collage directly with PIL
+        try:
+            from generate_labeled_comparison import generate_comparison_montage
+        except ImportError:
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from generate_labeled_comparison import generate_comparison_montage
+
+        candidates = [
+            {
+                "sku": "GAL-1044",
+                "similarity": 0.884,
+                "path": "/home/yoeli/galantesjewelry/public/assets/products/the-islamorada-solitaire.png"
+            },
+            {
+                "sku": "GAL-1041",
+                "similarity": 0.762,
+                "path": "/home/yoeli/galantesjewelry/public/assets/products/coastal-tide-ring.png"
+            }
+        ]
+        collage_out = "/tmp/review_collage.jpg"
+        generate_comparison_montage("/tmp/real_intake.jpg", candidates, collage_out)
+        print(f"Generated comparison collage at {collage_out}")
+
+        # 2. Paste collage into Galantesbacklog
+        print("Pasting comparison collage into Galantesbacklog...")
+        # Dismiss modals
+        post("type", {"key": "Escape"})
+        time.sleep(1)
+        view_chat("Galantesbacklog")
+        time.sleep(1)
+
+        import base64
+        with open(collage_out, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+
+        paste_js = f"""(async () => {{
+            const composer = document.querySelector('#main div[contenteditable="true"]');
+            const main = document.querySelector('#main');
+            if (!composer || !main) return {{ ok: false, error: 'no composer or main' }};
+
+            const binary = atob('{b64_data}');
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+            const blob = new Blob([array], {{ type: 'image/jpeg' }});
+            const file = new File([blob], 'similarities_review.jpg', {{ type: 'image/jpeg' }});
+
+            const dt = new DataTransfer();
+            dt.items.add(file);
+
+            composer.focus();
+            const pasteEvt = new ClipboardEvent('paste', {{
+                bubbles: true,
+                cancelable: true,
+                clipboardData: dt
+            }});
+            composer.dispatchEvent(pasteEvt);
+
+            const dropEvt = new DragEvent('drop', {{
+                bubbles: true,
+                cancelable: true,
+                dataTransfer: dt
+            }});
+            main.dispatchEvent(dropEvt);
+
+            return {{ ok: true, dispatched: true }};
+        }})()"""
+        eval_js(paste_js)
+        time.sleep(3)
+
+        check_send_js = """(() => {
+            const sendBtn = document.querySelector('span[data-icon="send"], div[aria-label="Send"], span[data-icon="send-light"]');
+            if (sendBtn) {
+                (sendBtn.closest('div[role="button"]') || sendBtn).click();
+                return { sent: true };
+            }
+            return { sent: false };
+        })()"""
+        send_res = eval_js(check_send_js)
+        if not send_res.get("result", {}).get("sent"):
+            post("type", {"key": "Enter"})
+        time.sleep(3)
+        save_frame("/tmp/collage_sent_frame.jpg")
+        print("Comparison collage dispatched to Galantesbacklog!")
+
+        # 3. Send structured interactive proposal to Galantesbacklog
+        print("Sending interactive question with options to Galantesbacklog...")
+        time.sleep(2)
+        question_text = (
+            "👑 *Galantes Backlog - Verificación de Joya Detectada*\n\n"
+            "📸 *Foto analizada:* Sortija de compromiso en oro blanco 14K con diamante solitario\n"
+            "🔍 *Coincidencia visual:* 88.4% con SKU *GAL-1044*\n"
+            "🔗 *Ficha actual en tienda:*\n"
+            "https://galantesjewelry.com/shop/the-islamorada-solitaire\n\n"
+            "*Propuesta de actualización de inventario:*\n"
+            "• *Título (EN):* 14K White Gold Solitaire Ring with Diamonds (A actualizar)\n"
+            "• *Categoría:* Rings (A actualizar)\n"
+            "• *Precio:* $499.00 USD (Intacto - No modificar)\n"
+            "• *Stock disponible:* 1 unit (Intacto - No modificar)\n"
+            "• *Materiales:* 14K White Gold, 0.25 Ct G-SI, Size 4, 2.3g (Intacto)\n"
+            "• *Imagen de catálogo:* Se conserva la foto profesional de Google Drive (no se crea producto vacío ni sin imagen).\n\n"
+            "¿Cómo deseas proceder con este producto?\n\n"
+            "1️⃣ *Opción 1: Confirmar y Actualizar*\n"
+            "   Modificar únicamente el título y la categoría del producto existente GAL-1044 y notificar al cliente.\n\n"
+            "2️⃣ *Opción 2: Asignar a otra variante*\n"
+            "   Vincular como variante al SKU alternativo *GAL-1041* (76.2% similitud).\n\n"
+            "3️⃣ *Opción 3: Descartar subida*\n"
+            "   No aplicar ningún cambio a este producto.\n\n"
+            "✍️ *Opción personalizada:*\n"
+            "   Escribe directamente tu instrucción (ej: *\"Asignar a SKU GAL-1080\"* o *\"Ajustar categoría a Fine Rings\"*)."
+        )
+        open_and_send("Galantesbacklog", question_text)
+        print("Full intake review cycle delivered to Galantesbacklog!")
 
     elif cmd == "paste_image_backlog":
         # 1. Dismiss any open modal
