@@ -8,7 +8,7 @@ this file owns the complete implementation.
 import re
 import unicodedata
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 # ---------------------------------------------------------------------------
 # English-language material labels shown on the storefront
@@ -53,6 +53,15 @@ class GalantesProductTemplate(models.Model):
         default=False,
         copy=False,
         help='Internal archival product used to preserve historical references when a real product is deleted.',
+    )
+
+    # ── Weight ───────────────────────────────────────────────────────────────
+    weight_grams = fields.Float(
+        string='Weight (g)',
+        digits=(12, 2),
+        index=True,
+        help='Total weight of the piece in grams (single field). Required to create '
+             'a product. Also feeds the standard Odoo weight (kg) used for shipping.',
     )
 
     # ── Material ─────────────────────────────────────────────────────────────
@@ -169,7 +178,20 @@ class GalantesProductTemplate(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         """Auto-generate slug from name when not explicitly provided."""
+        # Weight in grams is mandatory for every new product. Module data loads
+        # (install/upgrade) and the internal deletion placeholder are exempt.
+        enforce_weight = not (
+            self.env.context.get('install_mode')
+            or self.env.context.get('galantes_skip_weight_check')
+        )
         for vals in vals_list:
+            if enforce_weight and not (vals.get('weight_grams') or 0) > 0:
+                raise ValidationError(
+                    _('The weight in grams is required to create a product '
+                      '(field "Weight (g)", must be greater than 0).')
+                )
+            if vals.get('weight_grams') and 'weight' not in vals:
+                vals['weight'] = vals['weight_grams'] / 1000.0
             if not vals.get('slug') and vals.get('name'):
                 vals['slug'] = _slugify_text(vals['name'])
             # Odoo is the source of truth for the storefront catalog. Unless
@@ -180,6 +202,8 @@ class GalantesProductTemplate(models.Model):
 
     def write(self, vals):
         """Auto-generate slug when name changes and slug is still empty."""
+        if vals.get('weight_grams') and 'weight' not in vals:
+            vals = dict(vals, weight=vals['weight_grams'] / 1000.0)
         if 'name' in vals and not vals.get('slug'):
             # Only set slug on records that don't have one yet; skip others
             # to preserve intentionally customised slugs.
@@ -195,6 +219,15 @@ class GalantesProductTemplate(models.Model):
                 return super(GalantesProductTemplate, remaining).write(vals)
             return True
         return super().write(vals)
+
+    @api.constrains('weight_grams')
+    def _check_weight_grams(self):
+        for product in self:
+            if product.weight_grams is not None and product.weight_grams <= 0 \
+                    and not self.env.context.get('galantes_skip_weight_check'):
+                raise ValidationError(
+                    _('The weight in grams must be greater than 0.')
+                )
 
     @api.onchange('name')
     def _onchange_name_slug(self):
@@ -333,6 +366,7 @@ class GalantesProductProduct(models.Model):
 
         create_context = dict(self.env.context, active_test=False)
         create_context.pop('default_categ_id', None)
+        create_context['galantes_skip_weight_check'] = True
         template = self.env['product.template'].with_context(create_context).create(
             self._galantes_deletion_placeholder_values()
         )

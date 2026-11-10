@@ -1,6 +1,6 @@
 {
     'name': 'Galante\'s Jewelry',
-    'version': '19.0.1.0.2',
+    'version': '19.0.1.0.3',
     'category': 'Sales',
     'summary': 'Jewelry-specific product models, pricing, and web publication for Galante\'s Jewelry by the Sea',
     'author': 'Galante\'s Jewelry',

@@ -502,6 +502,9 @@ class ProductAPIController(http.Controller):
                     vals['standard_price'] = float(item['cost'])
                 if item.get('description'):
                     vals['description_sale'] = item['description']
+                _wg = item.get('weight_grams', item.get('weightGrams'))
+                if _wg not in (None, ''):
+                    vals['weight_grams'] = float(_wg)
 
                 primary_b64 = item.get('primaryImageBase64') or item.get('image_1920')
                 if primary_b64:
@@ -519,6 +522,8 @@ class ProductAPIController(http.Controller):
                     prod_rec = existing
                     updated_count += 1
                 else:
+                    if 'weight_grams' not in vals:
+                        raise ValueError(f"weight_grams is required to create product '{name}'")
                     prod_rec = Product.create(vals)
                     created_count += 1
 
@@ -586,6 +591,8 @@ class ProductAPIController(http.Controller):
                     product_rec = existing
                     updated_count += 1
                 else:
+                    if not (vals.get('weight_grams') or 0) > 0:
+                        raise ValueError(f"weight_grams is required to create product '{vals['name']}'")
                     product_rec = Product.create(vals)
                     created_count += 1
                 
