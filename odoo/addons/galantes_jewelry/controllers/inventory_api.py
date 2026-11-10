@@ -35,6 +35,12 @@ class InventoryAPIController(http.Controller):
             payload = json.loads(request.httprequest.data or '{}')
             required = ('name', 'default_code', 'list_price', 'stock')
             missing = [field for field in required if field not in payload]
+            weight_grams = payload.get('weight_grams', payload.get('weightGrams'))
+            product_exists = request.env['product.template'].sudo().search_count(
+                [('default_code', '=', str(payload.get('default_code', ''))[:64])]
+            ) if payload.get('default_code') else 0
+            if not product_exists and not (weight_grams and float(weight_grams) > 0):
+                missing.append('weight_grams')
             if missing:
                 return request.make_json_response({'ok': False, 'error': 'missing_fields', 'fields': missing}, status=400)
             if int(payload['stock']) < 0 or float(payload['list_price']) < 0:
@@ -53,6 +59,8 @@ class InventoryAPIController(http.Controller):
                 'available_on_website': True,
                 'description_sale': str(payload.get('description', ''))[:5000],
             }
+            if weight_grams and float(weight_grams) > 0:
+                vals['weight_grams'] = float(weight_grams)
             image = payload.get('image_base64')
             if image:
                 vals['image_1920'] = base64.b64decode(image, validate=True)
